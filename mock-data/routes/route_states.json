@@ -1,0 +1,387 @@
+{
+    "version": "1.0.0",
+    "description": "Route-level mock state registry for Money to Memories. Used by the UX-first mock app and persona switcher.",
+    "routes": {
+        "/home": {
+            "states": [
+                {
+                    "key": "empty",
+                    "label": "Empty",
+                    "description": "Brand new user with no receipts, no Things, no Memories.",
+                    "personaIds": [
+                        "teen",
+                        "single_adult_male",
+                        "single_adult_female"
+                    ],
+                    "uiExpectations": [
+                        "Show welcome card",
+                        "Primary CTA: Add Purchase",
+                        "Secondary CTA: Record Experience",
+                        "Show brief value explanation"
+                    ]
+                },
+                {
+                    "key": "first_use",
+                    "label": "First Use",
+                    "description": "User has added one or two purchases but has not yet formed habits or Things.",
+                    "personaIds": [
+                        "college_student",
+                        "roommates",
+                        "gig_worker"
+                    ],
+                    "uiExpectations": [
+                        "Show recent receipts section",
+                        "Show one insight teaser",
+                        "Show receipts needing review"
+                    ]
+                },
+                {
+                    "key": "loading",
+                    "label": "Loading",
+                    "description": "Data is loading for Home.",
+                    "personaIds": [
+                        "all"
+                    ],
+                    "uiExpectations": [
+                        "Skeleton for summary cards",
+                        "Skeleton for receipt list",
+                        "No layout shift"
+                    ]
+                },
+                {
+                    "key": "populated_light",
+                    "label": "Populated Light",
+                    "description": "Moderate activity user with recent receipts and a few Things.",
+                    "personaIds": [
+                        "single_adult_female",
+                        "single_adult_male",
+                        "couple_pet"
+                    ],
+                    "uiExpectations": [
+                        "Show recent receipts",
+                        "Show one or two value cards",
+                        "Show memory suggestion"
+                    ]
+                },
+                {
+                    "key": "populated_family",
+                    "label": "Populated Family",
+                    "description": "Household-heavy usage with groceries, school, home, and event spend.",
+                    "personaIds": [
+                        "parent_2_2",
+                        "single_parent",
+                        "adult_caring_for_parents"
+                    ],
+                    "uiExpectations": [
+                        "Show grouped recent receipts",
+                        "Show household-oriented insight card",
+                        "Show Things and memory suggestions"
+                    ]
+                },
+                {
+                    "key": "error",
+                    "label": "Error",
+                    "description": "Home feed failed to load.",
+                    "personaIds": [
+                        "all"
+                    ],
+                    "uiExpectations": [
+                        "Show retry affordance",
+                        "Preserve app shell and navigation"
+                    ]
+                },
+                {
+                    "key": "conversion_personal_pro",
+                    "label": "Conversion Personal Pro",
+                    "description": "Free user has hit receipt or premium feature limits.",
+                    "personaIds": [
+                        "all"
+                    ],
+                    "uiExpectations": [
+                        "Contextual upgrade card",
+                        "Emphasize unlimited receipts and warranties/manuals"
+                    ]
+                }
+            ]
+        },
+        "/things": {
+            "states": [
+                {
+                    "key": "empty",
+                    "label": "Empty",
+                    "description": "No Things yet.",
+                    "personaIds": [
+                        "teen",
+                        "college_student"
+                    ],
+                    "uiExpectations": [
+                        "Explain how purchases become Things",
+                        "CTA to review receipts or add purchase"
+                    ]
+                },
+                {
+                    "key": "loading",
+                    "label": "Loading",
+                    "description": "Things overview loading.",
+                    "personaIds": [
+                        "all"
+                    ],
+                    "uiExpectations": [
+                        "Skeleton for treemap or summary layout",
+                        "No collapse of action strip"
+                    ]
+                },
+                {
+                    "key": "overview_populated",
+                    "label": "Overview Populated",
+                    "description": "Treemap or grouped overview of spending-to-Things structure.",
+                    "personaIds": [
+                        "single_adult_male",
+                        "single_adult_female",
+                        "couple_pet",
+                        "parent_2_2"
+                    ],
+                    "uiExpectations": [
+                        "Show grouped visualization",
+                        "Support drilldown",
+                        "Action strip: Returns, Warranty, Insurance"
+                    ]
+                },
+                {
+                    "key": "owned_things",
+                    "label": "Owned Things",
+                    "description": "User has durable items with docs and warranty potential.",
+                    "personaIds": [
+                        "homeowner_diy",
+                        "grandparents",
+                        "single_elder"
+                    ],
+                    "uiExpectations": [
+                        "Show list/grid of Things",
+                        "Show warranty/doc affordances"
+                    ]
+                },
+                {
+                    "key": "premium_gate_warranty",
+                    "label": "Premium Gate Warranty",
+                    "description": "Free user tapped Warranty.",
+                    "personaIds": [
+                        "all"
+                    ],
+                    "uiExpectations": [
+                        "Show contextual Personal Pro upgrade prompt",
+                        "Preserve underlying Things context"
+                    ]
+                },
+                {
+                    "key": "error",
+                    "label": "Error",
+                    "description": "Things data failed to load.",
+                    "personaIds": [
+                        "all"
+                    ],
+                    "uiExpectations": [
+                        "Retry state",
+                        "Shell remains intact"
+                    ]
+                }
+            ]
+        },
+        "/people": {
+            "states": [
+                {
+                    "key": "empty",
+                    "label": "Empty",
+                    "description": "No linked people yet.",
+                    "personaIds": [
+                        "single_adult_male",
+                        "single_adult_female",
+                        "single_elder"
+                    ],
+                    "uiExpectations": [
+                        "Explain people-linked purchases and memories",
+                        "CTA to add person or tag a purchase"
+                    ]
+                },
+                {
+                    "key": "loading",
+                    "label": "Loading",
+                    "description": "People route loading.",
+                    "personaIds": [
+                        "all"
+                    ],
+                    "uiExpectations": [
+                        "Skeleton for network/list view"
+                    ]
+                },
+                {
+                    "key": "network_populated",
+                    "label": "Network Populated",
+                    "description": "User has multiple people with purchases and memory relationships.",
+                    "personaIds": [
+                        "parent_2_2",
+                        "couple_pet",
+                        "single_parent",
+                        "adult_caring_for_parents"
+                    ],
+                    "uiExpectations": [
+                        "Show circles/network or grouped list",
+                        "Surface gifts/shared/household filters"
+                    ]
+                },
+                {
+                    "key": "person_detail_populated",
+                    "label": "Person Detail Populated",
+                    "description": "Specific person detail with linked purchases, gifts, and memories.",
+                    "personaIds": [
+                        "all"
+                    ],
+                    "uiExpectations": [
+                        "Show linked purchases",
+                        "Show linked memories",
+                        "Show relationship metadata"
+                    ]
+                },
+                {
+                    "key": "error",
+                    "label": "Error",
+                    "description": "People data failed to load.",
+                    "personaIds": [
+                        "all"
+                    ],
+                    "uiExpectations": [
+                        "Retry state"
+                    ]
+                },
+                {
+                    "key": "conversion_family_pro",
+                    "label": "Conversion Family Pro",
+                    "description": "User attempts household collaboration or shared management.",
+                    "personaIds": [
+                        "parent_2_2",
+                        "couple_pet",
+                        "single_parent",
+                        "adult_caring_for_parents"
+                    ],
+                    "uiExpectations": [
+                        "Contextual Family Pro upgrade",
+                        "Highlight shared household and family collaboration"
+                    ]
+                }
+            ]
+        },
+        "/memories": {
+            "states": [
+                {
+                    "key": "empty",
+                    "label": "Empty",
+                    "description": "No memory candidates yet.",
+                    "personaIds": [
+                        "teen",
+                        "college_student",
+                        "single_adult_male"
+                    ],
+                    "uiExpectations": [
+                        "Explain auto-created memory candidates",
+                        "CTA to add purchases or record experience"
+                    ]
+                },
+                {
+                    "key": "loading",
+                    "label": "Loading",
+                    "description": "Memory timeline loading.",
+                    "personaIds": [
+                        "all"
+                    ],
+                    "uiExpectations": [
+                        "Skeleton timeline cards"
+                    ]
+                },
+                {
+                    "key": "candidate_timeline",
+                    "label": "Candidate Timeline",
+                    "description": "Auto-generated memory candidates visible in timeline order.",
+                    "personaIds": [
+                        "all"
+                    ],
+                    "uiExpectations": [
+                        "Cards show suggested title/time/place",
+                        "Actions: confirm, rename, add people, add note"
+                    ]
+                },
+                {
+                    "key": "confirmed_memories",
+                    "label": "Confirmed Memories",
+                    "description": "Mix of confirmed memories and unresolved candidates.",
+                    "personaIds": [
+                        "parent_2_2",
+                        "couple_pet",
+                        "grandparents",
+                        "uncle"
+                    ],
+                    "uiExpectations": [
+                        "Clear distinction between candidate and confirmed",
+                        "Support timeline / map / people lenses"
+                    ]
+                },
+                {
+                    "key": "error",
+                    "label": "Error",
+                    "description": "Memories failed to load.",
+                    "personaIds": [
+                        "all"
+                    ],
+                    "uiExpectations": [
+                        "Retry state"
+                    ]
+                }
+            ]
+        },
+        "/settings": {
+            "states": [
+                {
+                    "key": "default",
+                    "label": "Default",
+                    "description": "Normal settings state.",
+                    "personaIds": [
+                        "all"
+                    ],
+                    "uiExpectations": [
+                        "Preferences, notifications, privacy, capture settings"
+                    ]
+                }
+            ]
+        },
+        "/account": {
+            "states": [
+                {
+                    "key": "default",
+                    "label": "Default",
+                    "description": "Normal account state.",
+                    "personaIds": [
+                        "all"
+                    ],
+                    "uiExpectations": [
+                        "Profile, login method, sessions, subscription summary"
+                    ]
+                }
+            ]
+        },
+        "/plans": {
+            "states": [
+                {
+                    "key": "comparison",
+                    "label": "Comparison",
+                    "description": "Plan comparison screen.",
+                    "personaIds": [
+                        "all"
+                    ],
+                    "uiExpectations": [
+                        "Show Free vs Personal Pro vs Family Pro",
+                        "Family Trust positioned as future / contact / concierge path"
+                    ]
+                }
+            ]
+        }
+    }
+}

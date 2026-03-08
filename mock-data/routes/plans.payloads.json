@@ -1,0 +1,50 @@
+{
+    "version": "1.0.0",
+    "route": "/plans",
+    "payloads": {
+        "comparison": {
+            "currentPlan": "free",
+            "plans": [
+                {
+                    "key": "free",
+                    "label": "Free",
+                    "priceLabel": "$0",
+                    "features": [
+                        "First 100 receipts",
+                        "Core Home, Things, People, Memories",
+                        "Basic agent questions"
+                    ],
+                    "ctaLabel": "Current plan"
+                },
+                {
+                    "key": "personal_pro",
+                    "label": "Personal Pro",
+                    "priceLabel": "$3.99/mo",
+                    "features": [
+                        "Unlimited receipts",
+                        "Warranties and manuals",
+                        "Better Things management",
+                        "Stronger agent help"
+                    ],
+                    "ctaLabel": "Upgrade"
+                },
+                {
+                    "key": "family_pro",
+                    "label": "Family Pro",
+                    "priceLabel": "$8.99/mo",
+                    "features": [
+                        "Shared household collaboration",
+                        "Shared Things and Memories",
+                        "Family-oriented context and access"
+                    ],
+                    "ctaLabel": "See Family Pro"
+                }
+            ],
+            "familyTrustCard": {
+                "label": "Family Trust",
+                "description": "Dedicated family system for shared property, policies, and long-term stewardship.",
+                "ctaLabel": "Contact us"
+            }
+        }
+    }
+}

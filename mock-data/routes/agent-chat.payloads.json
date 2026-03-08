@@ -1,0 +1,140 @@
+{
+    "version": "1.0.0",
+    "route": "agent_chat",
+    "payloads": {
+        "empty": {
+            "mode": "chat",
+            "title": "Ask Agent",
+            "conversation": [],
+            "suggestedPrompts": [
+                "What did I spend most on this month?",
+                "Find the receipt for Trader Joe’s",
+                "What Things do I own with warranty coverage?",
+                "Which purchases were with Joe?"
+            ]
+        },
+        "spend_question": {
+            "mode": "chat",
+            "title": "Ask Agent",
+            "conversation": [
+                {
+                    "id": "msg_1",
+                    "role": "user",
+                    "content": "What did I spend most on this month?"
+                },
+                {
+                    "id": "msg_2",
+                    "role": "assistant",
+                    "content": "This month your largest spend category is Food at Home at $612.42, followed by Dining Out at $281.33 and Household at $194.28.",
+                    "citations": [
+                        {
+                            "type": "insight_snapshot",
+                            "label": "March spending summary"
+                        },
+                        {
+                            "type": "purchase_event",
+                            "id": "pe_1101",
+                            "label": "Costco — Mar 5"
+                        }
+                    ],
+                    "suggestedFollowUps": [
+                        "Show me the top grocery items",
+                        "How does that compare to last month?"
+                    ]
+                }
+            ]
+        },
+        "thing_question": {
+            "mode": "chat",
+            "title": "Ask Agent",
+            "conversation": [
+                {
+                    "id": "msg_3",
+                    "role": "user",
+                    "content": "What Things do I own with warranty coverage?"
+                },
+                {
+                    "id": "msg_4",
+                    "role": "assistant",
+                    "content": "You currently have 2 Things with active warranty records: Dyson V8 Vacuum and LG OLED TV.",
+                    "citations": [
+                        {
+                            "type": "asset",
+                            "id": "asset_7001",
+                            "label": "Dyson V8 Vacuum"
+                        },
+                        {
+                            "type": "asset",
+                            "id": "asset_7002",
+                            "label": "LG OLED TV"
+                        }
+                    ],
+                    "suggestedFollowUps": [
+                        "Which one expires first?",
+                        "Open Dyson V8 Vacuum"
+                    ]
+                }
+            ]
+        },
+        "memory_question": {
+            "mode": "chat",
+            "title": "Ask Agent",
+            "conversation": [
+                {
+                    "id": "msg_5",
+                    "role": "user",
+                    "content": "Which purchases were with Joe?"
+                },
+                {
+                    "id": "msg_6",
+                    "role": "assistant",
+                    "content": "I found 2 recent purchases linked to Joe: Nopa on Feb 21 and Alamo Drafthouse on Jan 17.",
+                    "citations": [
+                        {
+                            "type": "person",
+                            "id": "person_8005",
+                            "label": "Joe"
+                        },
+                        {
+                            "type": "purchase_event",
+                            "id": "pe_1301",
+                            "label": "Nopa"
+                        },
+                        {
+                            "type": "purchase_event",
+                            "id": "pe_1302",
+                            "label": "Alamo Drafthouse"
+                        }
+                    ],
+                    "suggestedFollowUps": [
+                        "Open Dinner with Joe",
+                        "Show all memories with Joe"
+                    ]
+                }
+            ]
+        },
+        "premium_gate": {
+            "mode": "chat",
+            "title": "Ask Agent",
+            "conversation": [
+                {
+                    "id": "msg_7",
+                    "role": "user",
+                    "content": "What warranties are expiring soon?"
+                },
+                {
+                    "id": "msg_8",
+                    "role": "assistant",
+                    "content": "Warranty tracking is available in Personal Pro. Upgrade to see active coverage and upcoming expirations for your Things.",
+                    "citations": [],
+                    "upgradeCard": {
+                        "tier": "personal_pro",
+                        "title": "Unlock warranty insights",
+                        "body": "Get warranty dates, manuals, and richer agent help.",
+                        "ctaLabel": "Upgrade"
+                    }
+                }
+            ]
+        }
+    }
+}

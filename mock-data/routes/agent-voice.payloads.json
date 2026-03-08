@@ -1,0 +1,50 @@
+{
+    "version": "1.0.0",
+    "route": "agent_voice",
+    "payloads": {
+        "idle": {
+            "mode": "voice",
+            "title": "Ask Agent by Voice",
+            "state": "idle",
+            "prompt": "Ask anything about your purchases, Things, people, or memories."
+        },
+        "listening": {
+            "mode": "voice",
+            "title": "Ask Agent by Voice",
+            "state": "listening",
+            "prompt": "Listening..."
+        },
+        "processing": {
+            "mode": "voice",
+            "title": "Ask Agent by Voice",
+            "state": "processing",
+            "prompt": "Thinking..."
+        },
+        "answered": {
+            "mode": "voice",
+            "title": "Ask Agent by Voice",
+            "state": "answered",
+            "transcript": "What did I buy last time at Trader Joe’s?",
+            "response": {
+                "content": "The last Trader Joe’s purchase included Organic Whole Milk, Greek Yogurt, and Storage Bin for a total of $32.17.",
+                "citations": [
+                    {
+                        "type": "purchase_event",
+                        "id": "pe_1002",
+                        "label": "Trader Joe's — Mar 7"
+                    }
+                ],
+                "suggestedFollowUps": [
+                    "Show me that receipt",
+                    "Was anything there a Thing?"
+                ]
+            }
+        },
+        "error": {
+            "mode": "voice",
+            "title": "Ask Agent by Voice",
+            "state": "error",
+            "prompt": "I couldn’t catch that. Try again."
+        }
+    }
+}

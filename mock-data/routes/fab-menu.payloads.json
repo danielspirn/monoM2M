@@ -1,0 +1,109 @@
+{
+    "version": "1.0.0",
+    "route": "fab_menu",
+    "payloads": {
+        "default": {
+            "title": "Add or Ask",
+            "items": [
+                {
+                    "id": "fab_add_purchase",
+                    "label": "Add Purchase",
+                    "icon": "receipt",
+                    "action": "route:/ingest/new"
+                },
+                {
+                    "id": "fab_scan_receipt",
+                    "label": "Scan Receipt",
+                    "icon": "camera",
+                    "action": "capture:receipt"
+                },
+                {
+                    "id": "fab_upload_document",
+                    "label": "Upload Document",
+                    "icon": "upload",
+                    "action": "upload:document"
+                },
+                {
+                    "id": "fab_record_experience",
+                    "label": "Record Experience",
+                    "icon": "sparkle",
+                    "action": "route:/memories/new"
+                },
+                {
+                    "id": "fab_ask_agent_chat",
+                    "label": "Ask Agent — Chat",
+                    "icon": "chat",
+                    "action": "agent:chat"
+                },
+                {
+                    "id": "fab_ask_agent_voice",
+                    "label": "Ask Agent — Voice",
+                    "icon": "mic",
+                    "action": "agent:voice"
+                }
+            ]
+        },
+        "context_things": {
+            "title": "Add or Ask",
+            "items": [
+                {
+                    "id": "fab_add_purchase",
+                    "label": "Add Purchase",
+                    "icon": "receipt",
+                    "action": "route:/ingest/new"
+                },
+                {
+                    "id": "fab_upload_document",
+                    "label": "Upload Document",
+                    "icon": "upload",
+                    "action": "upload:document"
+                },
+                {
+                    "id": "fab_ask_agent_chat",
+                    "label": "Ask about my Things",
+                    "icon": "chat",
+                    "action": "agent:chat",
+                    "suggestedPrompt": "What warranties are expiring soon?"
+                },
+                {
+                    "id": "fab_ask_agent_voice",
+                    "label": "Ask by Voice",
+                    "icon": "mic",
+                    "action": "agent:voice",
+                    "suggestedPrompt": "What Things do I own from Costco?"
+                }
+            ]
+        },
+        "context_memories": {
+            "title": "Add or Ask",
+            "items": [
+                {
+                    "id": "fab_record_experience",
+                    "label": "Record Experience",
+                    "icon": "sparkle",
+                    "action": "route:/memories/new"
+                },
+                {
+                    "id": "fab_add_purchase",
+                    "label": "Add Purchase",
+                    "icon": "receipt",
+                    "action": "route:/ingest/new"
+                },
+                {
+                    "id": "fab_ask_agent_chat",
+                    "label": "Ask about memories",
+                    "icon": "chat",
+                    "action": "agent:chat",
+                    "suggestedPrompt": "What purchases were part of our movie nights?"
+                },
+                {
+                    "id": "fab_ask_agent_voice",
+                    "label": "Ask by Voice",
+                    "icon": "mic",
+                    "action": "agent:voice",
+                    "suggestedPrompt": "Which memories include Joe?"
+                }
+            ]
+        }
+    }
+}

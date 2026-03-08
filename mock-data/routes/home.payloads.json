@@ -1,0 +1,248 @@
+{
+    "version": "1.0.0",
+    "route": "/home",
+    "payloads": {
+        "empty": {
+            "header": {
+                "title": "Home",
+                "searchPlaceholder": "Search purchases, things, people, memories"
+            },
+            "hero": {
+                "headline": "Turn purchases into understanding",
+                "primaryCta": {
+                    "label": "Add Purchase",
+                    "action": "fab:add_purchase"
+                },
+                "secondaryCta": {
+                    "label": "Record Experience",
+                    "action": "fab:record_experience"
+                }
+            },
+            "summary": null,
+            "reviewQueue": [],
+            "recentReceipts": [],
+            "thingsSummary": null,
+            "memorySuggestions": [],
+            "insightCards": [],
+            "upgradeCard": null
+        },
+        "first_use": {
+            "header": {
+                "title": "Home",
+                "searchPlaceholder": "Search purchases, things, people, memories"
+            },
+            "hero": {
+                "headline": "You’re off to a good start",
+                "primaryCta": {
+                    "label": "Scan Receipt",
+                    "action": "fab:scan_receipt"
+                },
+                "secondaryCta": {
+                    "label": "Ask Agent",
+                    "action": "fab:ask_agent_chat"
+                }
+            },
+            "summary": {
+                "periodLabel": "Last 30 days",
+                "purchaseCount": 2,
+                "totalSpend": 48.72,
+                "currency": "USD"
+            },
+            "reviewQueue": [
+                {
+                    "id": "pe_1002",
+                    "merchantName": "Trader Joe's",
+                    "purchasedAt": "2026-03-07T17:42:00-08:00",
+                    "status": "needs_review",
+                    "lineItemCount": 7,
+                    "grandTotal": 32.17,
+                    "currency": "USD"
+                }
+            ],
+            "recentReceipts": [
+                {
+                    "id": "pe_1001",
+                    "merchantName": "Blue Bottle Coffee",
+                    "purchasedAt": "2026-03-06T08:15:00-08:00",
+                    "status": "trusted",
+                    "lineItemCount": 2,
+                    "grandTotal": 16.55,
+                    "currency": "USD"
+                }
+            ],
+            "thingsSummary": {
+                "ownedThingsCount": 1,
+                "recentThingLabel": "Fellow Carter Mug"
+            },
+            "memorySuggestions": [
+                {
+                    "id": "mem_2001",
+                    "memoryState": "candidate",
+                    "suggestedTitle": "Coffee before work",
+                    "startsAt": "2026-03-06T08:15:00-08:00",
+                    "placeLabel": "Blue Bottle Coffee",
+                    "relatedPurchaseEventIds": [
+                        "pe_1001"
+                    ]
+                }
+            ],
+            "insightCards": [
+                {
+                    "id": "ins_3001",
+                    "type": "small_summary",
+                    "title": "Food away from home",
+                    "body": "Most of your recent spend is on quick meals and coffee."
+                }
+            ],
+            "upgradeCard": null
+        },
+        "populated_family": {
+            "header": {
+                "title": "Home",
+                "searchPlaceholder": "Search purchases, things, people, memories"
+            },
+            "hero": {
+                "headline": "Keep your household organized",
+                "primaryCta": {
+                    "label": "Add Purchase",
+                    "action": "fab:add_purchase"
+                },
+                "secondaryCta": {
+                    "label": "Ask Agent",
+                    "action": "fab:ask_agent_chat"
+                }
+            },
+            "summary": {
+                "periodLabel": "Last 30 days",
+                "purchaseCount": 42,
+                "totalSpend": 1824.39,
+                "currency": "USD"
+            },
+            "reviewQueue": [
+                {
+                    "id": "pe_1101",
+                    "merchantName": "Costco",
+                    "purchasedAt": "2026-03-05T15:24:00-08:00",
+                    "status": "needs_review",
+                    "lineItemCount": 18,
+                    "grandTotal": 246.13,
+                    "currency": "USD"
+                },
+                {
+                    "id": "pe_1102",
+                    "merchantName": "Target",
+                    "purchasedAt": "2026-03-04T18:11:00-08:00",
+                    "status": "needs_review",
+                    "lineItemCount": 9,
+                    "grandTotal": 88.72,
+                    "currency": "USD"
+                }
+            ],
+            "recentReceipts": [
+                {
+                    "id": "pe_1103",
+                    "merchantName": "AMC Metreon",
+                    "purchasedAt": "2026-03-02T19:05:00-08:00",
+                    "status": "trusted",
+                    "lineItemCount": 4,
+                    "grandTotal": 64.18,
+                    "currency": "USD"
+                },
+                {
+                    "id": "pe_1104",
+                    "merchantName": "Safeway",
+                    "purchasedAt": "2026-03-01T12:22:00-08:00",
+                    "status": "trusted",
+                    "lineItemCount": 15,
+                    "grandTotal": 121.49,
+                    "currency": "USD"
+                }
+            ],
+            "thingsSummary": {
+                "ownedThingsCount": 23,
+                "warrantyExpiringCount": 2,
+                "insuranceReadyCount": 5
+            },
+            "memorySuggestions": [
+                {
+                    "id": "mem_2101",
+                    "memoryState": "candidate",
+                    "suggestedTitle": "Movie night with the kids",
+                    "startsAt": "2026-03-02T18:45:00-08:00",
+                    "placeLabel": "AMC Metreon",
+                    "relatedPurchaseEventIds": [
+                        "pe_1103"
+                    ]
+                },
+                {
+                    "id": "mem_2102",
+                    "memoryState": "candidate",
+                    "suggestedTitle": "Weekend household restock",
+                    "startsAt": "2026-03-05T15:24:00-08:00",
+                    "placeLabel": "Costco",
+                    "relatedPurchaseEventIds": [
+                        "pe_1101"
+                    ]
+                }
+            ],
+            "insightCards": [
+                {
+                    "id": "ins_3101",
+                    "type": "cook_vs_eat_out",
+                    "title": "Cook vs Eat Out vs Delivery",
+                    "body": "Groceries were up 12%, but delivery was down 18% compared with last month.",
+                    "metrics": {
+                        "groceries": 612.42,
+                        "eatOut": 281.33,
+                        "delivery": 144.92,
+                        "currency": "USD"
+                    }
+                }
+            ],
+            "upgradeCard": {
+                "id": "up_5001",
+                "tier": "family_pro",
+                "title": "Share household context",
+                "body": "Upgrade to Family Pro to collaborate on Things, Memories, and shared purchases.",
+                "ctaLabel": "See Family Pro"
+            }
+        },
+        "conversion_personal_pro": {
+            "header": {
+                "title": "Home",
+                "searchPlaceholder": "Search purchases, things, people, memories"
+            },
+            "hero": {
+                "headline": "You’ve reached the Free receipt limit",
+                "primaryCta": {
+                    "label": "Upgrade to Personal Pro",
+                    "action": "plans:personal_pro"
+                },
+                "secondaryCta": {
+                    "label": "Review your plan",
+                    "action": "route:/plans"
+                }
+            },
+            "summary": {
+                "periodLabel": "All time",
+                "purchaseCount": 100,
+                "totalSpend": 4217.94,
+                "currency": "USD"
+            },
+            "reviewQueue": [],
+            "recentReceipts": [],
+            "thingsSummary": {
+                "ownedThingsCount": 9
+            },
+            "memorySuggestions": [],
+            "insightCards": [],
+            "upgradeCard": {
+                "id": "up_5002",
+                "tier": "personal_pro",
+                "title": "Unlock unlimited receipts",
+                "body": "Get unlimited receipts, warranties, manuals, and stronger agent help.",
+                "ctaLabel": "Upgrade now"
+            }
+        }
+    }
+}

@@ -1,0 +1,96 @@
+{
+    "version": "1.0.0",
+    "route": "/people/:personId",
+    "payloads": {
+        "friend_detail": {
+            "person": {
+                "id": "person_8005",
+                "displayName": "Joe",
+                "relationshipType": "friend",
+                "notes": "Usually connected to dinners and movie nights."
+            },
+            "summary": {
+                "linkedPurchaseCount": 6,
+                "linkedMemoryCount": 4,
+                "giftCount": 0
+            },
+            "recentPurchases": [
+                {
+                    "purchaseEventId": "pe_1301",
+                    "merchantName": "Nopa",
+                    "purchasedAt": "2026-02-21T20:14:00-08:00",
+                    "grandTotal": 128.44,
+                    "role": "participant"
+                },
+                {
+                    "purchaseEventId": "pe_1302",
+                    "merchantName": "Alamo Drafthouse",
+                    "purchasedAt": "2026-01-17T18:32:00-08:00",
+                    "grandTotal": 46.2,
+                    "role": "participant"
+                }
+            ],
+            "memories": [
+                {
+                    "id": "mem_2301",
+                    "title": "Dinner with Joe",
+                    "memoryState": "confirmed",
+                    "startsAt": "2026-02-21T20:00:00-08:00"
+                },
+                {
+                    "id": "mem_2302",
+                    "title": "Movie night with Joe",
+                    "memoryState": "confirmed",
+                    "startsAt": "2026-01-17T18:20:00-08:00"
+                }
+            ],
+            "gifts": []
+        },
+        "child_detail": {
+            "person": {
+                "id": "person_8002",
+                "displayName": "Coco",
+                "relationshipType": "child",
+                "notes": "Soccer-related activities and school events."
+            },
+            "summary": {
+                "linkedPurchaseCount": 14,
+                "linkedMemoryCount": 8,
+                "giftCount": 3
+            },
+            "recentPurchases": [
+                {
+                    "purchaseEventId": "pe_1501",
+                    "merchantName": "Sports Basement",
+                    "purchasedAt": "2026-03-03T14:25:00-08:00",
+                    "grandTotal": 86.5,
+                    "role": "beneficiary"
+                },
+                {
+                    "purchaseEventId": "pe_1502",
+                    "merchantName": "Hudl TV",
+                    "purchasedAt": "2026-03-07T08:10:00-08:00",
+                    "grandTotal": 15.75,
+                    "role": "participant"
+                }
+            ],
+            "memories": [
+                {
+                    "id": "mem_2601",
+                    "title": "Soccer tournament weekend",
+                    "memoryState": "candidate",
+                    "startsAt": "2026-03-07T08:00:00-08:00"
+                }
+            ],
+            "gifts": [
+                {
+                    "purchaseEventId": "pe_1503",
+                    "merchantName": "Target",
+                    "purchasedAt": "2025-12-12T18:11:00-08:00",
+                    "grandTotal": 49.99,
+                    "role": "gift_for"
+                }
+            ]
+        }
+    }
+}

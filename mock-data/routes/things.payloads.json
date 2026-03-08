@@ -1,0 +1,219 @@
+{
+    "version": "1.0.0",
+    "route": "/things",
+    "payloads": {
+        "empty": {
+            "header": {
+                "title": "Things",
+                "viewOptions": [
+                    "Things Overview",
+                    "By Category",
+                    "By Merchant",
+                    "Owned Things",
+                    "Consumables"
+                ],
+                "selectedView": "Things Overview"
+            },
+            "actionStrip": [
+                "Returns",
+                "Warranty",
+                "Insurance"
+            ],
+            "summary": {
+                "headline": "Your purchases become Things here",
+                "body": "As receipts are reviewed, durable items and grouped purchases become easier to understand and manage."
+            },
+            "visualization": null,
+            "groups": [],
+            "ownedThings": [],
+            "upgradeCard": null
+        },
+        "overview_populated": {
+            "header": {
+                "title": "Things",
+                "viewOptions": [
+                    "Things Overview",
+                    "By Category",
+                    "By Merchant",
+                    "Owned Things",
+                    "Consumables"
+                ],
+                "selectedView": "Things Overview"
+            },
+            "actionStrip": [
+                "Returns",
+                "Warranty",
+                "Insurance"
+            ],
+            "summary": {
+                "dateRangeLabel": "Last 30 days",
+                "thingCount": 68,
+                "ownedThingCount": 12,
+                "consumableCount": 56
+            },
+            "visualization": {
+                "type": "treemap",
+                "series": [
+                    {
+                        "id": "grp_1",
+                        "label": "Food at Home",
+                        "value": 612.42
+                    },
+                    {
+                        "id": "grp_2",
+                        "label": "Dining Out",
+                        "value": 281.33
+                    },
+                    {
+                        "id": "grp_3",
+                        "label": "Household",
+                        "value": 194.28
+                    },
+                    {
+                        "id": "grp_4",
+                        "label": "Kids",
+                        "value": 138.91
+                    },
+                    {
+                        "id": "grp_5",
+                        "label": "Entertainment",
+                        "value": 94.40
+                    }
+                ]
+            },
+            "groups": [
+                {
+                    "id": "grp_1",
+                    "label": "Food at Home",
+                    "thingCount": 24,
+                    "totalSpend": 612.42,
+                    "topItems": [
+                        "Greek Yogurt",
+                        "Chicken Thighs",
+                        "Pasta Sauce"
+                    ]
+                },
+                {
+                    "id": "grp_3",
+                    "label": "Household",
+                    "thingCount": 8,
+                    "totalSpend": 194.28,
+                    "topItems": [
+                        "Paper Towels",
+                        "Dish Soap",
+                        "Storage Bins"
+                    ]
+                }
+            ],
+            "ownedThings": [
+                {
+                    "id": "asset_7001",
+                    "displayName": "Dyson V8 Vacuum",
+                    "status": "active",
+                    "purchasePrice": 349.99,
+                    "purchaseDate": "2025-11-14",
+                    "hasWarranty": true,
+                    "hasManual": true
+                },
+                {
+                    "id": "asset_7002",
+                    "displayName": "LG OLED TV",
+                    "status": "active",
+                    "purchasePrice": 1799.99,
+                    "purchaseDate": "2025-06-02",
+                    "hasWarranty": true,
+                    "hasManual": true
+                }
+            ],
+            "upgradeCard": null
+        },
+        "owned_things": {
+            "header": {
+                "title": "Things",
+                "viewOptions": [
+                    "Things Overview",
+                    "By Category",
+                    "By Merchant",
+                    "Owned Things",
+                    "Consumables"
+                ],
+                "selectedView": "Owned Things"
+            },
+            "actionStrip": [
+                "Returns",
+                "Warranty",
+                "Insurance"
+            ],
+            "summary": {
+                "ownedThingCount": 14,
+                "warrantyExpiringCount": 2
+            },
+            "visualization": null,
+            "groups": [],
+            "ownedThings": [
+                {
+                    "id": "asset_7101",
+                    "displayName": "Nespresso Machine",
+                    "category": "Appliance",
+                    "purchasePrice": 249.00,
+                    "purchaseDate": "2025-12-22",
+                    "hasWarranty": true,
+                    "warrantyEndsAt": "2026-12-22",
+                    "docCount": 2
+                },
+                {
+                    "id": "asset_7102",
+                    "displayName": "Patio Heater",
+                    "category": "Home",
+                    "purchasePrice": 189.00,
+                    "purchaseDate": "2025-10-10",
+                    "hasWarranty": false,
+                    "docCount": 1
+                }
+            ],
+            "upgradeCard": null
+        },
+        "premium_gate_warranty": {
+            "header": {
+                "title": "Things",
+                "viewOptions": [
+                    "Things Overview",
+                    "By Category",
+                    "By Merchant",
+                    "Owned Things",
+                    "Consumables"
+                ],
+                "selectedView": "Owned Things"
+            },
+            "actionStrip": [
+                "Returns",
+                "Warranty",
+                "Insurance"
+            ],
+            "summary": {
+                "headline": "Warranty tracking is part of Personal Pro",
+                "body": "Unlock manuals, warranty dates, and agent help for the Things you own."
+            },
+            "visualization": null,
+            "groups": [],
+            "ownedThings": [
+                {
+                    "id": "asset_7201",
+                    "displayName": "Air Fryer",
+                    "category": "Appliance",
+                    "purchasePrice": 119.99,
+                    "purchaseDate": "2025-09-18",
+                    "hasWarranty": true,
+                    "locked": true
+                }
+            ],
+            "upgradeCard": {
+                "id": "up_5201",
+                "tier": "personal_pro",
+                "title": "Unlock warranty and manuals",
+                "body": "Track important Things with warranty coverage and supporting documents.",
+                "ctaLabel": "Upgrade to Personal Pro"
+            }
+        }
+    }
+}

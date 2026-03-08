@@ -1,0 +1,54 @@
+{
+    "version": "1.0.0",
+    "route": "/account",
+    "payloads": {
+        "default": {
+            "profile": {
+                "displayName": "Daniel",
+                "email": "daniel@example.com",
+                "planTier": "personal_pro",
+                "householdName": "Daniel Household"
+            },
+            "subscription": {
+                "planTier": "personal_pro",
+                "billingStatus": "active",
+                "renewalAt": "2026-04-01T00:00:00Z"
+            },
+            "sessions": [
+                {
+                    "id": "sess_1",
+                    "deviceLabel": "iPhone 15 Pro",
+                    "lastActiveAt": "2026-03-08T08:02:00-08:00",
+                    "current": true
+                },
+                {
+                    "id": "sess_2",
+                    "deviceLabel": "MacBook Pro",
+                    "lastActiveAt": "2026-03-07T21:11:00-08:00",
+                    "current": false
+                }
+            ],
+            "householdMemberships": [
+                {
+                    "householdId": "hh_1001",
+                    "householdName": "Daniel Household",
+                    "role": "owner"
+                }
+            ],
+            "actions": [
+                {
+                    "label": "Manage plan",
+                    "route": "/plans"
+                },
+                {
+                    "label": "Export my data",
+                    "route": "/account/export"
+                },
+                {
+                    "label": "Delete account",
+                    "route": "/account/delete"
+                }
+            ]
+        }
+    }
+}

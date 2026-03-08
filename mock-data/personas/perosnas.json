@@ -1,0 +1,293 @@
+{
+    "version": "1.0.0",
+    "personas": [
+        {
+            "id": "teen",
+            "label": "Teen",
+            "summary": "Young user with light purchases, social events, and first ownership habits.",
+            "householdType": "family_member",
+            "jobsToBeDone": [
+                "Find recent purchases quickly",
+                "Track small spending habits",
+                "Remember purchases linked to outings and friends"
+            ],
+            "keyRoutes": [
+                "home",
+                "memories",
+                "people"
+            ],
+            "premiumTriggers": [
+                "receipt_limit",
+                "warranty_interest_low"
+            ]
+        },
+        {
+            "id": "parent_2_2",
+            "label": "Parent in 2-adult 2-child household",
+            "summary": "Busy family organizer managing groceries, household, school, kids, and home spend.",
+            "householdType": "family",
+            "jobsToBeDone": [
+                "Understand where family money goes day to day",
+                "Track Things, warranties, and shared household purchases",
+                "Connect receipts to family events and people"
+            ],
+            "keyRoutes": [
+                "home",
+                "things",
+                "people",
+                "memories"
+            ],
+            "premiumTriggers": [
+                "warranty",
+                "shared_household",
+                "insurance"
+            ]
+        },
+        {
+            "id": "single_adult_male",
+            "label": "Single Adult Male",
+            "summary": "Independent user focused on purchases, gear, meals, and repeat spend habits.",
+            "householdType": "personal",
+            "jobsToBeDone": [
+                "Track what I spend on food, gear, and essentials",
+                "Find receipts and owned items fast",
+                "Ask questions about things I bought"
+            ],
+            "keyRoutes": [
+                "home",
+                "things"
+            ],
+            "premiumTriggers": [
+                "unlimited_receipts",
+                "warranty",
+                "manuals"
+            ]
+        },
+        {
+            "id": "single_adult_female",
+            "label": "Single Adult Female",
+            "summary": "Independent user focused on household, lifestyle, purchases, and meaningful events.",
+            "householdType": "personal",
+            "jobsToBeDone": [
+                "Understand daily spending and value",
+                "Track what I own and when I bought it",
+                "Connect purchases to life events and people"
+            ],
+            "keyRoutes": [
+                "home",
+                "things",
+                "memories"
+            ],
+            "premiumTriggers": [
+                "unlimited_receipts",
+                "warranty",
+                "insights"
+            ]
+        },
+        {
+            "id": "couple_pet",
+            "label": "Couple with Pet",
+            "summary": "Shared life with home, pet care, groceries, outings, and household ownership.",
+            "householdType": "family",
+            "jobsToBeDone": [
+                "Track shared spending and household purchases",
+                "Manage pet and home-related Things",
+                "Capture memories of shared outings"
+            ],
+            "keyRoutes": [
+                "home",
+                "things",
+                "people",
+                "memories"
+            ],
+            "premiumTriggers": [
+                "family_sharing",
+                "warranty",
+                "household_collab"
+            ]
+        },
+        {
+            "id": "single_parent",
+            "label": "Single Parent",
+            "summary": "Time-constrained manager of child-related spend, essentials, events, and memories.",
+            "householdType": "family",
+            "jobsToBeDone": [
+                "Keep up with child and household purchases",
+                "See what daily life is costing",
+                "Connect expenses to child and family events"
+            ],
+            "keyRoutes": [
+                "home",
+                "people",
+                "memories",
+                "things"
+            ],
+            "premiumTriggers": [
+                "family_features",
+                "warranty",
+                "insurance"
+            ]
+        },
+        {
+            "id": "grandparents",
+            "label": "Grandparents",
+            "summary": "Older household with gifts, family events, home maintenance, and meaningful memories.",
+            "householdType": "family",
+            "jobsToBeDone": [
+                "Track meaningful purchases and gifts",
+                "Manage owned Things and household records",
+                "Keep a timeline of family-related memories"
+            ],
+            "keyRoutes": [
+                "memories",
+                "things",
+                "people"
+            ],
+            "premiumTriggers": [
+                "warranty",
+                "manuals",
+                "family_pro"
+            ]
+        },
+        {
+            "id": "uncle",
+            "label": "Uncle",
+            "summary": "Extended family role with gifts, outings, and occasional support purchases.",
+            "householdType": "personal",
+            "jobsToBeDone": [
+                "Track gifts and event-related purchases",
+                "Connect purchases to nieces, nephews, and family events"
+            ],
+            "keyRoutes": [
+                "people",
+                "memories"
+            ],
+            "premiumTriggers": [
+                "insights",
+                "unlimited_receipts"
+            ]
+        },
+        {
+            "id": "single_elder",
+            "label": "Single Elder",
+            "summary": "Older solo user focused on household goods, care, records, and easy recall.",
+            "householdType": "personal",
+            "jobsToBeDone": [
+                "Find purchases and documents easily",
+                "Track important Things and coverage",
+                "Use an agent for simple questions"
+            ],
+            "keyRoutes": [
+                "home",
+                "things",
+                "account"
+            ],
+            "premiumTriggers": [
+                "warranty",
+                "manuals",
+                "supportive_agent"
+            ]
+        },
+        {
+            "id": "adult_caring_for_parents",
+            "label": "Adult Caring for 1 or 2 Parents",
+            "summary": "Care coordinator managing purchases, records, household details, and elder support.",
+            "householdType": "family",
+            "jobsToBeDone": [
+                "Track support-related purchases",
+                "Manage Things and records for parents",
+                "Connect purchases to people and caregiving context"
+            ],
+            "keyRoutes": [
+                "people",
+                "things",
+                "memories",
+                "home"
+            ],
+            "premiumTriggers": [
+                "family_pro",
+                "insurance",
+                "shared_household"
+            ]
+        },
+        {
+            "id": "college_student",
+            "label": "College Student / Young Adult Renter",
+            "summary": "Budget-aware user with rent-adjacent living, food, school, and social activities.",
+            "householdType": "personal",
+            "jobsToBeDone": [
+                "Track food and lifestyle spending",
+                "Understand small recurring cost patterns",
+                "Capture memories of social events and trips"
+            ],
+            "keyRoutes": [
+                "home",
+                "memories"
+            ],
+            "premiumTriggers": [
+                "receipt_limit"
+            ]
+        },
+        {
+            "id": "roommates",
+            "label": "Roommates / House-share",
+            "summary": "Shared-living scenario with overlapping grocery, household, and shared purchases.",
+            "householdType": "shared_living",
+            "jobsToBeDone": [
+                "Track shared purchases and household use items",
+                "Understand what belongs to whom",
+                "Support eventual collaboration features"
+            ],
+            "keyRoutes": [
+                "things",
+                "people",
+                "home"
+            ],
+            "premiumTriggers": [
+                "family_pro",
+                "shared_household"
+            ]
+        },
+        {
+            "id": "homeowner_diy",
+            "label": "Homeowner / DIY Improver",
+            "summary": "Home-focused user with repairs, improvements, tools, appliances, and documentation needs.",
+            "householdType": "family_or_personal",
+            "jobsToBeDone": [
+                "Track repair and home improvement purchases",
+                "Store manuals, warranties, and related docs",
+                "Understand cost trends in the home"
+            ],
+            "keyRoutes": [
+                "things",
+                "home",
+                "memories"
+            ],
+            "premiumTriggers": [
+                "warranty",
+                "insurance",
+                "docs"
+            ]
+        },
+        {
+            "id": "gig_worker",
+            "label": "Gig Worker / Side-hustle Consumer",
+            "summary": "Mixed personal and work-adjacent spending with a need for better classification and recall.",
+            "householdType": "personal",
+            "jobsToBeDone": [
+                "Separate personal and work-like purchases",
+                "Track receipts for possible reimbursement or tax use",
+                "Use search and agent to find proof quickly"
+            ],
+            "keyRoutes": [
+                "home",
+                "things",
+                "account"
+            ],
+            "premiumTriggers": [
+                "unlimited_receipts",
+                "advanced_export"
+            ]
+        }
+    ]
+}

@@ -1,0 +1,87 @@
+{
+    "version": "1.0.0",
+    "route": "/memories/:memoryId",
+    "payloads": {
+        "candidate_memory_detail": {
+            "memory": {
+                "id": "mem_2401",
+                "memoryState": "candidate",
+                "autoCreatedFlag": true,
+                "candidateConfidence": 0.88,
+                "title": null,
+                "suggestedTitle": "Meal with Joe",
+                "memoryType": "routine",
+                "startsAt": "2026-03-01T19:12:00-08:00",
+                "endsAt": "2026-03-01T21:02:00-08:00",
+                "placeLabel": "Nopa",
+                "summary": null,
+                "notes": null
+            },
+            "people": [
+                {
+                    "id": "person_8005",
+                    "displayName": "Joe",
+                    "relationshipType": "friend"
+                }
+            ],
+            "linkedPurchases": [
+                {
+                    "purchaseEventId": "pe_1401",
+                    "merchantName": "Nopa",
+                    "grandTotal": 128.44
+                }
+            ],
+            "linkedThings": [],
+            "actions": {
+                "canConfirm": true,
+                "canRename": true,
+                "canAddPeople": true,
+                "canAddNote": true,
+                "canMerge": true
+            }
+        },
+        "confirmed_memory_detail": {
+            "memory": {
+                "id": "mem_2403",
+                "memoryState": "confirmed",
+                "autoCreatedFlag": true,
+                "candidateConfidence": 0.93,
+                "title": "Movie night in Japantown",
+                "suggestedTitle": "Movie night",
+                "memoryType": "celebration",
+                "startsAt": "2026-02-14T18:30:00-08:00",
+                "endsAt": "2026-02-14T22:00:00-08:00",
+                "placeLabel": "AMC Kabuki / Japantown",
+                "summary": "Dinner after the movie.",
+                "notes": "Great night."
+            },
+            "people": [
+                {
+                    "id": "person_8001",
+                    "displayName": "Shanshan",
+                    "relationshipType": "spouse"
+                }
+            ],
+            "linkedPurchases": [
+                {
+                    "purchaseEventId": "pe_1403",
+                    "merchantName": "AMC Kabuki",
+                    "grandTotal": 42.1
+                },
+                {
+                    "purchaseEventId": "pe_1404",
+                    "merchantName": "Marufuku Ramen",
+                    "grandTotal": 58.74
+                }
+            ],
+            "linkedThings": [],
+            "actions": {
+                "canConfirm": false,
+                "canRename": true,
+                "canAddPeople": true,
+                "canAddNote": true,
+                "canMerge": true
+            }
+        }
+    }
+}

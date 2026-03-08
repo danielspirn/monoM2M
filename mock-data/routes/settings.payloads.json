@@ -1,0 +1,97 @@
+{
+    "version": "1.0.0",
+    "route": "/settings",
+    "payloads": {
+        "default": {
+            "sections": [
+                {
+                    "key": "general",
+                    "title": "General",
+                    "items": [
+                        {
+                            "type": "select",
+                            "key": "defaultCurrency",
+                            "label": "Currency",
+                            "value": "USD",
+                            "options": [
+                                "USD",
+                                "EUR",
+                                "GBP"
+                            ]
+                        },
+                        {
+                            "type": "select",
+                            "key": "timezone",
+                            "label": "Timezone",
+                            "value": "America/Los_Angeles",
+                            "options": [
+                                "America/Los_Angeles",
+                                "America/New_York"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "key": "capture",
+                    "title": "Receipt Capture",
+                    "items": [
+                        {
+                            "type": "toggle",
+                            "key": "autoOpenReview",
+                            "label": "Open review after scan",
+                            "value": true
+                        },
+                        {
+                            "type": "toggle",
+                            "key": "saveOriginalReceipts",
+                            "label": "Keep original uploads",
+                            "value": true
+                        }
+                    ]
+                },
+                {
+                    "key": "notifications",
+                    "title": "Notifications",
+                    "items": [
+                        {
+                            "type": "toggle",
+                            "key": "receiptReviewReminders",
+                            "label": "Receipt review reminders",
+                            "value": true
+                        },
+                        {
+                            "type": "toggle",
+                            "key": "warrantyAlerts",
+                            "label": "Warranty alerts",
+                            "value": true
+                        }
+                    ]
+                },
+                {
+                    "key": "privacy",
+                    "title": "Privacy",
+                    "items": [
+                        {
+                            "type": "link",
+                            "key": "privacyControls",
+                            "label": "Privacy & Security",
+                            "route": "/settings/privacy"
+                        },
+                        {
+                            "type": "link",
+                            "key": "exportData",
+                            "label": "Export my data",
+                            "route": "/account/export"
+                        },
+                        {
+                            "type": "link",
+                            "key": "deleteAccount",
+                            "label": "Delete account",
+                            "route": "/account/delete"
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

@@ -1,0 +1,47 @@
+{
+    "version": "1.0.0",
+    "route": "upgrade_modal",
+    "payloads": {
+        "personal_pro_warranty": {
+            "context": "warranty",
+            "title": "Unlock warranty tracking",
+            "body": "Personal Pro helps you keep manuals, warranty dates, and supporting docs for the Things you own.",
+            "tier": "personal_pro",
+            "features": [
+                "Unlimited receipts",
+                "Warranty and manuals",
+                "Better Things management",
+                "Stronger agent help"
+            ],
+            "primaryCta": "Upgrade to Personal Pro",
+            "secondaryCta": "Maybe later"
+        },
+        "personal_pro_receipt_limit": {
+            "context": "receipt_limit",
+            "title": "You’ve reached the Free receipt limit",
+            "body": "Upgrade to keep adding receipts and build a complete history of your spending and Things.",
+            "tier": "personal_pro",
+            "features": [
+                "Unlimited receipts",
+                "Search across all receipts",
+                "Better agent answers",
+                "Warranty support"
+            ],
+            "primaryCta": "Upgrade now",
+            "secondaryCta": "View plans"
+        },
+        "family_pro_shared": {
+            "context": "shared_household",
+            "title": "Bring your household together",
+            "body": "Family Pro lets you share Things, Memories, and household context with the people you live with.",
+            "tier": "family_pro",
+            "features": [
+                "Shared household collaboration",
+                "Shared Things and Memories",
+                "People-linked household context"
+            ],
+            "primaryCta": "See Family Pro",
+            "secondaryCta": "Maybe later"
+        }
+    }
+}

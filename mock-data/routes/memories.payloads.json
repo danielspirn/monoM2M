@@ -1,0 +1,154 @@
+{
+    "version": "1.0.0",
+    "route": "/memories",
+    "payloads": {
+        "empty": {
+            "header": {
+                "title": "Memories",
+                "viewOptions": [
+                    "Timeline",
+                    "Map",
+                    "People"
+                ],
+                "selectedView": "Timeline"
+            },
+            "actionStrip": [
+                "Timeline",
+                "Map",
+                "People"
+            ],
+            "summary": {
+                "headline": "Memories grow from real life",
+                "body": "Receipts, places, and time can become memory candidates you can keep, rename, and enrich."
+            },
+            "timeline": [],
+            "selectedMemory": null
+        },
+        "candidate_timeline": {
+            "header": {
+                "title": "Memories",
+                "viewOptions": [
+                    "Timeline",
+                    "Map",
+                    "People"
+                ],
+                "selectedView": "Timeline"
+            },
+            "actionStrip": [
+                "Timeline",
+                "Map",
+                "People"
+            ],
+            "summary": {
+                "candidateCount": 4,
+                "confirmedCount": 2
+            },
+            "timeline": [
+                {
+                    "id": "mem_2401",
+                    "memoryState": "candidate",
+                    "autoCreatedFlag": true,
+                    "candidateConfidence": 0.88,
+                    "suggestedTitle": "Meal with Joe",
+                    "title": null,
+                    "startsAt": "2026-03-01T19:12:00-08:00",
+                    "endsAt": "2026-03-01T21:02:00-08:00",
+                    "placeLabel": "Nopa",
+                    "relatedPurchaseEventIds": [
+                        "pe_1401"
+                    ],
+                    "peoplePreview": [
+                        "Joe"
+                    ],
+                    "notes": null
+                },
+                {
+                    "id": "mem_2402",
+                    "memoryState": "candidate",
+                    "autoCreatedFlag": true,
+                    "candidateConfidence": 0.76,
+                    "suggestedTitle": "Gift purchase for Kate",
+                    "title": null,
+                    "startsAt": "2026-02-27T16:40:00-08:00",
+                    "endsAt": null,
+                    "placeLabel": "Target",
+                    "relatedPurchaseEventIds": [
+                        "pe_1402"
+                    ],
+                    "peoplePreview": [
+                        "Kate"
+                    ],
+                    "notes": null
+                },
+                {
+                    "id": "mem_2403",
+                    "memoryState": "confirmed",
+                    "autoCreatedFlag": true,
+                    "candidateConfidence": 0.93,
+                    "suggestedTitle": "Movie night",
+                    "title": "Movie night in Japantown",
+                    "startsAt": "2026-02-14T18:30:00-08:00",
+                    "endsAt": "2026-02-14T22:00:00-08:00",
+                    "placeLabel": "AMC Kabuki",
+                    "relatedPurchaseEventIds": [
+                        "pe_1403",
+                        "pe_1404"
+                    ],
+                    "peoplePreview": [
+                        "Shanshan"
+                    ],
+                    "notes": "Dinner after the movie."
+                }
+            ],
+            "selectedMemory": null
+        },
+        "confirmed_detail": {
+            "header": {
+                "title": "Memories",
+                "viewOptions": [
+                    "Timeline",
+                    "Map",
+                    "People"
+                ],
+                "selectedView": "Timeline"
+            },
+            "actionStrip": [
+                "Timeline",
+                "Map",
+                "People"
+            ],
+            "summary": null,
+            "timeline": [],
+            "selectedMemory": {
+                "id": "mem_2403",
+                "memoryState": "confirmed",
+                "title": "Movie night in Japantown",
+                "memoryType": "celebration",
+                "startsAt": "2026-02-14T18:30:00-08:00",
+                "endsAt": "2026-02-14T22:00:00-08:00",
+                "placeLabel": "AMC Kabuki / Japantown",
+                "people": [
+                    {
+                        "id": "person_8001",
+                        "displayName": "Shanshan",
+                        "relationshipType": "spouse"
+                    }
+                ],
+                "linkedPurchases": [
+                    {
+                        "purchaseEventId": "pe_1403",
+                        "merchantName": "AMC Kabuki",
+                        "grandTotal": 42.10
+                    },
+                    {
+                        "purchaseEventId": "pe_1404",
+                        "merchantName": "Marufuku Ramen",
+                        "grandTotal": 58.74
+                    }
+                ],
+                "linkedThings": [],
+                "notes": "Dinner after the movie. Great night."
+            }
+        }
+    }
+}

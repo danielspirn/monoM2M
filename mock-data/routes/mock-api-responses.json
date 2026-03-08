@@ -1,0 +1,93 @@
+{
+    "version": "1.0.0",
+    "app": "money-to-memories",
+    "routes": {
+        "/home": {
+            "defaultStateByPersona": {
+                "teen": "empty",
+                "college_student": "first_use",
+                "single_adult_male": "first_use",
+                "single_adult_female": "populated_light",
+                "couple_pet": "populated_family",
+                "parent_2_2": "populated_family",
+                "single_parent": "populated_family",
+                "grandparents": "populated_family",
+                "uncle": "first_use",
+                "single_elder": "first_use",
+                "adult_caring_for_parents": "populated_family",
+                "roommates": "first_use",
+                "homeowner_diy": "populated_family",
+                "gig_worker": "first_use"
+            }
+        },
+        "/things": {
+            "defaultStateByPersona": {
+                "teen": "empty",
+                "college_student": "empty",
+                "single_adult_male": "overview_populated",
+                "single_adult_female": "overview_populated",
+                "couple_pet": "overview_populated",
+                "parent_2_2": "overview_populated",
+                "single_parent": "overview_populated",
+                "grandparents": "owned_things",
+                "uncle": "overview_populated",
+                "single_elder": "owned_things",
+                "adult_caring_for_parents": "owned_things",
+                "roommates": "overview_populated",
+                "homeowner_diy": "owned_things",
+                "gig_worker": "overview_populated"
+            }
+        },
+        "/people": {
+            "defaultStateByPersona": {
+                "teen": "empty",
+                "college_student": "empty",
+                "single_adult_male": "network_populated",
+                "single_adult_female": "network_populated",
+                "couple_pet": "network_populated",
+                "parent_2_2": "network_populated",
+                "single_parent": "network_populated",
+                "grandparents": "network_populated",
+                "uncle": "network_populated",
+                "single_elder": "empty",
+                "adult_caring_for_parents": "network_populated",
+                "roommates": "network_populated",
+                "homeowner_diy": "network_populated",
+                "gig_worker": "network_populated"
+            }
+        },
+        "/memories": {
+            "defaultStateByPersona": {
+                "teen": "candidate_timeline",
+                "college_student": "candidate_timeline",
+                "single_adult_male": "candidate_timeline",
+                "single_adult_female": "candidate_timeline",
+                "couple_pet": "candidate_timeline",
+                "parent_2_2": "candidate_timeline",
+                "single_parent": "candidate_timeline",
+                "grandparents": "confirmed_detail",
+                "uncle": "candidate_timeline",
+                "single_elder": "empty",
+                "adult_caring_for_parents": "candidate_timeline",
+                "roommates": "candidate_timeline",
+                "homeowner_diy": "candidate_timeline",
+                "gig_worker": "candidate_timeline"
+            }
+        },
+        "/settings": {
+            "defaultStateByPersona": {
+                "all": "default"
+            }
+        },
+        "/account": {
+            "defaultStateByPersona": {
+                "all": "default"
+            }
+        },
+        "/plans": {
+            "defaultStateByPersona": {
+                "all": "comparison"
+            }
+        }
+    }
+}

@@ -1,0 +1,220 @@
+{
+    "version": "1.0.0",
+    "route": "/people",
+    "payloads": {
+        "empty": {
+            "header": {
+                "title": "People",
+                "viewOptions": [
+                    "Circles Network",
+                    "List",
+                    "Household",
+                    "Gifts",
+                    "Shared"
+                ],
+                "selectedView": "Circles Network"
+            },
+            "actionStrip": [
+                "Household",
+                "Gifts",
+                "Shared"
+            ],
+            "summary": {
+                "headline": "Connect purchases to people",
+                "body": "Tag who you were with, who something was for, and who matters in your spending story."
+            },
+            "network": {
+                "rings": []
+            },
+            "people": [],
+            "selectedPerson": null,
+            "upgradeCard": null
+        },
+        "network_populated": {
+            "header": {
+                "title": "People",
+                "viewOptions": [
+                    "Circles Network",
+                    "List",
+                    "Household",
+                    "Gifts",
+                    "Shared"
+                ],
+                "selectedView": "Circles Network"
+            },
+            "actionStrip": [
+                "Household",
+                "Gifts",
+                "Shared"
+            ],
+            "summary": {
+                "personCount": 8,
+                "linkedMemoryCount": 12,
+                "giftCount": 5
+            },
+            "network": {
+                "rings": [
+                    {
+                        "label": "Family",
+                        "count": 4,
+                        "nodes": [
+                            {
+                                "id": "person_8001",
+                                "label": "Shanshan",
+                                "relationshipType": "spouse"
+                            },
+                            {
+                                "id": "person_8002",
+                                "label": "Coco",
+                                "relationshipType": "child"
+                            },
+                            {
+                                "id": "person_8003",
+                                "label": "Mom",
+                                "relationshipType": "parent"
+                            },
+                            {
+                                "id": "person_8004",
+                                "label": "Dad",
+                                "relationshipType": "parent"
+                            }
+                        ]
+                    },
+                    {
+                        "label": "Friends",
+                        "count": 3,
+                        "nodes": [
+                            {
+                                "id": "person_8005",
+                                "label": "Joe",
+                                "relationshipType": "friend"
+                            },
+                            {
+                                "id": "person_8006",
+                                "label": "Kate",
+                                "relationshipType": "friend"
+                            },
+                            {
+                                "id": "person_8007",
+                                "label": "Mike",
+                                "relationshipType": "coworker"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "people": [
+                {
+                    "id": "person_8005",
+                    "displayName": "Joe",
+                    "relationshipType": "friend",
+                    "linkedPurchaseCount": 6,
+                    "linkedMemoryCount": 4,
+                    "giftCount": 0
+                },
+                {
+                    "id": "person_8006",
+                    "displayName": "Kate",
+                    "relationshipType": "friend",
+                    "linkedPurchaseCount": 3,
+                    "linkedMemoryCount": 2,
+                    "giftCount": 2
+                }
+            ],
+            "selectedPerson": null,
+            "upgradeCard": null
+        },
+        "person_detail_populated": {
+            "header": {
+                "title": "People",
+                "viewOptions": [
+                    "Circles Network",
+                    "List",
+                    "Household",
+                    "Gifts",
+                    "Shared"
+                ],
+                "selectedView": "List"
+            },
+            "actionStrip": [
+                "Household",
+                "Gifts",
+                "Shared"
+            ],
+            "summary": {
+                "headline": "Joe",
+                "subheadline": "Friend"
+            },
+            "network": null,
+            "people": [],
+            "selectedPerson": {
+                "id": "person_8005",
+                "displayName": "Joe",
+                "relationshipType": "friend",
+                "notes": "Often connected to dinners and movie nights.",
+                "linkedPurchases": [
+                    {
+                        "purchaseEventId": "pe_1301",
+                        "merchantName": "Nopa",
+                        "purchasedAt": "2026-02-21T20:14:00-08:00",
+                        "grandTotal": 128.44
+                    },
+                    {
+                        "purchaseEventId": "pe_1302",
+                        "merchantName": "Alamo Drafthouse",
+                        "purchasedAt": "2026-01-17T18:32:00-08:00",
+                        "grandTotal": 46.20
+                    }
+                ],
+                "linkedMemories": [
+                    {
+                        "memoryId": "mem_2301",
+                        "title": "Dinner with Joe",
+                        "memoryState": "confirmed",
+                        "startsAt": "2026-02-21T20:00:00-08:00"
+                    },
+                    {
+                        "memoryId": "mem_2302",
+                        "title": "Movie night with Joe",
+                        "memoryState": "confirmed",
+                        "startsAt": "2026-01-17T18:20:00-08:00"
+                    }
+                ],
+                "giftHistory": []
+            },
+            "upgradeCard": null
+        },
+        "conversion_family_pro": {
+            "header": {
+                "title": "People",
+                "viewOptions": [
+                    "Circles Network",
+                    "List",
+                    "Household",
+                    "Gifts",
+                    "Shared"
+                ],
+                "selectedView": "Household"
+            },
+            "actionStrip": [
+                "Household",
+                "Gifts",
+                "Shared"
+            ],
+            "summary": {
+                "headline": "Shared household views are part of Family Pro",
+                "body": "Collaborate on shared purchases, Things, and family memories."
+            },
+            "network": null,
+            "people": [],
+            "selectedPerson": null,
+            "upgradeCard": {
+                "id": "up_5301",
+                "tier": "family_pro",
+                "title": "Upgrade to Family Pro",
+                "body": "See shared household context and collaborate with family members.",
+                "ctaLabel": "See Family Pro"
+            }
+        }
+    }
+}

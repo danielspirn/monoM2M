@@ -1,0 +1,144 @@
+{
+    "version": "1.0.0",
+    "route": "/things/:thingId",
+    "payloads": {
+        "owned_thing_detail": {
+            "thing": {
+                "id": "asset_7001",
+                "displayName": "Dyson V8 Vacuum",
+                "assetType": "electronics",
+                "status": "active",
+                "purchasePrice": 349.99,
+                "currency": "USD",
+                "acquiredAt": "2025-11-14T13:02:00-08:00",
+                "merchantName": "Costco",
+                "serialNumber": "DY-V8-4X29",
+                "notes": "Used upstairs mainly."
+            },
+            "product": {
+                "id": "prod_3001",
+                "canonicalName": "Dyson V8 Vacuum",
+                "brand": "Dyson",
+                "modelNumber": "V8",
+                "productCategory": "Vacuum"
+            },
+            "warranty": {
+                "id": "war_1001",
+                "providerName": "Dyson",
+                "coverageType": "manufacturer",
+                "startsAt": "2025-11-14T13:02:00-08:00",
+                "endsAt": "2027-11-14T13:02:00-08:00",
+                "coverageNotes": "Standard two-year coverage."
+            },
+            "documents": [
+                {
+                    "id": "doc_1001",
+                    "title": "Dyson V8 Manual",
+                    "documentRole": "manual",
+                    "documentType": "manual"
+                },
+                {
+                    "id": "doc_1002",
+                    "title": "Costco Receipt",
+                    "documentRole": "receipt",
+                    "documentType": "receipt_pdf"
+                }
+            ],
+            "lifecycle": [
+                {
+                    "id": "life_1001",
+                    "eventType": "purchased",
+                    "eventDate": "2025-11-14T13:02:00-08:00",
+                    "notes": "Bought during Costco holiday promotion."
+                }
+            ],
+            "linkedMemories": [],
+            "linkedPeople": [],
+            "actions": {
+                "canAskAgent": true,
+                "canAddWarranty": true,
+                "canUploadDoc": true
+            }
+        },
+        "consumable_detail": {
+            "thing": {
+                "id": "line_4001",
+                "displayName": "Organic Greek Yogurt",
+                "assetType": null,
+                "status": "consumed",
+                "purchasePrice": 6.49,
+                "currency": "USD",
+                "acquiredAt": "2026-03-05T15:24:00-08:00",
+                "merchantName": "Costco",
+                "serialNumber": null,
+                "notes": null
+            },
+            "product": {
+                "id": "prod_3002",
+                "canonicalName": "Organic Greek Yogurt 32 oz",
+                "brand": "Kirkland",
+                "modelNumber": null,
+                "productCategory": "Food at Home"
+            },
+            "priceTrend": {
+                "currentObservedPrice": 6.49,
+                "previousObservedPrice": 5.99,
+                "delta": 0.5,
+                "currency": "USD",
+                "observationCount": 5
+            },
+            "documents": [],
+            "lifecycle": [],
+            "linkedMemories": [
+                {
+                    "id": "mem_2102",
+                    "title": "Weekend household restock",
+                    "memoryState": "candidate"
+                }
+            ],
+            "linkedPeople": [],
+            "actions": {
+                "canAskAgent": true,
+                "canAddWarranty": false,
+                "canUploadDoc": false
+            }
+        },
+        "premium_locked_warranty_detail": {
+            "thing": {
+                "id": "asset_7201",
+                "displayName": "Air Fryer",
+                "assetType": "appliance",
+                "status": "active",
+                "purchasePrice": 119.99,
+                "currency": "USD",
+                "acquiredAt": "2025-09-18T11:04:00-08:00",
+                "merchantName": "Target",
+                "serialNumber": null,
+                "notes": null
+            },
+            "product": {
+                "id": "prod_3901",
+                "canonicalName": "Cosori Air Fryer",
+                "brand": "Cosori",
+                "modelNumber": "AF358",
+                "productCategory": "Appliance"
+            },
+            "warranty": {
+                "locked": true
+            },
+            "documents": [],
+            "lifecycle": [],
+            "upgradeCard": {
+                "tier": "personal_pro",
+                "title": "Warranty and manuals are part of Personal Pro",
+                "body": "Track coverage and keep docs for important Things.",
+                "ctaLabel": "Upgrade"
+            },
+            "actions": {
+                "canAskAgent": true,
+                "canAddWarranty": false,
+                "canUploadDoc": false
+            }
+        }
+    }
+}

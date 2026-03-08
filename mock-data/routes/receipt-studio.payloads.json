@@ -1,0 +1,259 @@
+{
+    "version": "1.0.0",
+    "route": "/ingest/:receiptId",
+    "payloads": {
+        "processing": {
+            "receipt": {
+                "id": "rcpt_1001",
+                "status": "processing",
+                "sourceType": "receipt_image",
+                "capturedAt": "2026-03-08T08:12:00-08:00"
+            },
+            "header": {
+                "title": "Review Receipt",
+                "merchantName": null,
+                "purchasedAt": null,
+                "grandTotal": null,
+                "currency": "USD"
+            },
+            "progress": {
+                "stage": "extracting_line_items",
+                "label": "Extracting line items..."
+            },
+            "lineItems": [],
+            "evidence": null,
+            "actions": {
+                "canSave": false,
+                "canConvertToThing": false,
+                "canTagPeople": false,
+                "canAddToMemory": false
+            }
+        },
+        "needs_review": {
+            "receipt": {
+                "id": "rcpt_1002",
+                "status": "needs_review",
+                "sourceType": "receipt_image",
+                "capturedAt": "2026-03-08T08:12:00-08:00"
+            },
+            "header": {
+                "title": "Review Receipt",
+                "merchantName": "Trader Joe's",
+                "purchasedAt": "2026-03-07T17:42:00-08:00",
+                "grandTotal": 32.17,
+                "currency": "USD"
+            },
+            "progress": null,
+            "lineItems": [
+                {
+                    "id": "line_5001",
+                    "lineIndex": 1,
+                    "descriptionRaw": "ORGANIC WHOLE MILK",
+                    "descriptionNormalized": "Organic Whole Milk",
+                    "quantity": 1,
+                    "unitPrice": 4.29,
+                    "lineTotal": 4.29,
+                    "reviewState": "auto",
+                    "confidenceScore": 0.93,
+                    "assetCandidateFlag": false,
+                    "productMatchStatus": "suggested",
+                    "productMatchConfidence": 0.81,
+                    "householdTags": [
+                        "groceries",
+                        "food_at_home"
+                    ],
+                    "lemTags": [
+                        "nourishment",
+                        "routine"
+                    ]
+                },
+                {
+                    "id": "line_5002",
+                    "lineIndex": 2,
+                    "descriptionRaw": "GREEK YOGURT",
+                    "descriptionNormalized": "Greek Yogurt",
+                    "quantity": 1,
+                    "unitPrice": 6.49,
+                    "lineTotal": 6.49,
+                    "reviewState": "needs_review",
+                    "confidenceScore": 0.66,
+                    "assetCandidateFlag": false,
+                    "productMatchStatus": "unmatched",
+                    "productMatchConfidence": 0.31,
+                    "householdTags": [
+                        "groceries",
+                        "food_at_home"
+                    ],
+                    "lemTags": [
+                        "nourishment"
+                    ]
+                },
+                {
+                    "id": "line_5003",
+                    "lineIndex": 3,
+                    "descriptionRaw": "STORAGE BIN",
+                    "descriptionNormalized": "Storage Bin",
+                    "quantity": 1,
+                    "unitPrice": 12.99,
+                    "lineTotal": 12.99,
+                    "reviewState": "auto",
+                    "confidenceScore": 0.91,
+                    "assetCandidateFlag": true,
+                    "productMatchStatus": "suggested",
+                    "productMatchConfidence": 0.72,
+                    "householdTags": [
+                        "household_consumable"
+                    ],
+                    "lemTags": [
+                        "continuity",
+                        "home"
+                    ]
+                }
+            ],
+            "selectedLineItemId": "line_5002",
+            "evidence": {
+                "targetObjectType": "purchase_line_item",
+                "targetObjectId": "line_5002",
+                "evidenceType": "image_region",
+                "pageNumber": 1,
+                "x": 0.14,
+                "y": 0.42,
+                "width": 0.71,
+                "height": 0.05,
+                "snippet": "GREEK YOGURT 6.49"
+            },
+            "peopleSuggestions": [
+                {
+                    "id": "person_8001",
+                    "displayName": "Shanshan",
+                    "relationshipType": "spouse"
+                },
+                {
+                    "id": "person_8002",
+                    "displayName": "Coco",
+                    "relationshipType": "child"
+                }
+            ],
+            "memorySuggestions": [
+                {
+                    "id": "mem_2501",
+                    "memoryState": "candidate",
+                    "suggestedTitle": "Weekend restock run"
+                }
+            ],
+            "actions": {
+                "canSave": true,
+                "canConvertToThing": true,
+                "canTagPeople": true,
+                "canAddToMemory": true
+            }
+        },
+        "trusted": {
+            "receipt": {
+                "id": "rcpt_1003",
+                "status": "trusted",
+                "sourceType": "receipt_pdf",
+                "capturedAt": "2026-03-06T18:22:00-08:00"
+            },
+            "header": {
+                "title": "Review Receipt",
+                "merchantName": "Nopa",
+                "purchasedAt": "2026-03-06T19:42:00-08:00",
+                "grandTotal": 128.44,
+                "currency": "USD"
+            },
+            "progress": null,
+            "lineItems": [
+                {
+                    "id": "line_5101",
+                    "lineIndex": 1,
+                    "descriptionRaw": "DINNER TOTAL",
+                    "descriptionNormalized": "Dinner for 2",
+                    "quantity": 1,
+                    "unitPrice": 128.44,
+                    "lineTotal": 128.44,
+                    "reviewState": "edited",
+                    "confidenceScore": 0.95,
+                    "assetCandidateFlag": false,
+                    "productMatchStatus": "confirmed",
+                    "productMatchConfidence": 0.95,
+                    "householdTags": [
+                        "dining_out"
+                    ],
+                    "lemTags": [
+                        "connection",
+                        "celebration"
+                    ]
+                }
+            ],
+            "selectedLineItemId": null,
+            "evidence": null,
+            "peopleSuggestions": [],
+            "memorySuggestions": [
+                {
+                    "id": "mem_2502",
+                    "memoryState": "candidate",
+                    "suggestedTitle": "Dinner with Joe"
+                }
+            ],
+            "actions": {
+                "canSave": true,
+                "canConvertToThing": false,
+                "canTagPeople": true,
+                "canAddToMemory": true
+            }
+        },
+        "premium_gate_warranty_from_receipt": {
+            "receipt": {
+                "id": "rcpt_1004",
+                "status": "trusted",
+                "sourceType": "receipt_image",
+                "capturedAt": "2026-03-05T11:10:00-08:00"
+            },
+            "header": {
+                "title": "Review Receipt",
+                "merchantName": "Target",
+                "purchasedAt": "2026-03-05T11:10:00-08:00",
+                "grandTotal": 119.99,
+                "currency": "USD"
+            },
+            "lineItems": [
+                {
+                    "id": "line_5201",
+                    "lineIndex": 1,
+                    "descriptionRaw": "AIR FRYER",
+                    "descriptionNormalized": "Air Fryer",
+                    "quantity": 1,
+                    "unitPrice": 119.99,
+                    "lineTotal": 119.99,
+                    "reviewState": "edited",
+                    "confidenceScore": 0.92,
+                    "assetCandidateFlag": true,
+                    "productMatchStatus": "suggested",
+                    "productMatchConfidence": 0.74,
+                    "householdTags": [
+                        "appliance"
+                    ],
+                    "lemTags": [
+                        "convenience",
+                        "home"
+                    ]
+                }
+            ],
+            "selectedLineItemId": "line_5201",
+            "evidence": null,
+            "upgradeCard": {
+                "tier": "personal_pro",
+                "title": "Track warranty and manuals",
+                "body": "Upgrade to Personal Pro to keep docs and coverage for the Things you own.",
+                "ctaLabel": "Upgrade"
+            },
+            "actions": {
+                "canSave": true,
+                "canConvertToThing": true,
+                "canTagPeople": false,
+                "canAddToMemory": false
+            }
+        }
+    }
+}
