@@ -21,3 +21,9 @@ Before finishing:
 - confirm mocked states
 - confirm persona-switching still works
 - summarize deferred items
+
+## Frozen patterns for Milestone 2
+- keep the secondary action strip above the primary bottom navigation inside the shell bottom chrome
+- keep the branded secondary-screen header pattern for Things, People, and Memories
+- keep primary route canvases as single-column stacked sections with full-width content cards
+- keep Things and People visualizations mock-driven at the route layer until Milestone 2 contracts are finalized

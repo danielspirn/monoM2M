@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import { LogoLockup, LogoMark } from './brand';
+import { ChartSurface, type AppChartOption } from './charts';
 import { Icon } from './icons';
 
 type ButtonAction = {
@@ -299,6 +301,14 @@ type PageProps<T> = {
   onAction: (action: string) => void;
 };
 
+type SummaryMetric = {
+  label: string;
+  value: string;
+  note?: string;
+  trend?: number[];
+  tone?: 'blue' | 'green' | 'amber';
+};
+
 const money = new Intl.NumberFormat('en-US', {
   currency: 'USD',
   style: 'currency',
@@ -331,9 +341,36 @@ export function HomeView({ state, payload, onAction }: PageProps<HomePayload>) {
   }
   if (!payload) return <RouteError title="Missing Home mock" body="No payload was found for the selected state." />;
 
+  const summaryMetrics = payload.summary
+    ? [
+        {
+          label: payload.summary.periodLabel,
+          value: `${payload.summary.purchaseCount} purchases`,
+          note: 'Recent capture volume',
+          trend: buildSparklineSeed(payload.summary.purchaseCount, 7),
+          tone: 'blue',
+        },
+        {
+          label: 'Spend',
+          value: money.format(payload.summary.totalSpend),
+          note: 'Across reviewed receipts',
+          trend: buildSparklineSeed(Math.round(payload.summary.totalSpend / 22), 7),
+          tone: 'amber',
+        },
+        {
+          label: 'Things',
+          value: `${payload.thingsSummary?.ownedThingsCount ?? 0} tracked`,
+          note: payload.thingsSummary?.recentThingLabel ?? 'Ownership grows from reviewed purchases',
+          trend: buildSparklineSeed(payload.thingsSummary?.ownedThingsCount ?? 1, 7),
+          tone: 'green',
+        },
+      ] satisfies SummaryMetric[]
+    : null;
+
   return (
     <div className="route-stack">
       <section className="hero-card hero-card--home">
+        <LogoLockup className="hero-card__brand" decorative />
         <p className="eyebrow">Household clarity, one receipt at a time</p>
         <h1>{payload.hero.headline}</h1>
         <p className="hero-copy">
@@ -345,15 +382,8 @@ export function HomeView({ state, payload, onAction }: PageProps<HomePayload>) {
         </div>
       </section>
 
-      {payload.summary ? (
-        <section className="metric-row">
-          <MetricCard label={payload.summary.periodLabel} value={`${payload.summary.purchaseCount} purchases`} />
-          <MetricCard label="Spend" value={money.format(payload.summary.totalSpend)} />
-          <MetricCard
-            label="Things"
-            value={`${payload.thingsSummary?.ownedThingsCount ?? 0} tracked`}
-          />
-        </section>
+      {summaryMetrics ? (
+        <SummaryBand items={summaryMetrics} />
       ) : (
         <EmptyPanel
           title="Start with one receipt"
@@ -364,11 +394,7 @@ export function HomeView({ state, payload, onAction }: PageProps<HomePayload>) {
       )}
 
       {payload.reviewQueue.length > 0 && (
-        <SectionCard
-          title="Review queue"
-          action="Review"
-          onAction={() => onAction('open:fabsheet')}
-        >
+        <SectionCard title="Review queue" action="Review" onAction={() => onAction('open:fabsheet')}>
           <div className="card-list">
             {payload.reviewQueue.map((receipt) => (
               <ReceiptRow key={receipt.id} receipt={receipt} />
@@ -377,38 +403,36 @@ export function HomeView({ state, payload, onAction }: PageProps<HomePayload>) {
         </SectionCard>
       )}
 
-      <div className="two-up">
-        <SectionCard title="Recent receipts">
-          {payload.recentReceipts.length > 0 ? (
-            <div className="card-list">
-              {payload.recentReceipts.map((receipt) => (
-                <ReceiptRow key={receipt.id} receipt={receipt} />
-              ))}
-            </div>
-          ) : (
-            <BlankCard title="No recent receipts" body="When receipts arrive, they’ll show up here with line-item review status." />
-          )}
-        </SectionCard>
+      <SectionCard title="Recent receipts">
+        {payload.recentReceipts.length > 0 ? (
+          <div className="card-list">
+            {payload.recentReceipts.map((receipt) => (
+              <ReceiptRow key={receipt.id} receipt={receipt} />
+            ))}
+          </div>
+        ) : (
+          <BlankCard title="No recent receipts" body="When receipts arrive, they’ll show up here with line-item review status." />
+        )}
+      </SectionCard>
 
-        <SectionCard title="Things snapshot">
-          {payload.thingsSummary ? (
-            <div className="mini-stack">
-              <MetricLine label="Tracked Things" value={String(payload.thingsSummary.ownedThingsCount)} />
-              {payload.thingsSummary.recentThingLabel ? (
-                <MetricLine label="Most recent" value={payload.thingsSummary.recentThingLabel} />
-              ) : null}
-              {payload.thingsSummary.warrantyExpiringCount ? (
-                <MetricLine label="Expiring soon" value={String(payload.thingsSummary.warrantyExpiringCount)} />
-              ) : null}
-              {payload.thingsSummary.insuranceReadyCount ? (
-                <MetricLine label="Insurance ready" value={String(payload.thingsSummary.insuranceReadyCount)} />
-              ) : null}
-            </div>
-          ) : (
-            <BlankCard title="No Things yet" body="Durable items become easier to manage as purchases are reviewed." />
-          )}
-        </SectionCard>
-      </div>
+      <SectionCard title="Things snapshot">
+        {payload.thingsSummary ? (
+          <div className="mini-stack">
+            <MetricLine label="Tracked Things" value={String(payload.thingsSummary.ownedThingsCount)} />
+            {payload.thingsSummary.recentThingLabel ? (
+              <MetricLine label="Most recent" value={payload.thingsSummary.recentThingLabel} />
+            ) : null}
+            {payload.thingsSummary.warrantyExpiringCount ? (
+              <MetricLine label="Expiring soon" value={String(payload.thingsSummary.warrantyExpiringCount)} />
+            ) : null}
+            {payload.thingsSummary.insuranceReadyCount ? (
+              <MetricLine label="Insurance ready" value={String(payload.thingsSummary.insuranceReadyCount)} />
+            ) : null}
+          </div>
+        ) : (
+          <BlankCard title="No Things yet" body="Durable items become easier to manage as purchases are reviewed." />
+        )}
+      </SectionCard>
 
       <SectionCard title="Memory suggestions">
         {payload.memorySuggestions.length > 0 ? (
@@ -424,7 +448,7 @@ export function HomeView({ state, payload, onAction }: PageProps<HomePayload>) {
 
       <SectionCard title="Insights">
         {payload.insightCards.length > 0 ? (
-          <div className="insight-grid">
+          <div className="card-list">
             {payload.insightCards.map((card) => (
               <article className="insight-card" key={card.id}>
                 <div>
@@ -432,6 +456,7 @@ export function HomeView({ state, payload, onAction }: PageProps<HomePayload>) {
                   <h3>{card.title}</h3>
                 </div>
                 <p>{card.body}</p>
+                {card.metrics ? <CompactMetricBars metrics={card.metrics} /> : null}
               </article>
             ))}
           </div>
@@ -464,108 +489,143 @@ export function ThingsView({ state, payload, onAction }: PageProps<ThingsPayload
     ? null
     : (payload.summary as Exclude<ThingsPayload['summary'], { headline: string; body: string }>);
 
+  const metrics: SummaryMetric[] = thingSummaryMetrics
+    ? [
+        thingSummaryMetrics.dateRangeLabel
+          ? {
+              label: 'Window',
+              value: thingSummaryMetrics.dateRangeLabel,
+              note: 'Current grouped view',
+              trend: buildSparklineSeed(14, 7),
+              tone: 'blue',
+            }
+          : null,
+        thingSummaryMetrics.thingCount
+          ? {
+              label: 'Things',
+              value: String(thingSummaryMetrics.thingCount),
+              note: 'Grouped from reviewed purchases',
+              trend: buildSparklineSeed(thingSummaryMetrics.thingCount, 7),
+              tone: 'blue',
+            }
+          : null,
+        thingSummaryMetrics.ownedThingCount
+          ? {
+              label: 'Owned',
+              value: String(thingSummaryMetrics.ownedThingCount),
+              note: 'Durable purchases',
+              trend: buildSparklineSeed(thingSummaryMetrics.ownedThingCount, 7),
+              tone: 'green',
+            }
+          : null,
+        thingSummaryMetrics.consumableCount
+          ? {
+              label: 'Consumables',
+              value: String(thingSummaryMetrics.consumableCount),
+              note: 'Repeat-buy categories',
+              trend: buildSparklineSeed(thingSummaryMetrics.consumableCount, 7),
+              tone: 'amber',
+            }
+          : null,
+        thingSummaryMetrics.warrantyExpiringCount
+          ? {
+              label: 'Expiring',
+              value: String(thingSummaryMetrics.warrantyExpiringCount),
+              note: 'Warranty follow-up',
+              trend: buildSparklineSeed(thingSummaryMetrics.warrantyExpiringCount + 2, 7),
+              tone: 'amber',
+            }
+          : null,
+      ].filter(Boolean) as SummaryMetric[]
+    : [];
+
   return (
     <div className="route-stack">
-      <section className="route-header-card">
-        <div>
-          <p className="eyebrow">Consumer-friendly ownership</p>
-          <h1>Things</h1>
-        </div>
-        <div className="pill-select">
-          <span>{payload.header.selectedView}</span>
-          <Icon name="chevron" className="icon-sm" />
-        </div>
-      </section>
+      <ScreenToolbar
+        eyebrow="Consumer-friendly ownership"
+        title="Things"
+        selectedView={payload.header.selectedView}
+        support="Organize what you own without exposing internal asset jargon."
+      />
 
-      <section className="section-card">
-        {thingIntroSummary ? (
+      {thingIntroSummary ? (
+        <SectionCard title="Overview">
           <div className="empty-copy">
             <h2>{thingIntroSummary.headline}</h2>
             <p>{thingIntroSummary.body}</p>
           </div>
-        ) : (
-          <div className="metric-row">
-            {thingSummaryMetrics?.dateRangeLabel ? (
-              <MetricCard label="Window" value={thingSummaryMetrics.dateRangeLabel} />
-            ) : null}
-            {thingSummaryMetrics?.thingCount ? <MetricCard label="Things" value={String(thingSummaryMetrics.thingCount)} /> : null}
-            {thingSummaryMetrics?.ownedThingCount ? <MetricCard label="Owned" value={String(thingSummaryMetrics.ownedThingCount)} /> : null}
-            {thingSummaryMetrics?.consumableCount ? <MetricCard label="Consumables" value={String(thingSummaryMetrics.consumableCount)} /> : null}
-            {thingSummaryMetrics?.warrantyExpiringCount ? <MetricCard label="Expiring" value={String(thingSummaryMetrics.warrantyExpiringCount)} /> : null}
-          </div>
-        )}
-      </section>
+        </SectionCard>
+      ) : (
+        <SummaryBand items={metrics} />
+      )}
 
       {payload.visualization ? (
-        <SectionCard title="Things overview">
-          <div className="treemap-grid">
-            {payload.visualization.series.map((item, index) => (
-              <article
-                key={item.id}
-                className={`treemap-tile treemap-tile--${index % 5}`}
-                style={{ flexGrow: Math.max(item.value, 50) }}
-              >
+        <SectionCard title="Spending map">
+          <ChartSurface className="chart-surface" height={250} label="Things treemap" option={buildThingsTreemapOption(payload.visualization.series)} />
+          <div className="visual-summary-row">
+            {payload.visualization.series.map((item) => (
+              <div className="compact-count" key={item.id}>
                 <span>{item.label}</span>
                 <strong>{money.format(item.value)}</strong>
-              </article>
+              </div>
             ))}
           </div>
         </SectionCard>
       ) : null}
 
-      <div className="two-up">
-        <SectionCard title="Groups">
-          {payload.groups.length > 0 ? (
-            <div className="card-list">
-              {payload.groups.map((group) => (
-                <article className="list-card" key={group.id}>
-                  <div className="list-card__header">
+      <SectionCard title="Groups">
+        {payload.groups.length > 0 ? (
+          <div className="card-list">
+            {payload.groups.map((group) => (
+              <article className="list-card" key={group.id}>
+                <div className="list-card__header">
+                  <div>
                     <h3>{group.label}</h3>
-                    <strong>{money.format(group.totalSpend)}</strong>
+                    <p>{group.thingCount} items</p>
                   </div>
-                  <p>{group.thingCount} items</p>
-                  <div className="chip-row">
-                    {group.topItems.map((item) => (
-                      <span className="chip" key={item}>
-                        {item}
-                      </span>
-                    ))}
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <BlankCard title="Grouped views grow with history" body="Once purchases accumulate, grouped views help the user see what they own and rebuy." />
-          )}
-        </SectionCard>
+                  <strong>{money.format(group.totalSpend)}</strong>
+                </div>
+                <div className="chip-row">
+                  {group.topItems.map((item) => (
+                    <span className="chip" key={item}>
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <BlankCard title="Grouped views grow with history" body="Once purchases accumulate, grouped views help the user see what they own and rebuy." />
+        )}
+      </SectionCard>
 
-        <SectionCard title="Owned Things">
-          {payload.ownedThings.length > 0 ? (
-            <div className="card-list">
-              {payload.ownedThings.map((thing) => (
-                <article className="list-card" key={thing.id}>
-                  <div className="list-card__header">
-                    <div>
-                      <h3>{thing.displayName}</h3>
-                      <p>{thing.category ?? thing.status ?? 'Tracked Thing'}</p>
-                    </div>
-                    <strong>{money.format(thing.purchasePrice)}</strong>
+      <SectionCard title="Owned Things">
+        {payload.ownedThings.length > 0 ? (
+          <div className="card-list">
+            {payload.ownedThings.map((thing) => (
+              <article className="list-card" key={thing.id}>
+                <div className="list-card__header">
+                  <div>
+                    <h3>{thing.displayName}</h3>
+                    <p>{thing.category ?? thing.status ?? 'Tracked Thing'}</p>
                   </div>
-                  <div className="chip-row">
-                    {thing.hasWarranty ? <span className="chip chip--accent">Warranty</span> : null}
-                    {thing.hasManual ? <span className="chip">Manual</span> : null}
-                    {thing.docCount ? <span className="chip">{thing.docCount} docs</span> : null}
-                    {thing.locked ? <span className="chip chip--locked">Locked</span> : null}
-                  </div>
-                  <p>{formatDateOnly(thing.purchaseDate)}</p>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <BlankCard title="No owned Things yet" body="Important items and durable purchases will appear here once they are confirmed." />
-          )}
-        </SectionCard>
-      </div>
+                  <strong>{money.format(thing.purchasePrice)}</strong>
+                </div>
+                <div className="chip-row">
+                  {thing.hasWarranty ? <span className="chip chip--accent">Warranty</span> : null}
+                  {thing.hasManual ? <span className="chip">Manual</span> : null}
+                  {thing.docCount ? <span className="chip">{thing.docCount} docs</span> : null}
+                  {thing.locked ? <span className="chip chip--locked">Locked</span> : null}
+                </div>
+                <p>{formatDateOnly(thing.purchaseDate)}</p>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <BlankCard title="No owned Things yet" body="Important items and durable purchases will appear here once they are confirmed." />
+        )}
+      </SectionCard>
 
       {payload.upgradeCard ? <UpgradeCard data={payload.upgradeCard} onAction={onAction} /> : null}
     </div>
@@ -592,16 +652,12 @@ export function PeopleView({ state, payload, onAction }: PageProps<PeoplePayload
 
   return (
     <div className="route-stack">
-      <section className="route-header-card">
-        <div>
-          <p className="eyebrow">Grounded relationship context</p>
-          <h1>People</h1>
-        </div>
-        <div className="pill-select">
-          <span>{payload.header.selectedView}</span>
-          <Icon name="chevron" className="icon-sm" />
-        </div>
-      </section>
+      <ScreenToolbar
+        eyebrow="Grounded relationship context"
+        title="People"
+        selectedView={payload.header.selectedView}
+        support="Keep purchases, memories, and gifts anchored to real relationships."
+      />
 
       {peopleIntroSummary ? (
         <EmptyPanel
@@ -611,11 +667,31 @@ export function PeopleView({ state, payload, onAction }: PageProps<PeoplePayload
           onAction={() => onAction('agent:chat')}
         />
       ) : peopleMetricsSummary ? (
-        <section className="metric-row">
-          <MetricCard label="People" value={String(peopleMetricsSummary.personCount)} />
-          <MetricCard label="Linked memories" value={String(peopleMetricsSummary.linkedMemoryCount)} />
-          <MetricCard label="Gifts" value={String(peopleMetricsSummary.giftCount)} />
-        </section>
+        <SummaryBand
+          items={[
+            {
+              label: 'People',
+              value: String(peopleMetricsSummary.personCount),
+              note: 'Tracked relationships',
+              trend: buildSparklineSeed(peopleMetricsSummary.personCount, 7),
+              tone: 'blue',
+            },
+            {
+              label: 'Linked memories',
+              value: String(peopleMetricsSummary.linkedMemoryCount),
+              note: 'Shared moments with purchase context',
+              trend: buildSparklineSeed(peopleMetricsSummary.linkedMemoryCount, 7),
+              tone: 'green',
+            },
+            {
+              label: 'Gifts',
+              value: String(peopleMetricsSummary.giftCount),
+              note: 'Gift-related purchases',
+              trend: buildSparklineSeed(peopleMetricsSummary.giftCount + 2, 7),
+              tone: 'amber',
+            },
+          ]}
+        />
       ) : peopleFocusSummary ? (
         <section className="section-card person-focus">
           <p className="eyebrow">{peopleFocusSummary.subheadline}</p>
@@ -624,72 +700,74 @@ export function PeopleView({ state, payload, onAction }: PageProps<PeoplePayload
       ) : null}
 
       {payload.network?.rings.length ? (
-        <SectionCard title="Circles network">
-          <div className="network-shell">
-            {payload.network.rings.map((ring, index) => (
-              <div className={`network-ring network-ring--${index}`} key={ring.label}>
-                <div className="network-ring__meta">
-                  <span>{ring.label}</span>
-                  <strong>{ring.count}</strong>
-                </div>
-                <div className="network-ring__nodes">
-                  {ring.nodes.map((node) => (
-                    <span className="network-node" key={node.id}>
-                      {node.label}
-                    </span>
-                  ))}
-                </div>
+        <SectionCard title="Relationship map">
+          <ChartSurface className="chart-surface" height={278} label="People bubble chart" option={buildPeopleBubbleOption(payload.network.rings)} />
+          <div className="visual-summary-row">
+            {payload.network.rings.map((ring) => (
+              <div className="compact-count compact-count--soft" key={ring.label}>
+                <span>{ring.label}</span>
+                <strong>{ring.count}</strong>
               </div>
             ))}
           </div>
         </SectionCard>
       ) : null}
 
-      <div className="two-up">
-        <SectionCard title="People list">
-          {payload.people.length > 0 ? (
-            <div className="card-list">
-              {payload.people.map((person) => (
-                <article className="list-card" key={person.id}>
-                  <div className="list-card__header">
-                    <div>
-                      <h3>{person.displayName}</h3>
-                      <p>{person.relationshipType}</p>
-                    </div>
-                    <span className="chip chip--accent">{person.linkedPurchaseCount} purchases</span>
+      <SectionCard title="People list">
+        {payload.people.length > 0 ? (
+          <div className="card-list">
+            {payload.people.map((person) => (
+              <article className="list-card" key={person.id}>
+                <div className="list-card__header">
+                  <div>
+                    <h3>{person.displayName}</h3>
+                    <p>{person.relationshipType}</p>
                   </div>
-                  <p>{person.linkedMemoryCount} memories linked</p>
+                  <span className="chip chip--accent">{person.linkedPurchaseCount} purchases</span>
+                </div>
+                <div className="chip-row">
+                  <span className="chip">{person.linkedMemoryCount} memories</span>
+                  <span className="chip">{person.giftCount} gifts</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <BlankCard title="No linked people yet" body="People context begins when purchases or memories are tagged to someone who matters." />
+        )}
+      </SectionCard>
+
+      <SectionCard title={payload.selectedPerson ? payload.selectedPerson.displayName : 'Selected person'}>
+        {payload.selectedPerson ? (
+          <div className="mini-stack">
+            <p>{payload.selectedPerson.notes}</p>
+            <MetricLine label="Purchases" value={String(payload.selectedPerson.linkedPurchases.length)} />
+            <MetricLine label="Memories" value={String(payload.selectedPerson.linkedMemories.length)} />
+            <div className="card-list">
+              {payload.selectedPerson.linkedPurchases.map((purchase) => (
+                <article className="list-card list-card--compact" key={purchase.purchaseEventId}>
+                  <div className="list-card__header">
+                    <h3>{purchase.merchantName}</h3>
+                    <strong>{money.format(purchase.grandTotal)}</strong>
+                  </div>
+                  <p>{fullDateTime.format(new Date(purchase.purchasedAt))}</p>
+                </article>
+              ))}
+              {payload.selectedPerson.linkedMemories.map((memory) => (
+                <article className="list-card list-card--compact" key={memory.memoryId}>
+                  <div className="list-card__header">
+                    <h3>{memory.title}</h3>
+                    <span className={`state-pill state-pill--${memory.memoryState}`}>{memory.memoryState}</span>
+                  </div>
+                  <p>{fullDateTime.format(new Date(memory.startsAt))}</p>
                 </article>
               ))}
             </div>
-          ) : (
-            <BlankCard title="No linked people yet" body="People context begins when purchases or memories are tagged to someone who matters." />
-          )}
-        </SectionCard>
-
-        <SectionCard title={payload.selectedPerson ? payload.selectedPerson.displayName : 'Selected person'}>
-          {payload.selectedPerson ? (
-            <div className="mini-stack">
-              <p>{payload.selectedPerson.notes}</p>
-              <MetricLine label="Purchases" value={String(payload.selectedPerson.linkedPurchases.length)} />
-              <MetricLine label="Memories" value={String(payload.selectedPerson.linkedMemories.length)} />
-              <div className="card-list">
-                {payload.selectedPerson.linkedPurchases.map((purchase) => (
-                  <article className="list-card list-card--compact" key={purchase.purchaseEventId}>
-                    <div className="list-card__header">
-                      <h3>{purchase.merchantName}</h3>
-                      <strong>{money.format(purchase.grandTotal)}</strong>
-                    </div>
-                    <p>{fullDateTime.format(new Date(purchase.purchasedAt))}</p>
-                  </article>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <BlankCard title="Choose a person" body="Person details surface linked purchases, gifts, and memories when a relationship is selected." />
-          )}
-        </SectionCard>
-      </div>
+          </div>
+        ) : (
+          <BlankCard title="Choose a person" body="Person details surface linked purchases, gifts, and memories when a relationship is selected." />
+        )}
+      </SectionCard>
 
       {payload.upgradeCard ? <UpgradeCard data={payload.upgradeCard} onAction={onAction} /> : null}
     </div>
@@ -712,16 +790,12 @@ export function MemoriesView({ state, payload, onAction }: PageProps<MemoriesPay
 
   return (
     <div className="route-stack">
-      <section className="route-header-card">
-        <div>
-          <p className="eyebrow">System-assisted memory creation</p>
-          <h1>Memories</h1>
-        </div>
-        <div className="pill-select">
-          <span>{payload.header.selectedView}</span>
-          <Icon name="chevron" className="icon-sm" />
-        </div>
-      </section>
+      <ScreenToolbar
+        eyebrow="System-assisted memory creation"
+        title="Memories"
+        selectedView={payload.header.selectedView}
+        support="Timeline stays primary while candidates, places, and people remain easy to review."
+      />
 
       {payload.summary ? (
         'headline' in payload.summary ? (
@@ -732,11 +806,31 @@ export function MemoriesView({ state, payload, onAction }: PageProps<MemoriesPay
             onAction={() => onAction('fab:record_experience')}
           />
         ) : (
-          <section className="metric-row">
-            <MetricCard label="Candidates" value={String(payload.summary.candidateCount)} />
-            <MetricCard label="Confirmed" value={String(payload.summary.confirmedCount)} />
-            <MetricCard label="Timeline" value="Default view" />
-          </section>
+          <SummaryBand
+            items={[
+              {
+                label: 'Candidates',
+                value: String(payload.summary.candidateCount),
+                note: 'System-assisted suggestions',
+                trend: buildSparklineSeed(payload.summary.candidateCount, 7),
+                tone: 'amber',
+              },
+              {
+                label: 'Confirmed',
+                value: String(payload.summary.confirmedCount),
+                note: 'Kept memories',
+                trend: buildSparklineSeed(payload.summary.confirmedCount, 7),
+                tone: 'green',
+              },
+              {
+                label: 'Lens',
+                value: 'Timeline',
+                note: 'Default view',
+                trend: buildSparklineSeed(9, 7),
+                tone: 'blue',
+              },
+            ]}
+          />
         )
       ) : null}
 
@@ -961,10 +1055,7 @@ export function AgentChatView({ payload, state, onAction }: PageProps<AgentChatP
       ) : (
         <div className="conversation">
           {payload.conversation.map((message) => (
-            <article
-              className={`message-bubble message-bubble--${message.role}`}
-              key={message.id}
-            >
+            <article className={`message-bubble message-bubble--${message.role}`} key={message.id}>
               <p>{message.content}</p>
               {message.citations?.length ? (
                 <div className="chip-row">
@@ -1021,7 +1112,7 @@ export function AgentVoiceView({ payload, state }: PageProps<AgentVoicePayload>)
           <Icon name="mic" className="icon-lg" />
         </div>
         <h2>{payload.prompt ?? prettifyState(payload.state)}</h2>
-        {payload.transcript ? <p className="voice-transcript">“{payload.transcript}”</p> : null}
+        {payload.transcript ? <p className="voice-transcript">"{payload.transcript}"</p> : null}
       </section>
       {payload.response ? (
         <SectionCard title="Answer">
@@ -1084,6 +1175,50 @@ export function LoadingState(props: { label: string; blocks: number }) {
   );
 }
 
+function ScreenToolbar(props: { eyebrow: string; title: string; selectedView: string; support: string }) {
+  return (
+    <section className="screen-toolbar">
+      <div className="screen-toolbar__identity">
+        <div className="screen-toolbar__logo">
+          <LogoMark className="screen-toolbar__logo-mark" decorative />
+        </div>
+        <div>
+          <p className="eyebrow">{props.eyebrow}</p>
+          <h1>{props.title}</h1>
+          <p>{props.support}</p>
+        </div>
+      </div>
+      <div className="pill-select">
+        <span>{props.selectedView}</span>
+        <Icon name="chevron" className="icon-sm" />
+      </div>
+    </section>
+  );
+}
+
+function SummaryBand(props: { items: SummaryMetric[] }) {
+  return (
+    <section className="summary-band">
+      {props.items.map((item) => (
+        <SummaryStatCard item={item} key={`${item.label}-${item.value}`} />
+      ))}
+    </section>
+  );
+}
+
+function SummaryStatCard(props: { item: SummaryMetric }) {
+  return (
+    <article className={`summary-stat summary-stat--${props.item.tone ?? 'blue'}`}>
+      <div className="summary-stat__copy">
+        <span>{props.item.label}</span>
+        <strong>{props.item.value}</strong>
+        {props.item.note ? <small>{props.item.note}</small> : null}
+      </div>
+      {props.item.trend?.length ? <MiniSparkline tone={props.item.tone ?? 'blue'} values={props.item.trend} /> : null}
+    </article>
+  );
+}
+
 function SectionCard(props: {
   title: string;
   children: ReactNode;
@@ -1124,15 +1259,6 @@ function BlankCard(props: { title: string; body: string }) {
       <h3>{props.title}</h3>
       <p>{props.body}</p>
     </div>
-  );
-}
-
-function MetricCard(props: { label: string; value: string }) {
-  return (
-    <article className="metric-card">
-      <span>{props.label}</span>
-      <strong>{props.value}</strong>
-    </article>
   );
 }
 
@@ -1182,6 +1308,53 @@ function MemoryCandidateRow(props: { memory: MemorySummary }) {
   );
 }
 
+function CompactMetricBars(props: { metrics: Record<string, number | string> }) {
+  const values = Object.entries(props.metrics).filter(
+    ([key, value]) => key !== 'currency' && typeof value === 'number'
+  ) as Array<[string, number]>;
+
+  if (!values.length) {
+    return null;
+  }
+
+  const max = Math.max(...values.map(([, value]) => value), 1);
+
+  return (
+    <div className="mini-bars">
+      {values.map(([label, value]) => (
+        <div className="mini-bars__row" key={label}>
+          <span>{label}</span>
+          <div className="mini-bars__track">
+            <div className="mini-bars__fill" style={{ width: `${(value / max) * 100}%` }} />
+          </div>
+          <strong>{money.format(value)}</strong>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MiniSparkline(props: { tone: 'blue' | 'green' | 'amber'; values: number[] }) {
+  const width = 88;
+  const height = 28;
+  const max = Math.max(...props.values, 1);
+  const min = Math.min(...props.values, 0);
+  const range = Math.max(max - min, 1);
+  const points = props.values
+    .map((value, index) => {
+      const x = (index / Math.max(props.values.length - 1, 1)) * (width - 4) + 2;
+      const y = height - (((value - min) / range) * (height - 6) + 3);
+      return `${x},${y}`;
+    })
+    .join(' ');
+
+  return (
+    <svg className={`mini-sparkline mini-sparkline--${props.tone}`} viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
+      <polyline fill="none" points={points} />
+    </svg>
+  );
+}
+
 function UpgradeCard(props: { data: UpgradeCardData; onAction: (action: string) => void }) {
   return (
     <section className="upgrade-card">
@@ -1205,6 +1378,166 @@ function ActionButton(props: { label: string; onClick: () => void; tone?: 'prima
       {props.label}
     </button>
   );
+}
+
+function buildThingsTreemapOption(
+  series: Array<{ id: string; label: string; value: number }>
+): AppChartOption {
+  const colors = ['#5270d5', '#4aac75', '#ff8c52', '#9a71dc', '#36aba4'];
+
+  return {
+    animation: false,
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: 'rgba(17, 16, 22, 0.94)',
+      borderWidth: 0,
+      textStyle: {
+        color: '#f7f4ef',
+      },
+      formatter: (params: unknown) => {
+        const data = (params as { data?: { name?: string; value?: number } }).data;
+        return `${data?.name ?? 'Group'}<br/>${money.format(data?.value ?? 0)}`;
+      },
+    },
+    series: [
+      {
+        type: 'treemap',
+        roam: false,
+        nodeClick: false,
+        breadcrumb: {
+          show: false,
+        },
+        itemStyle: {
+          borderColor: '#f7f8fc',
+          borderWidth: 4,
+          gapWidth: 4,
+          borderRadius: 20,
+        },
+        upperLabel: {
+          show: false,
+        },
+        label: {
+          show: true,
+          formatter: '{b}',
+          color: '#ffffff',
+          fontSize: 13,
+          fontWeight: 600,
+          overflow: 'truncate',
+        },
+        data: series.map((item, index) => ({
+          id: item.id,
+          name: item.label,
+          value: item.value,
+          itemStyle: {
+            color: colors[index % colors.length],
+          },
+        })),
+      },
+    ],
+  };
+}
+
+function buildPeopleBubbleOption(
+  rings: Array<{
+    label: string;
+    count: number;
+    nodes: Array<{ id: string; label: string; relationshipType: string }>;
+  }>
+): AppChartOption {
+  const centers = [
+    { x: 30, y: 54, color: '#4aac75' },
+    { x: 71, y: 36, color: '#5270d5' },
+    { x: 54, y: 76, color: '#ff8c52' },
+    { x: 82, y: 72, color: '#9a71dc' },
+  ];
+
+  const data = rings.flatMap((ring, ringIndex) => {
+    const center = centers[ringIndex % centers.length];
+    const step = (Math.PI * 2) / Math.max(ring.nodes.length, 1);
+
+    return ring.nodes.map((node, nodeIndex) => {
+      const angle = step * nodeIndex - Math.PI / 2;
+      const radius = 10 + ringIndex * 8;
+      const size = 32 + ring.count * 4 - nodeIndex;
+
+      return {
+        name: node.label,
+        value: [
+          center.x + Math.cos(angle) * radius,
+          center.y + Math.sin(angle) * radius,
+          size,
+          ring.label,
+          node.relationshipType,
+        ],
+        itemStyle: {
+          color: center.color,
+          shadowBlur: 12,
+          shadowColor: `${center.color}55`,
+        },
+        label: {
+          color: '#ffffff',
+          fontWeight: 600,
+          fontSize: 11,
+        },
+      };
+    });
+  });
+
+  return {
+    animation: false,
+    grid: {
+      left: 0,
+      right: 0,
+      top: 6,
+      bottom: 0,
+    },
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: 'rgba(17, 16, 22, 0.94)',
+      borderWidth: 0,
+      textStyle: {
+        color: '#f7f4ef',
+      },
+      formatter: (params: unknown) => {
+        const bubble = params as { name?: string; value?: (string | number)[] };
+        return `${bubble.name ?? 'Person'}<br/>${String(bubble.value?.[3] ?? 'Circle')} · ${String(bubble.value?.[4] ?? 'Relationship')}`;
+      },
+    },
+    xAxis: {
+      min: 0,
+      max: 100,
+      show: false,
+    },
+    yAxis: {
+      min: 0,
+      max: 100,
+      show: false,
+      inverse: true,
+    },
+    series: [
+      {
+        type: 'scatter',
+        data,
+        symbolSize: (value: number[]) => value[2],
+        label: {
+          show: true,
+          formatter: '{b}',
+          position: 'inside',
+        },
+        emphasis: {
+          scale: false,
+        },
+      },
+    ],
+  };
+}
+
+function buildSparklineSeed(seed: number, length: number) {
+  const base = Math.max(seed, 1);
+  return Array.from({ length }, (_, index) => {
+    const wave = ((base + index * 7) % 9) + 3;
+    return Math.max(1, Math.round(base * (0.34 + wave / 16)));
+  });
 }
 
 function prettifyTier(value: string) {

@@ -47,8 +47,8 @@ export function Icon({ name, ...props }: IconProps) {
     case 'home':
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
-          <path {...common} d="M4 11.5 12 5l8 6.5V20H4z" />
-          <path {...common} d="M9.5 20v-5h5v5" />
+          <path {...common} d="M12 4v16" />
+          <path {...common} d="M16 8.25c0-1.7-1.9-3-4-3s-4 1.1-4 3 1.5 2.45 4 3 4 1.3 4 3-1.9 3-4 3-4-1.1-4-3" />
         </svg>
       );
     case 'things':
@@ -68,9 +68,10 @@ export function Icon({ name, ...props }: IconProps) {
     case 'memories':
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true" {...props}>
-          <path {...common} d="M8 4h8a4 4 0 0 1 0 8H8z" />
-          <path {...common} d="M8 12h8a4 4 0 0 1 0 8H8z" />
-          <path {...common} d="M8 4v16" />
+          <path
+            {...common}
+            d="M15.5 7.5v8.25a4.25 4.25 0 1 1-8.5 0V6.5a2.75 2.75 0 1 1 5.5 0v8.25a1.25 1.25 0 0 1-2.5 0V8.5"
+          />
         </svg>
       );
     case 'plus':

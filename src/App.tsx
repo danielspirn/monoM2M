@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 
+import { LogoMark } from '@/src/brand';
 import { MockControlPanel } from '@/components/dev/MockControlPanel';
 import { getSelectedPersona, getStateOverrides, setSelectedPersona, setStateOverride } from '@/mocks/mockSessionStore';
 import {
@@ -94,6 +95,12 @@ const APP_TITLES: Partial<Record<RouteKey, string>> = {
   '/agent/voice': 'Ask Agent by Voice',
 };
 
+const BRANDED_TOPBAR_META: Partial<Record<RouteKey, string>> = {
+  '/things': 'Returns, warranty, insurance',
+  '/people': 'Household, gifts, shared',
+  '/memories': 'Timeline, map, people',
+};
+
 export function App() {
   return (
     <BrowserRouter>
@@ -122,7 +129,9 @@ function Shell() {
   }, []);
 
   useEffect(() => {
-    if (!notice) return undefined;
+    if (!notice) {
+      return undefined;
+    }
 
     const timer = window.setTimeout(() => setNotice(null), 2600);
     return () => window.clearTimeout(timer);
@@ -139,12 +148,13 @@ function Shell() {
   );
 
   const pageTitle = routeKey === '/home' ? undefined : APP_TITLES[routeKey] ?? 'Money to Memories';
-  const actionStrip = ACTION_STRIPS[routeKey] ?? ACTION_STRIPS['/home'];
+  const actionStrip = getActionStrip(payload, routeKey);
   const fabPayload = resolveMockPayload('/fab-menu', {
     personaId: selectedPersona,
     state: getDefaultState(selectedPersona, '/fab-menu') ?? 'default',
   }) as { title: string; items: FabItem[] };
   const personaMeta = getPersonaDefinitions().find((persona) => persona.id === selectedPersona);
+  const searchPlaceholder = routeKey === '/home' ? getHomeSearchPlaceholder(payload) : undefined;
 
   function handlePersonaChange(personaId: PersonaId) {
     setPersona(personaId);
@@ -240,37 +250,12 @@ function Shell() {
       <div className="app-scene__aurora" />
       <div className="workspace">
         <div className="phone-shell">
-          <header className="topbar">
-            <button
-              aria-label="Open drawer"
-              className="icon-button"
-              type="button"
-              onClick={() => setDrawerOpen(true)}
-            >
-              <Icon name="menu" className="icon-md" />
-            </button>
-            {routeKey === '/home' ? (
-              <div className="search-pill">
-                <Icon name="search" className="icon-sm" />
-                <span>Search purchases, Things, people, memories</span>
-              </div>
-            ) : (
-              <div className="topbar__title">
-                <span>{pageTitle}</span>
-              </div>
-            )}
-            <div className="persona-chip">
-              <span>{personaMeta?.label ?? 'Persona'}</span>
-            </div>
-          </header>
-
-          <div className="context-strip">
-            {actionStrip.map((item) => (
-              <button className="context-chip" key={item} type="button">
-                {item}
-              </button>
-            ))}
-          </div>
+          <ShellHeader
+            pageTitle={pageTitle}
+            routeKey={routeKey}
+            searchPlaceholder={searchPlaceholder}
+            onOpenDrawer={() => setDrawerOpen(true)}
+          />
 
           <main className="route-body">
             <Routes>
@@ -288,33 +273,32 @@ function Shell() {
             </Routes>
           </main>
 
-          <nav className="bottom-nav" aria-label="Primary navigation">
-            <div className="bottom-nav__notch" />
-            {PRIMARY_NAV.slice(0, 2).map((item) => (
-              <NavButton
-                key={item.route}
-                active={routeKey === item.route}
-                item={item}
-                onClick={() => navigate(item.route)}
-              />
-            ))}
-            <button
-              aria-label="Open add or ask menu"
-              className="fab-button"
-              type="button"
-              onClick={() => setFabOpen(true)}
-            >
-              <Icon name="plus" className="icon-lg" />
-            </button>
-            {PRIMARY_NAV.slice(2).map((item) => (
-              <NavButton
-                key={item.route}
-                active={routeKey === item.route}
-                item={item}
-                onClick={() => navigate(item.route)}
-              />
-            ))}
-          </nav>
+          <div className="shell-bottom">
+            <div aria-label="Secondary navigation" className="context-strip">
+              {actionStrip.map((item, index) => (
+                <button className={`context-chip ${index === 0 ? 'context-chip--active' : ''}`} key={item} type="button">
+                  {item}
+                </button>
+              ))}
+            </div>
+
+            <nav className="bottom-nav" aria-label="Primary navigation">
+              {PRIMARY_NAV.slice(0, 2).map((item) => (
+                <NavButton key={item.route} active={routeKey === item.route} item={item} onClick={() => navigate(item.route)} />
+              ))}
+              <button
+                aria-label="Open add or ask menu"
+                className="fab-button"
+                type="button"
+                onClick={() => setFabOpen(true)}
+              >
+                <Icon name="plus" className="icon-lg" />
+              </button>
+              {PRIMARY_NAV.slice(2).map((item) => (
+                <NavButton key={item.route} active={routeKey === item.route} item={item} onClick={() => navigate(item.route)} />
+              ))}
+            </nav>
+          </div>
         </div>
 
         <div className="control-rail">
@@ -343,8 +327,11 @@ function Shell() {
         <Overlay onClose={() => setDrawerOpen(false)}>
           <aside className="drawer">
             <div className="drawer__header">
-              <p className="eyebrow">Standard drawer</p>
-              <h2>Money to Memories</h2>
+              <LogoMark className="drawer__logo" decorative />
+              <div>
+                <p className="eyebrow">Standard drawer</p>
+                <h2>Money to Memories</h2>
+              </div>
             </div>
             <div className="drawer__list">
               {DRAWER_ITEMS.map((item) => (
@@ -382,6 +369,73 @@ function Shell() {
 
       {notice ? <div className="notice-toast">{notice}</div> : null}
     </div>
+  );
+}
+
+function ShellHeader(props: {
+  onOpenDrawer: () => void;
+  pageTitle?: string;
+  routeKey: RouteKey;
+  searchPlaceholder?: string;
+}) {
+  if (props.routeKey === '/home') {
+    return (
+      <header className="topbar topbar--home">
+        <div className="search-pill">
+          <Icon name="search" className="icon-sm" />
+          <span>{props.searchPlaceholder ?? 'Search purchases, Things, people, memories'}</span>
+        </div>
+        <button
+          aria-label="Open drawer"
+          className="icon-button"
+          type="button"
+          onClick={props.onOpenDrawer}
+        >
+          <Icon name="menu" className="icon-md" />
+        </button>
+      </header>
+    );
+  }
+
+  if (props.routeKey in BRANDED_TOPBAR_META) {
+    return (
+      <header className="topbar topbar--branded">
+        <div className="topbar__brand">
+          <div className="topbar__logo-shell">
+            <LogoMark className="topbar__logo" decorative />
+          </div>
+          <div className="topbar__brand-copy">
+            <span>Money to Memories</span>
+            <strong>{props.pageTitle}</strong>
+            <small>{BRANDED_TOPBAR_META[props.routeKey]}</small>
+          </div>
+        </div>
+        <button
+          aria-label="Open drawer"
+          className="icon-button icon-button--ghost"
+          type="button"
+          onClick={props.onOpenDrawer}
+        >
+          <Icon name="menu" className="icon-md" />
+        </button>
+      </header>
+    );
+  }
+
+  return (
+    <header className="topbar topbar--secondary">
+      <div className="topbar__title">
+        <span>{props.pageTitle}</span>
+      </div>
+      <button
+        aria-label="Open drawer"
+        className="icon-button"
+        type="button"
+        onClick={props.onOpenDrawer}
+      >
+        <Icon name="menu" className="icon-md" />
+      </button>
+    </header>
   );
 }
 
@@ -498,6 +552,36 @@ function mockNoticeForAction(action: string) {
     default:
       return 'Mock-only action.';
   }
+}
+
+function getActionStrip(payload: unknown, routeKey: RouteKey) {
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    'actionStrip' in payload &&
+    Array.isArray(payload.actionStrip) &&
+    payload.actionStrip.every((item) => typeof item === 'string')
+  ) {
+    return payload.actionStrip;
+  }
+
+  return ACTION_STRIPS[routeKey] ?? ACTION_STRIPS['/home'];
+}
+
+function getHomeSearchPlaceholder(payload: unknown) {
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    'header' in payload &&
+    payload.header &&
+    typeof payload.header === 'object' &&
+    'searchPlaceholder' in payload.header &&
+    typeof payload.header.searchPlaceholder === 'string'
+  ) {
+    return payload.header.searchPlaceholder;
+  }
+
+  return 'Search purchases, Things, people, memories';
 }
 
 function iconForFabItem(icon: string) {
