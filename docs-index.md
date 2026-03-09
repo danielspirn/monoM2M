@@ -13,6 +13,7 @@ If you are an engineer, AI coding agent, or reviewer, read documents in this ord
 7. `docs/build/codex-build-v1.md`
 8. `docs/security/security-foundation.md`
 9. `contracts/openapi/money_to_memories_openapi_v1_1.yaml`
+10. `contracts/schema/README.md`
 
 ## Source of truth hierarchy
 
@@ -22,7 +23,8 @@ When instructions conflict, use this priority order:
 2. route-specific UX docs in `docs/ux/`
 3. data model in `docs/data-model/`
 4. OpenAPI contract in `contracts/openapi/`
-5. older archived docs or design notes
+5. schema guidance in `contracts/schema/`
+6. older archived docs or design notes
 
 ## Product summary
 
@@ -30,10 +32,11 @@ Money to Memories is a consumer-first, mobile-first product that helps people:
 - capture purchases and receipts
 - understand spending at the line-item level
 - organize what they own as **Things**
-- connect purchases to people, place, time, and memory
+- connect purchases to people, place, time, and memories
 - use an agent to ask questions and make better decisions
 
 This is not a generic budgeting app.
+
 Its differentiation is:
 - line-item intelligence
 - Things ownership and warranty support
@@ -92,20 +95,89 @@ using mocked data and persona switching before full backend integration.
 ### API contract
 - `contracts/openapi/money_to_memories_openapi_v1_1.yaml`
 
+### Schema guidance
+- `contracts/schema/README.md`
+
 ## Mocking and development inputs
 
-When building mocked flows, use:
-- `mock-data/personas/`
-- `mock-data/routes/`
+### Persona files
+- `mock-data/personas/personas.json`
+- `mock-data/personas/persona-to-route-defaults.json`
+
+### Route-state registry
+- `mock-data/routes/route_states.json`
+- `mock-data/routes/mock-api-responses.json`
+
+### Route payloads
+- `mock-data/routes/home.payloads.json`
+- `mock-data/routes/things.payloads.json`
+- `mock-data/routes/people.payloads.json`
+- `mock-data/routes/memories.payloads.json`
+- `mock-data/routes/thing-detail.payloads.json`
+- `mock-data/routes/person-detail.payloads.json`
+- `mock-data/routes/memory-detail.payloads.json`
+- `mock-data/routes/receipt-studio.payloads.json`
+- `mock-data/routes/fab-menu.payloads.json`
+- `mock-data/routes/agent-chat.payloads.json`
+- `mock-data/routes/agent-voice.payloads.json`
+- `mock-data/routes/upgrade-modal.payloads.json`
+- `mock-data/routes/settings.payloads.json`
+- `mock-data/routes/account.payloads.json`
+- `mock-data/routes/plans.payloads.json`
+
+### Mock infrastructure
+- `mocks/mockProvider.ts`
+- `mocks/useMockRoute.ts`
+- `mocks/mockSessionStore.ts`
+- `mocks/handlers/routes.ts`
+- `mocks/handlers/agent.ts`
+
+### Dev-only review controls
+- `components/dev/mockDevConfig.ts`
+- `components/dev/PersonaSwitcher.tsx`
+- `components/dev/RouteStateSwitcher.tsx`
+- `components/dev/MockControlPanel.tsx`
+
+### Design references
+- `design-references/hero-screens/README.md`
 - `design-references/hero-screens/`
 
-Every primary route must support:
-- empty state
-- first-use state
-- loading state
-- populated state
-- error state
-- premium-conversion state where relevant
+## Hero screen usage rule
+
+Hero screen images are visual anchors, not standalone specs.
+
+When implementing UI:
+1. read `AGENTS.md`
+2. read the relevant UX docs
+3. review the matching hero screen(s)
+4. use the mock payloads and persona defaults
+5. build all route states, not only the best-looking populated state
+
+## Current implementation target
+
+The immediate Codex target is:
+
+1. shell and navigation
+2. Home
+3. Things
+4. People
+5. Memories
+6. Settings / Account
+7. Plans / Upgrade
+8. FAB / Agent entry
+9. mocked data integration only
+
+Backend integration should happen only after the mocked UX passes review.
+
+## Required mocked states
+
+Every major route must support:
+- empty
+- first-use
+- loading
+- populated
+- error
+- premium-conversion where relevant
 
 ## Tier summary
 
@@ -131,6 +203,7 @@ Every primary route must support:
 ## Build rule
 
 Do not drift into backend-first implementation.
+
 The required sequence is:
 
 1. mocked shell and routes
@@ -148,3 +221,29 @@ Before writing code:
 - use consumer UX labels
 - respect security and tenancy assumptions
 - preserve Family Trust headroom without forcing trust complexity into the initial consumer app
+
+## Repo readiness checkpoint
+
+This repo is considered ready for a Codex planning pass when:
+- the docs above are committed
+- the mock payload files are present
+- the design reference PNGs are present
+- `AGENTS.md` and this file are up to date
+
+## Recommended Codex workflow
+
+1. Read `AGENTS.md`
+2. Read `docs-index.md`
+3. Read the UX and data-model docs
+4. Review mock payloads and hero screens
+5. Produce a plan first
+6. Execute in small PR-sized route slices
+
+## Near-term implementation rule
+
+Use mocked data first.
+Do not connect real APIs until:
+- shell and navigation are stable
+- route states are reviewed
+- UX wording and hierarchy are approved
+- route data needs are validated against OpenAPI
