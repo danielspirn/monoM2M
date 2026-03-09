@@ -1,4 +1,6 @@
 import personaDefaults from '../mock-data/personas/persona-to-route-defaults.json';
+import personas from '../mock-data/personas/personas.json';
+import routeStates from '../mock-data/routes/route_states.json';
 
 import homePayloads from '../mock-data/routes/home.payloads.json';
 import thingsPayloads from '../mock-data/routes/things.payloads.json';
@@ -77,6 +79,38 @@ type ResolveOptions = {
     params?: Record<string, string>;
 };
 
+type RouteStateDefinition = {
+    key: string;
+    label: string;
+    description?: string;
+    personaIds?: string[];
+    uiExpectations?: string[];
+};
+
+type PersonaDefinition = {
+    id: PersonaId;
+    label: string;
+    summary: string;
+    householdType: string;
+    jobsToBeDone: string[];
+    keyRoutes: string[];
+    premiumTriggers: string[];
+};
+
+type MissingStatePayload = {
+    __mockMissingState: string;
+    routeKey: RouteKey;
+    params?: Record<string, string>;
+};
+
+type PersonaDefaultsMap = {
+    personas?: Partial<Record<PersonaId, Partial<Record<RouteKey, string>>>>;
+};
+
+type RouteStatesRegistry = {
+    routes?: Partial<Record<RouteKey, { states?: RouteStateDefinition[] }>>;
+};
+
 function structuredCloneSafe<T>(value: T): T {
     return JSON.parse(JSON.stringify(value));
 }
@@ -86,14 +120,14 @@ export function getDefaultState(
     routeKey: RouteKey
 ): string | null {
     if (!personaId) return null;
-    const personas = (personaDefaults as any).personas ?? {};
+    const personas = (personaDefaults as PersonaDefaultsMap).personas ?? {};
     return personas[personaId]?.[routeKey] ?? null;
 }
 
 export function resolveMockPayload(
     routeKey: RouteKey,
     options: ResolveOptions = {}
-): unknown {
+): unknown | MissingStatePayload {
     const { personaId, state, params } = options;
     const payloads = ROUTE_PAYLOADS[routeKey];
 
@@ -109,9 +143,11 @@ export function resolveMockPayload(
     const payload = payloads[resolvedState];
 
     if (!payload) {
-        throw new Error(
-            `No payload found for route "${routeKey}" and state "${resolvedState}"`
-        );
+        return {
+            __mockMissingState: resolvedState,
+            routeKey,
+            params
+        };
     }
 
     const result = structuredCloneSafe(payload);
@@ -125,9 +161,33 @@ export function resolveMockPayload(
 
 export function listAvailableStates(routeKey: RouteKey): string[] {
     const payloads = ROUTE_PAYLOADS[routeKey];
-    return payloads ? Object.keys(payloads) : [];
+    const registry = ((routeStates as RouteStatesRegistry).routes?.[routeKey]?.states ?? [])
+        .map((state) => state.key);
+
+    return Array.from(new Set([...(payloads ? Object.keys(payloads) : []), ...registry]));
 }
 
 export function listRoutes(): RouteKey[] {
     return Object.keys(ROUTE_PAYLOADS) as RouteKey[];
+}
+
+export function getRouteStateDefinitions(routeKey: RouteKey): RouteStateDefinition[] {
+    return (routeStates as RouteStatesRegistry).routes?.[routeKey]?.states ?? [];
+}
+
+export function getPersonaDefinitions(): PersonaDefinition[] {
+    return (personas as { personas: PersonaDefinition[] }).personas;
+}
+
+export function hasMockPayload(routeKey: RouteKey, state: string): boolean {
+    return Boolean(ROUTE_PAYLOADS[routeKey]?.[state]);
+}
+
+export function isMissingStatePayload(value: unknown): value is MissingStatePayload {
+    return Boolean(
+        value &&
+            typeof value === 'object' &&
+            '__mockMissingState' in value &&
+            'routeKey' in value
+    );
 }

@@ -1,13 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Select, Space, Typography } from 'antd';
 
 import type { RouteKey } from '@/mocks/mockProvider';
 import { clearStateOverride, getStateOverrides, setStateOverride } from '@/mocks/mockSessionStore';
 import { ROUTE_OPTIONS, getRouteStateOptions } from './mockDevConfig';
-
-const { Text } = Typography;
 
 type RouteStateSwitcherProps = {
     routeKey?: RouteKey;
@@ -52,33 +49,50 @@ export function RouteStateSwitcher(props: RouteStateSwitcherProps) {
     }
 
     return (
-        <Space direction={compact ? 'horizontal' : 'vertical'} size={8} style={{ width: compact ? 'auto' : '100%' }}>
-            {!compact && <Text type="secondary">Route State</Text>}
+        <div className={`mock-stack ${compact ? 'mock-stack--compact' : ''}`}>
+            {!compact && <span className="mock-control__label">Route State</span>}
 
             {!controlledRouteKey && (
-                <Select<RouteKey>
+                <label className="mock-control">
+                    <span className="mock-control__label">Route</span>
+                    <select
+                        className="mock-control__input"
                     value={activeRouteKey}
-                    onChange={handleRouteChange}
-                    options={ROUTE_OPTIONS}
-                    style={{ minWidth: compact ? 220 : '100%' }}
-                    size="middle"
-                    popupMatchSelectWidth={false}
-                />
+                        onChange={(event) => handleRouteChange(event.target.value as RouteKey)}
+                    >
+                        {ROUTE_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                                {option.label}
+                            </option>
+                        ))}
+                    </select>
+                </label>
             )}
 
-            <Space.Compact block={!compact}>
-                <Select<string>
-                    allowClear
-                    placeholder="Use persona default state"
-                    value={stateValue}
-                    onChange={handleStateChange}
-                    options={stateOptions}
-                    style={{ minWidth: compact ? 220 : '100%' }}
-                    size="middle"
-                    popupMatchSelectWidth={false}
-                />
-                <Button onClick={handleReset}>Reset</Button>
-            </Space.Compact>
-        </Space>
+            <div className="mock-row">
+                <select
+                    className="mock-control__input"
+                    value={stateValue ?? ''}
+                    onChange={(event) => {
+                        const value = event.target.value;
+                        if (!value) {
+                            handleReset();
+                            return;
+                        }
+                        handleStateChange(value);
+                    }}
+                >
+                    <option value="">Use persona default state</option>
+                    {stateOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                            {option.label}
+                        </option>
+                    ))}
+                </select>
+                <button className="mock-control__button" type="button" onClick={handleReset}>
+                    Reset
+                </button>
+            </div>
+        </div>
     );
 }

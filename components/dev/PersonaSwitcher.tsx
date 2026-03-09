@@ -1,13 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Select, Space, Typography } from 'antd';
 
 import type { PersonaId } from '@/mocks/mockProvider';
 import { getSelectedPersona, setSelectedPersona } from '@/mocks/mockSessionStore';
 import { PERSONA_OPTIONS } from './mockDevConfig';
-
-const { Text } = Typography;
 
 type PersonaSwitcherProps = {
     onChange?: (personaId: PersonaId) => void;
@@ -35,16 +32,19 @@ export function PersonaSwitcher(props: PersonaSwitcherProps) {
     }
 
     return (
-        <Space direction={compact ? 'horizontal' : 'vertical'} size={4} style={{ width: compact ? 'auto' : '100%' }}>
-            {!compact && <Text type="secondary">Persona</Text>}
-            <Select<PersonaId>
+        <label className={`mock-control ${compact ? 'mock-control--compact' : ''}`}>
+            {!compact && <span className="mock-control__label">Persona</span>}
+            <select
+                className="mock-control__input"
                 value={personaId}
-                onChange={handleChange}
-                options={PERSONA_OPTIONS}
-                style={{ minWidth: compact ? 220 : '100%' }}
-                size="middle"
-                popupMatchSelectWidth={false}
-            />
-        </Space>
+                onChange={(event) => handleChange(event.target.value as PersonaId)}
+            >
+                {PERSONA_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                        {option.label}
+                    </option>
+                ))}
+            </select>
+        </label>
     );
 }

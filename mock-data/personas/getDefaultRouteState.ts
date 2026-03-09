@@ -33,11 +33,15 @@ type RouteKey =
 
 import defaults from './persona-to-route-defaults.json';
 
+type PersonaDefaultsMap = {
+    personas?: Partial<Record<PersonaId, Partial<Record<RouteKey, string>>>>;
+};
+
 export function getDefaultRouteState(
     personaId: PersonaId,
     routeKey: RouteKey
 ): string | null {
-    const persona = (defaults as any).personas?.[personaId];
+    const persona = (defaults as PersonaDefaultsMap).personas?.[personaId];
     if (!persona) return null;
     return persona[routeKey] ?? null;
 }

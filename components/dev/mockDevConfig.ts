@@ -21,19 +21,13 @@ export const PERSONA_OPTIONS: Array<{ value: PersonaId; label: string }> = [
 export const ROUTE_OPTIONS: Array<{ value: RouteKey; label: string }> = [
     { value: '/home', label: 'Home' },
     { value: '/things', label: 'Things' },
-    { value: '/things/:thingId', label: 'Thing Detail' },
     { value: '/people', label: 'People' },
-    { value: '/people/:personId', label: 'Person Detail' },
     { value: '/memories', label: 'Memories' },
-    { value: '/memories/:memoryId', label: 'Memory Detail' },
     { value: '/settings', label: 'Settings' },
     { value: '/account', label: 'Account' },
     { value: '/plans', label: 'Plans' },
     { value: '/agent/chat', label: 'Agent Chat' },
-    { value: '/agent/voice', label: 'Agent Voice' },
-    { value: '/fab-menu', label: 'FAB Menu' },
-    { value: '/ingest/:receiptId', label: 'Receipt Studio' },
-    { value: '/upgrade-modal', label: 'Upgrade Modal' }
+    { value: '/agent/voice', label: 'Agent Voice' }
 ];
 
 export function getRouteStateOptions(routeKey: RouteKey): Array<{ value: string; label: string }> {

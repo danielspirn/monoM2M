@@ -11,37 +11,37 @@ import thingDetailPayloads from '../../mock-data/routes/thing-detail.payloads.js
 import personDetailPayloads from '../../mock-data/routes/person-detail.payloads.json';
 import memoryDetailPayloads from '../../mock-data/routes/memory-detail.payloads.json';
 
+type PayloadRegistry = { payloads: Record<string, unknown> };
+type HandlerContext = { request: Request };
+type HandlerWithParams = { request: Request; params: Record<string, string> };
+
 function getState(url: URL, fallback: string) {
     return url.searchParams.get('state') || fallback;
 }
 
 export const routeHandlers = [
-    http.get('/api/mock/home', ({ request }) => {
+    http.get('/api/mock/home', ({ request }: HandlerContext) => {
         const url = new URL(request.url);
         const state = getState(url, 'empty');
-        // @ts-ignore
-        return HttpResponse.json(homePayloads.payloads[state]);
+        return HttpResponse.json((homePayloads as PayloadRegistry).payloads[state]);
     }),
 
-    http.get('/api/mock/things', ({ request }) => {
+    http.get('/api/mock/things', ({ request }: HandlerContext) => {
         const url = new URL(request.url);
         const state = getState(url, 'overview_populated');
-        // @ts-ignore
-        return HttpResponse.json(thingsPayloads.payloads[state]);
+        return HttpResponse.json((thingsPayloads as PayloadRegistry).payloads[state]);
     }),
 
-    http.get('/api/mock/people', ({ request }) => {
+    http.get('/api/mock/people', ({ request }: HandlerContext) => {
         const url = new URL(request.url);
         const state = getState(url, 'network_populated');
-        // @ts-ignore
-        return HttpResponse.json(peoplePayloads.payloads[state]);
+        return HttpResponse.json((peoplePayloads as PayloadRegistry).payloads[state]);
     }),
 
-    http.get('/api/mock/memories', ({ request }) => {
+    http.get('/api/mock/memories', ({ request }: HandlerContext) => {
         const url = new URL(request.url);
         const state = getState(url, 'candidate_timeline');
-        // @ts-ignore
-        return HttpResponse.json(memoriesPayloads.payloads[state]);
+        return HttpResponse.json((memoriesPayloads as PayloadRegistry).payloads[state]);
     }),
 
     http.get('/api/mock/settings', () => {
@@ -56,33 +56,30 @@ export const routeHandlers = [
         return HttpResponse.json(plansPayloads.payloads.comparison);
     }),
 
-    http.get('/api/mock/things/:thingId', ({ params, request }) => {
+    http.get('/api/mock/things/:thingId', ({ params, request }: HandlerWithParams) => {
         const url = new URL(request.url);
         const state = getState(url, 'owned_thing_detail');
-        // @ts-ignore
         return HttpResponse.json({
             thingId: params.thingId,
-            ...thingDetailPayloads.payloads[state]
+            ...((thingDetailPayloads as PayloadRegistry).payloads[state] as Record<string, unknown>)
         });
     }),
 
-    http.get('/api/mock/people/:personId', ({ params, request }) => {
+    http.get('/api/mock/people/:personId', ({ params, request }: HandlerWithParams) => {
         const url = new URL(request.url);
         const state = getState(url, 'friend_detail');
-        // @ts-ignore
         return HttpResponse.json({
             personId: params.personId,
-            ...personDetailPayloads.payloads[state]
+            ...((personDetailPayloads as PayloadRegistry).payloads[state] as Record<string, unknown>)
         });
     }),
 
-    http.get('/api/mock/memories/:memoryId', ({ params, request }) => {
+    http.get('/api/mock/memories/:memoryId', ({ params, request }: HandlerWithParams) => {
         const url = new URL(request.url);
         const state = getState(url, 'candidate_memory_detail');
-        // @ts-ignore
         return HttpResponse.json({
             memoryId: params.memoryId,
-            ...memoryDetailPayloads.payloads[state]
+            ...((memoryDetailPayloads as PayloadRegistry).payloads[state] as Record<string, unknown>)
         });
     })
 ];
