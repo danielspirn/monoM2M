@@ -146,6 +146,8 @@ describe('Milestone 1 shell', () => {
     fireEvent.click(screen.getByRole('navigation', { name: 'Primary navigation' }).querySelectorAll('button')[1]);
     fireEvent.click(screen.getByText('Air Fryer'));
 
+    expect(screen.getByText('Product record')).toBeTruthy();
+    expect(screen.getAllByText('confirmed').length).toBeGreaterThan(0);
     expect(screen.getByText('Ownership support')).toBeTruthy();
     expect(screen.getByText('Receipt linked')).toBeTruthy();
     expect(screen.getByText('Receipt document')).toBeTruthy();

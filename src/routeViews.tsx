@@ -392,6 +392,22 @@ export function ThingDetailView({ state, payload, onAction }: PageProps<ThingDet
         <MetadataList items={payload.metadata} />
       </SectionCard>
 
+      {payload.product ? (
+        <SectionCard title="Product record">
+          <div className="route-stack route-stack--compact">
+            <div>
+              <p className="eyebrow">{payload.product.category}</p>
+              <h3>{payload.product.title}</h3>
+              <p>{payload.product.note}</p>
+            </div>
+            <div className="chip-row">
+              <span className="chip chip--accent">{payload.product.matchStatus}</span>
+              <span className="chip">{payload.product.confidenceLabel}</span>
+            </div>
+          </div>
+        </SectionCard>
+      ) : null}
+
       {payload.detail.supportLabels.length ? (
         <SectionCard title="Ownership support">
           <div className="chip-row">

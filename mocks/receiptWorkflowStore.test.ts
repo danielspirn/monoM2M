@@ -8,6 +8,7 @@ import {
   listProjectedPurchaseLineItems,
   listProjectedMemories,
   listProjectedPurchaseReceipts,
+  listProjectedProducts,
   listProjectedThings,
   resetLiveReceiptStore,
   rerunLiveReceiptExtraction,
@@ -40,6 +41,7 @@ describe('receiptWorkflowStore projections', () => {
     const projectedReceipts = listProjectedPurchaseReceipts();
     const projectedPurchaseEvents = listProjectedPurchaseEvents();
     const projectedPurchaseLineItems = listProjectedPurchaseLineItems();
+    const projectedProducts = listProjectedProducts();
     const projectedThings = listProjectedThings();
     const projectedMemories = listProjectedMemories();
 
@@ -52,6 +54,10 @@ describe('receiptWorkflowStore projections', () => {
     expect(projectedPurchaseLineItems[0]?.purchaseEventId).toBe(`purchase_${capture.primaryReceiptId}`);
     expect(projectedPurchaseLineItems[0]?.productCandidateKey).toBeTruthy();
     expect(projectedPurchaseLineItems.find((item) => item.description === 'Air Fryer')?.thingId).toBeTruthy();
+
+    expect(projectedProducts).toHaveLength(2);
+    expect(projectedProducts.find((product) => product.displayName === 'Air Fryer')?.linkedThingId).toBeTruthy();
+    expect(projectedProducts.find((product) => product.displayName === 'Air Fryer')?.matchStatus).toBe('confirmed');
 
     expect(projectedReceipts).toHaveLength(1);
     expect(projectedReceipts[0]?.purchaseEventId).toBe(`purchase_${capture.primaryReceiptId}`);

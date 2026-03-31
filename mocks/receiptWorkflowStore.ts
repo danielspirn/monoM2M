@@ -367,6 +367,30 @@ export type ProjectedPurchaseLineItemRecord = {
   personIds: string[];
 };
 
+export type ProjectedProductRecord = {
+  id: string;
+  purchaseEventId: string;
+  receiptId: string;
+  sourceLineItemId: string;
+  purchasedAt: string;
+  merchantName: string;
+  currency: string;
+  displayName: string;
+  canonicalLabel: string;
+  category: string;
+  subcategory: string;
+  matchStatus: 'suggested' | 'confirmed' | 'unmatched';
+  matchConfidence: number;
+  thingCandidate: boolean;
+  linkedThingId?: string;
+  lineTotal: number;
+  householdTags: string[];
+  lemTags: string[];
+  evidenceSpanIds: string[];
+  personIds: string[];
+  note: string;
+};
+
 export type ProjectedThingRecord = {
   id: string;
   purchaseEventId: string;
@@ -447,6 +471,7 @@ type StoredPurchaseGraphRecords = {
   savedAt: string;
   purchaseEvent: ProjectedPurchaseEventRecord;
   purchaseLineItems: ProjectedPurchaseLineItemRecord[];
+  productRecords: ProjectedProductRecord[];
   thingRecords: ProjectedThingRecord[];
   memoryRecords: ProjectedMemoryRecord[];
 };
@@ -700,6 +725,13 @@ export function listProjectedPurchaseLineItems(): ProjectedPurchaseLineItemRecor
 
       return 0;
     });
+}
+
+export function listProjectedProducts(): ProjectedProductRecord[] {
+  return readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .flatMap((record) => getStoredPurchaseGraph(record).productRecords)
+    .sort((left, right) => right.purchasedAt.localeCompare(left.purchasedAt) || left.displayName.localeCompare(right.displayName));
 }
 
 export function listProjectedThings(): ProjectedThingRecord[] {
@@ -1030,7 +1062,15 @@ function materializeRecord(record: StoredReceiptRecord): StoredReceiptRecord {
         };
 
   if (nextRecord.status !== 'processing') {
-    if (nextRecord.status === 'trusted' && (!nextRecord.purchaseProjection || !nextRecord.purchaseGraph)) {
+    if (
+      nextRecord.status === 'trusted'
+      && (
+        !nextRecord.purchaseProjection
+        || !nextRecord.purchaseGraph
+        || !nextRecord.purchaseGraph.productRecords
+        || !nextRecord.purchaseGraph.memoryRecords
+      )
+    ) {
       const purchaseProjection = nextRecord.purchaseProjection ?? buildPurchaseProjection(nextRecord, nextRecord.updatedAt);
       return {
         ...nextRecord,
@@ -1233,6 +1273,38 @@ function buildProjectedPurchaseLineItemRecords(record: StoredReceiptRecord): Pro
     });
 }
 
+function buildProjectedProductRecords(
+  record: StoredReceiptRecord,
+  purchaseLineItems: ProjectedPurchaseLineItemRecord[],
+): ProjectedProductRecord[] {
+  return purchaseLineItems.map((item) => ({
+    id: item.productCandidateKey,
+    purchaseEventId: item.purchaseEventId,
+    receiptId: item.receiptId,
+    sourceLineItemId: item.sourceLineItemId,
+    purchasedAt: item.purchasedAt,
+    merchantName: item.merchantName,
+    currency: item.currency,
+    displayName: item.productCandidateLabel,
+    canonicalLabel: item.productCandidateLabel,
+    category: item.category,
+    subcategory: item.subcategory,
+    matchStatus: item.productMatchStatus,
+    matchConfidence: item.productMatchConfidence,
+    thingCandidate: item.assetCandidateFlag,
+    linkedThingId: item.thingId,
+    lineTotal: item.lineTotal,
+    householdTags: item.householdTags,
+    lemTags: item.lemTags,
+    evidenceSpanIds: item.evidenceSpanIds,
+    personIds: item.personIds,
+    note:
+      item.productMatchStatus === 'unmatched'
+        ? `${item.description} is still an unmatched product candidate from receipt review.`
+        : `${item.productCandidateLabel} is a ${item.productMatchStatus} product candidate grounded in the reviewed receipt.`,
+  }));
+}
+
 function buildProjectedPurchaseReceiptRecord(
   purchaseEvent: ProjectedPurchaseEventRecord,
   purchaseLineItems: ProjectedPurchaseLineItemRecord[],
@@ -1260,10 +1332,10 @@ function buildProjectedPurchaseReceiptRecord(
   };
 }
 
-function buildProjectedThingRecord(item: ProjectedPurchaseLineItemRecord, record?: StoredReceiptRecord): ProjectedThingRecord {
-  const returnWindowEndsAt = item.returnable ? addDays(item.purchasedAt, inferReturnWindowDays(item.merchantName)) : undefined;
-  const warrantyEndsAt = item.warrantyEligible ? addDays(item.purchasedAt, 365) : undefined;
-  const sourceDocumentId = record?.sourceDocument.id ?? `srcdoc_${item.receiptId}`;
+function buildProjectedThingRecord(product: ProjectedProductRecord, record?: StoredReceiptRecord): ProjectedThingRecord {
+  const returnWindowEndsAt = product.thingCandidate ? addDays(product.purchasedAt, inferReturnWindowDays(product.merchantName)) : undefined;
+  const warrantyEndsAt = product.thingCandidate ? addDays(product.purchasedAt, 365) : undefined;
+  const sourceDocumentId = record?.sourceDocument.id ?? `srcdoc_${product.receiptId}`;
   const supportLabels = [
     'Receipt linked',
     returnWindowEndsAt ? 'Return policy tracked' : 'Return window closed',
@@ -1271,25 +1343,25 @@ function buildProjectedThingRecord(item: ProjectedPurchaseLineItemRecord, record
   ];
 
   return {
-    id: item.thingId ?? `thing_${slugify(`${item.receiptId}-${item.lineIndex}-${item.description}`)}`,
-    purchaseEventId: item.purchaseEventId,
+    id: product.linkedThingId ?? `thing_${slugify(`${product.receiptId}-${product.displayName}`)}`,
+    purchaseEventId: product.purchaseEventId,
     sourceDocumentId,
-    displayName: item.description,
-    category: item.category,
-    subcategory: item.subcategory,
-    status: inferThingStatus(item.purchasedAt),
-    purchasePrice: item.lineTotal,
-    currency: item.currency,
-    acquiredAt: item.purchasedAt,
-    merchantName: item.merchantName,
-    receiptId: item.receiptId,
-    notes: `${item.merchantName} line item trusted from receipt review and ready for ownership follow-up.`,
+    displayName: product.displayName,
+    category: product.category,
+    subcategory: product.subcategory,
+    status: inferThingStatus(product.purchasedAt),
+    purchasePrice: product.lineTotal,
+    currency: product.currency,
+    acquiredAt: product.purchasedAt,
+    merchantName: product.merchantName,
+    receiptId: product.receiptId,
+    notes: `${product.merchantName} product candidate trusted from receipt review and ready for ownership follow-up.`,
     warrantyEndsAt,
     returnWindowEndsAt,
-    badgeLabels: buildThingBadges(returnWindowEndsAt, warrantyEndsAt, item.purchasedAt),
+    badgeLabels: buildThingBadges(returnWindowEndsAt, warrantyEndsAt, product.purchasedAt),
     supportLabels,
     linkedDocumentCount: 1,
-    personIds: item.personIds,
+    personIds: product.personIds,
     memoryIds: [],
   };
 }
@@ -1443,9 +1515,10 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
   };
   const purchaseEvent = buildProjectedPurchaseEventRecord(projectedRecord);
   const purchaseLineItems = buildProjectedPurchaseLineItemRecords(projectedRecord);
-  const baseThingRecords = purchaseLineItems
-    .filter((item) => item.assetCandidateFlag && item.thingId)
-    .map((item) => buildProjectedThingRecord(item, projectedRecord));
+  const productRecords = buildProjectedProductRecords(projectedRecord, purchaseLineItems);
+  const baseThingRecords = productRecords
+    .filter((product) => product.thingCandidate && product.linkedThingId)
+    .map((product) => buildProjectedThingRecord(product, projectedRecord));
   const memoryRecords = buildProjectedMemoryRecords(projectedRecord, purchaseEvent, purchaseLineItems, baseThingRecords);
   const thingRecords = baseThingRecords.map((thing) => ({
     ...thing,
@@ -1456,6 +1529,7 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
     savedAt,
     purchaseEvent,
     purchaseLineItems,
+    productRecords,
     thingRecords,
     memoryRecords,
   };

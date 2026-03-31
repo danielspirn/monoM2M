@@ -6,6 +6,7 @@ import {
   listProjectedMemories,
   listProjectedPurchaseEvents,
   listProjectedPurchaseLineItems,
+  listProjectedProducts,
   listProjectedThings,
 } from './receiptWorkflowStore';
 
@@ -233,6 +234,13 @@ export type ThingDetailPayload = {
     supportLabels: string[];
     headerSummary: string;
   };
+  product: {
+    title: string;
+    matchStatus: string;
+    confidenceLabel: string;
+    category: string;
+    note: string;
+  } | null;
   metadata: Array<{ label: string; value: string }>;
   purchaseSource: ReceiptCardData | null;
   linkedPeople: PersonCardData[];
@@ -1299,6 +1307,9 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
   const allThingRecords = allThings();
   const thing = getThing(options.params?.thingId ?? 'thing_mixer') ?? allThingRecords[0];
   const sourceReceipt = getReceipt(thing.receiptId) ?? null;
+  const product = listProjectedProducts().find((candidate) => candidate.linkedThingId === thing.id)
+    ?? listProjectedProducts().find((candidate) => candidate.receiptId === thing.receiptId && candidate.displayName === thing.displayName)
+    ?? null;
   const linkedPeople = thing.personIds.map((id) => personCard(getPerson(id) ?? people[0]));
   const linkedMemories = thing.memoryIds.map((id) => memoryCard(getMemory(id) ?? allMemories()[0]));
   const relatedThings = allThingRecords
@@ -1319,6 +1330,15 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
       supportLabels: thing.supportLabels ?? [],
       headerSummary: `Bought at ${thing.merchantName}, linked to ${thing.linkedDocumentCount ?? 0} receipt document${thing.linkedDocumentCount === 1 ? '' : 's'}, and connected to ${thing.personIds.length || 0} people and ${thing.memoryIds.length || 0} memories.`,
     },
+    product: product
+      ? {
+          title: product.displayName,
+          matchStatus: product.matchStatus,
+          confidenceLabel: `${Math.round(product.matchConfidence * 100)}% confidence`,
+          category: `${product.category} / ${product.subcategory}`,
+          note: product.note,
+        }
+      : null,
     metadata: [
       { label: 'Category', value: `${thing.category} / ${thing.subcategory}` },
       { label: 'Purchase source', value: thing.merchantName },
