@@ -60,6 +60,7 @@ export type ReceiptOcrBackendResult = {
   vendorRequestId?: string;
   processingMs?: number;
   estimatedCostUsd?: number;
+  documentMode?: 'single_receipt' | 'multi_receipt' | 'pdf_document';
   rawText: string;
   fieldCandidates: Array<{
     label: string;
@@ -72,6 +73,22 @@ export type ReceiptOcrBackendResult = {
     unitPrice: number;
     lineTotal: number;
     confidence: number;
+  }>;
+  receiptCandidates?: Array<{
+    candidateId: string;
+    rawText: string;
+    fieldCandidates: Array<{
+      label: string;
+      value: string;
+      confidence: number;
+    }>;
+    lineItemCandidates: Array<{
+      description: string;
+      quantity: number;
+      unitPrice: number;
+      lineTotal: number;
+      confidence: number;
+    }>;
   }>;
 };
 

@@ -19,6 +19,7 @@ console.log(JSON.stringify({
   merchant: summary.merchant,
   purchaseDate: summary.purchaseDate,
   grandTotal: summary.grandTotal,
+  receiptCandidateCount: summary.receiptCandidateCount,
   lineItemCount: summary.lineItemCount,
   rawTextPreview: summary.rawTextPreview,
 }, null, 2));

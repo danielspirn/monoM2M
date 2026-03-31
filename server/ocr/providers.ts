@@ -27,6 +27,7 @@ export function buildReceiptOcrTransportEnvelope(
       payload: {
         modality: request.sourceMimeType,
         sourceObjectPath: request.sourceObjectPath,
+        captureChannel: request.captureChannel,
         prompt: prepared.prompt,
         responseFormat: 'json',
       },
@@ -43,6 +44,7 @@ export function buildReceiptOcrTransportEnvelope(
     payload: {
       modality: request.sourceMimeType,
       sourceObjectPath: request.sourceObjectPath,
+      captureChannel: request.captureChannel,
       prompt: prepared.prompt,
       responseFormat: 'json',
     },

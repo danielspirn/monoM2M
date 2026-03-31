@@ -105,21 +105,25 @@ export async function runGeminiReceiptOcr(filePathArg) {
 }
 
 export function deriveReceiptSummary(parsed) {
+  const primaryCandidate = Array.isArray(parsed.receiptCandidates) && parsed.receiptCandidates.length
+    ? parsed.receiptCandidates[0]
+    : parsed;
   const merchant = sanitizeMerchantName(
-    findFieldValue(parsed, ['merchant', 'store', 'vendor', 'retailer', 'bill from', 'business'])
-      ?? inferMerchantFromRawText(parsed.rawText),
+    findFieldValue(primaryCandidate, ['merchant', 'store', 'vendor', 'retailer', 'bill from', 'business'])
+      ?? inferMerchantFromRawText(primaryCandidate.rawText),
   );
   const purchaseDate = normalizeReceiptDate(
-    findFieldValue(parsed, ['purchase date', 'date', 'transaction date', 'invoice date']) ?? inferDateFromRawText(parsed.rawText),
+    findFieldValue(primaryCandidate, ['purchase date', 'date', 'transaction date', 'invoice date']) ?? inferDateFromRawText(primaryCandidate.rawText),
   );
-  const grandTotal = findFieldValue(parsed, ['grand total', 'total', 'amount due']);
+  const grandTotal = findFieldValue(primaryCandidate, ['grand total', 'total', 'amount due']);
 
   return {
     merchant,
     purchaseDate,
     grandTotal,
-    lineItemCount: Array.isArray(parsed.lineItems) ? parsed.lineItems.length : 0,
-    rawTextPreview: typeof parsed.rawText === 'string' ? parsed.rawText.slice(0, 240) : null,
+    receiptCandidateCount: Array.isArray(parsed.receiptCandidates) ? parsed.receiptCandidates.length : 1,
+    lineItemCount: Array.isArray(primaryCandidate.lineItems) ? primaryCandidate.lineItems.length : 0,
+    rawTextPreview: typeof primaryCandidate.rawText === 'string' ? primaryCandidate.rawText.slice(0, 240) : null,
   };
 }
 

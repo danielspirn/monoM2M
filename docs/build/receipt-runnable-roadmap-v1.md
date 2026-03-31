@@ -188,16 +188,16 @@ Success signal:
 
 #### Slice 13: PDF and multi-receipt live OCR
 
-Goal:
-- expand beyond single-image live OCR
+Status:
+- complete
 
-Deliver:
-- Gemini Files API or equivalent PDF path
-- live multi-receipt splitting
-- long receipt handling
+Shipped:
+- backend OCR contract now supports document mode and grouped receipt candidates
+- Gemini adapter now preserves multi-receipt candidates and PDF-aware mode
+- smoke and helper scripts now summarize grouped candidate counts
 
 Success signal:
-- grouped uploads and PDFs use real OCR instead of fixture shortcuts or mock fallback
+- grouped uploads and PDFs use a backend shape that no longer assumes one receipt per document
 
 #### Slice 14: OpenAI live fallback
 

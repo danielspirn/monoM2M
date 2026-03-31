@@ -20,8 +20,24 @@ type GeminiReceiptOcrJson = {
     description: string;
     quantity: number;
     unitPrice: number;
-    lineTotal: number;
-    confidence: number;
+      lineTotal: number;
+      confidence: number;
+    }>;
+  receiptCandidates?: Array<{
+    candidateId?: string;
+    rawText: string;
+    fieldCandidates: Array<{
+      label: string;
+      value: string;
+      confidence: number;
+    }>;
+    lineItems: Array<{
+      description: string;
+      quantity: number;
+      unitPrice: number;
+      lineTotal: number;
+      confidence: number;
+    }>;
   }>;
 };
 
@@ -76,21 +92,41 @@ export async function executeGeminiReceiptOcrFromFile(params: {
   }
 
   const parsed = JSON.parse(text) as GeminiReceiptOcrJson;
-
-  return {
-    providerId: 'google_gemini_2_5_flash',
-    modelName: 'gemini-2.5-flash',
-    authMode: 'gemini_api_key',
-    vendorRequestId: payload.responseId,
-    rawText: parsed.rawText,
-    fieldCandidates: parsed.fieldCandidates ?? [],
-    lineItemCandidates: (parsed.lineItems ?? []).map((item) => ({
+  const normalizedReceiptCandidates = (parsed.receiptCandidates ?? []).map((candidate, index) => ({
+    candidateId: candidate.candidateId ?? `receipt_candidate_${index + 1}`,
+    rawText: candidate.rawText,
+    fieldCandidates: candidate.fieldCandidates ?? [],
+    lineItemCandidates: (candidate.lineItems ?? []).map((item) => ({
       description: item.description,
       quantity: coerceNumber(item.quantity, 1),
       unitPrice: coerceNumber(item.unitPrice, 0),
       lineTotal: coerceNumber(item.lineTotal, 0),
       confidence: coerceConfidence(item.confidence),
     })),
+  }));
+  const primaryCandidate = normalizedReceiptCandidates[0];
+
+  return {
+    providerId: 'google_gemini_2_5_flash',
+    modelName: 'gemini-2.5-flash',
+    authMode: 'gemini_api_key',
+    vendorRequestId: payload.responseId,
+    documentMode:
+      params.request.sourceMimeType === 'application/pdf'
+        ? 'pdf_document'
+        : params.request.captureChannel === 'multi_receipt_photo'
+          ? 'multi_receipt'
+          : 'single_receipt',
+    rawText: primaryCandidate?.rawText ?? parsed.rawText,
+    fieldCandidates: primaryCandidate?.fieldCandidates ?? parsed.fieldCandidates ?? [],
+    lineItemCandidates: primaryCandidate?.lineItemCandidates ?? (parsed.lineItems ?? []).map((item) => ({
+      description: item.description,
+      quantity: coerceNumber(item.quantity, 1),
+      unitPrice: coerceNumber(item.unitPrice, 0),
+      lineTotal: coerceNumber(item.lineTotal, 0),
+      confidence: coerceConfidence(item.confidence),
+    })),
+    receiptCandidates: normalizedReceiptCandidates.length ? normalizedReceiptCandidates : undefined,
   };
 }
 
@@ -148,6 +184,43 @@ export function buildGeminiReceiptOcrRequestBody(params: {
               required: ['description', 'quantity', 'unitPrice', 'lineTotal', 'confidence'],
             },
           },
+          receiptCandidates: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                candidateId: { type: 'string' },
+                rawText: { type: 'string' },
+                fieldCandidates: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      label: { type: 'string' },
+                      value: { type: 'string' },
+                      confidence: { type: 'number' },
+                    },
+                    required: ['label', 'value', 'confidence'],
+                  },
+                },
+                lineItems: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      description: { type: 'string' },
+                      quantity: { type: 'number' },
+                      unitPrice: { type: 'number' },
+                      lineTotal: { type: 'number' },
+                      confidence: { type: 'number' },
+                    },
+                    required: ['description', 'quantity', 'unitPrice', 'lineTotal', 'confidence'],
+                  },
+                },
+              },
+              required: ['rawText', 'fieldCandidates', 'lineItems'],
+            },
+          },
         },
         required: ['rawText', 'fieldCandidates', 'lineItems'],
       },
@@ -157,11 +230,15 @@ export function buildGeminiReceiptOcrRequestBody(params: {
 
 function buildLiveReceiptOcrPrompt(request: ReceiptOcrBackendRequest) {
   const splitInstruction = request.captureChannel === 'multi_receipt_photo'
-    ? 'If there are multiple receipts in the image, focus on the most legible receipt and preserve only its fields for this first live extraction.'
+    ? 'If there are multiple receipts in the image, return receiptCandidates with one candidate per visible receipt, ordered by readability, and also mirror the best candidate at the top level.'
     : 'Treat the document as one receipt unless the evidence clearly contradicts that.';
+  const pdfInstruction = request.sourceMimeType === 'application/pdf'
+    ? 'This upload may be a PDF. Read the document pages directly and preserve receiptCandidates when one PDF contains multiple receipt sections or attachments.'
+    : 'This upload is an image-based receipt capture.';
 
   return [
     'Extract receipt OCR facts for Money to Memories.',
+    pdfInstruction,
     splitInstruction,
     'Return only JSON that matches the provided schema.',
     'Set rawText to the best plain-text OCR transcript you can read from the image.',

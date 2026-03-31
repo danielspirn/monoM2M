@@ -78,5 +78,69 @@ describe('gemini receipt OCR adapter', () => {
     expect(result.vendorRequestId).toBe('resp_123');
     expect(result.fieldCandidates[0]?.value).toBe('Safeway');
     expect(result.lineItemCandidates[0]?.description).toBe('Bananas');
+    expect(result.documentMode).toBe('single_receipt');
+  });
+
+  it('preserves multi-receipt candidates for grouped uploads', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        responseId: 'resp_multi',
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: JSON.stringify({
+                    rawText: 'Primary receipt text',
+                    fieldCandidates: [
+                      { label: 'Merchant', value: 'Primary Market', confidence: 0.97 },
+                    ],
+                    lineItems: [
+                      {
+                        description: 'Milk',
+                        quantity: 1,
+                        unitPrice: 4.99,
+                        lineTotal: 4.99,
+                        confidence: 0.91,
+                      },
+                    ],
+                    receiptCandidates: [
+                      {
+                        candidateId: 'candidate_1',
+                        rawText: 'Primary receipt text',
+                        fieldCandidates: [{ label: 'Merchant', value: 'Primary Market', confidence: 0.97 }],
+                        lineItems: [{ description: 'Milk', quantity: 1, unitPrice: 4.99, lineTotal: 4.99, confidence: 0.91 }],
+                      },
+                      {
+                        candidateId: 'candidate_2',
+                        rawText: 'Second receipt text',
+                        fieldCandidates: [{ label: 'Merchant', value: 'Coffee Bar', confidence: 0.9 }],
+                        lineItems: [{ description: 'Latte', quantity: 1, unitPrice: 5.5, lineTotal: 5.5, confidence: 0.88 }],
+                      },
+                    ],
+                  }),
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    } as Response);
+
+    const result = await executeGeminiReceiptOcrFromFile({
+      request: {
+        ...baseRequest,
+        captureChannel: 'multi_receipt_photo',
+      },
+      filePath: '/Users/danielspirn/Documents/dev/monoM2M/monoM2M/receipt_images/IMG_7573.jpeg',
+      apiKey: 'gemini-secret',
+      fetchImpl: fetchMock,
+    });
+
+    expect(result.documentMode).toBe('multi_receipt');
+    expect(result.receiptCandidates).toHaveLength(2);
+    expect(result.receiptCandidates?.[1]?.fieldCandidates[0]?.value).toBe('Coffee Bar');
+    expect(result.fieldCandidates[0]?.value).toBe('Primary Market');
   });
 });
