@@ -159,14 +159,14 @@ Success signal:
 
 #### Slice 11: Real structured purchase graph
 
-Goal:
-- persist trusted output into actual structured records
+Status:
+- complete
 
-Deliver:
-- durable `purchase_events`
-- durable `purchase_line_items`
-- merchant resolution hooks
-- product match placeholders
+Shipped:
+- trusted receipts now store durable purchase-event records
+- trusted receipts now store durable purchase-line-item records
+- durable graph records refresh after reviewed edits
+- merchant resolution hooks and product candidate placeholders now live on stored records
 
 Success signal:
 - reviewed live receipts begin feeding Home, Things, People, and Memories from real records

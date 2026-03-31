@@ -41,10 +41,12 @@ describe('receiptWorkflowStore projections', () => {
 
     expect(projectedPurchaseEvents).toHaveLength(1);
     expect(projectedPurchaseEvents[0]?.merchantId).toBe('merchant_target');
+    expect(projectedPurchaseEvents[0]?.merchantDirectoryId).toBe('merchant_directory_target');
     expect(projectedPurchaseEvents[0]?.thingCandidateCount).toBe(1);
 
     expect(projectedPurchaseLineItems).toHaveLength(2);
     expect(projectedPurchaseLineItems[0]?.purchaseEventId).toBe(`purchase_${capture.primaryReceiptId}`);
+    expect(projectedPurchaseLineItems[0]?.productCandidateKey).toBeTruthy();
     expect(projectedPurchaseLineItems.find((item) => item.description === 'Air Fryer')?.thingId).toBeTruthy();
 
     expect(projectedReceipts).toHaveLength(1);
@@ -139,5 +141,28 @@ describe('receiptWorkflowStore projections', () => {
     expect(payload?.lineItems[0]?.reviewState).toBe('edited');
     expect(payload?.parsedData.fieldCandidates[0]?.value).toBe('Target Run');
     expect(payload?.structuredData.merchantMatchStatus).toBe('confirmed');
+  });
+
+  it('refreshes stored purchase graph records after trusted edits', () => {
+    const capture = createLiveReceiptBatch({
+      merchant: 'Target',
+      purchaseDate: '2026-03-08',
+      source: 'Upload photo',
+      summary: 'Air fryer, parchment liners',
+    });
+
+    vi.advanceTimersByTime(2200);
+    submitLiveReceiptReview(capture.primaryReceiptId);
+
+    saveLiveReceiptHeaderField(capture.primaryReceiptId, 'merchantName', 'Target Run');
+    saveLiveReceiptLineItemField(capture.primaryReceiptId, `${capture.primaryReceiptId}_line_1`, 'descriptionNormalized', 'Air Fryer XL');
+
+    const purchaseEvents = listProjectedPurchaseEvents();
+    const purchaseLineItems = listProjectedPurchaseLineItems();
+
+    expect(purchaseEvents[0]?.merchantName).toBe('Target Run');
+    expect(purchaseEvents[0]?.merchantResolutionSource).toBe('reviewed_receipt');
+    expect(purchaseLineItems.find((item) => item.lineIndex === 1)?.description).toBe('Air Fryer Xl');
+    expect(purchaseLineItems.find((item) => item.lineIndex === 1)?.productCandidateLabel).toBe('Air Fryer Xl');
   });
 });

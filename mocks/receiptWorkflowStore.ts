@@ -203,6 +203,7 @@ type StoredReceiptRecord = {
     purchaseEventId: string;
     projectedThingIds: string[];
   };
+  purchaseGraph?: StoredPurchaseGraphRecords;
 };
 
 export type ReceiptStudioLivePayload = {
@@ -312,6 +313,7 @@ export type ProjectedPurchaseEventRecord = {
   receiptId: string;
   sourceDocumentId: string;
   merchantId: string;
+  merchantDirectoryId: string;
   merchantName: string;
   purchasedAt: string;
   grandTotal: number;
@@ -320,6 +322,7 @@ export type ProjectedPurchaseEventRecord = {
   retailerProfile: string;
   merchantMatchStatus: 'suggested' | 'confirmed';
   merchantMatchConfidence: number;
+  merchantResolutionSource: 'directory_match' | 'reviewed_receipt';
   taxTags: string[];
   lifestyleTags: string[];
   productCategories: string[];
@@ -349,6 +352,8 @@ export type ProjectedPurchaseLineItemRecord = {
   assetCandidateFlag: boolean;
   productMatchStatus: 'suggested' | 'confirmed' | 'unmatched';
   productMatchConfidence: number;
+  productCandidateKey: string;
+  productCandidateLabel: string;
   householdTags: string[];
   lemTags: string[];
   category: string;
@@ -378,6 +383,13 @@ export type ProjectedThingRecord = {
   badgeLabels: string[];
   personIds: string[];
   memoryIds: string[];
+};
+
+type StoredPurchaseGraphRecords = {
+  savedAt: string;
+  purchaseEvent: ProjectedPurchaseEventRecord;
+  purchaseLineItems: ProjectedPurchaseLineItemRecord[];
+  thingRecords: ProjectedThingRecord[];
 };
 
 export function createLiveReceipt(input: CreateReceiptInput): string {
@@ -611,14 +623,14 @@ export function listProjectedPurchaseReceipts(): ProjectedPurchaseReceiptRecord[
 export function listProjectedPurchaseEvents(): ProjectedPurchaseEventRecord[] {
   return readStoredReceipts()
     .filter((record) => record.status === 'trusted')
-    .map((record) => buildProjectedPurchaseEventRecord(record))
+    .map((record) => getStoredPurchaseGraph(record).purchaseEvent)
     .sort((left, right) => right.purchasedAt.localeCompare(left.purchasedAt));
 }
 
 export function listProjectedPurchaseLineItems(): ProjectedPurchaseLineItemRecord[] {
   return readStoredReceipts()
     .filter((record) => record.status === 'trusted')
-    .flatMap((record) => buildProjectedPurchaseLineItemRecords(record))
+    .flatMap((record) => getStoredPurchaseGraph(record).purchaseLineItems)
     .sort((left, right) => {
       if (left.purchasedAt && right.purchasedAt) {
         return right.purchasedAt.localeCompare(left.purchasedAt) || left.lineIndex - right.lineIndex;
@@ -629,9 +641,9 @@ export function listProjectedPurchaseLineItems(): ProjectedPurchaseLineItemRecor
 }
 
 export function listProjectedThings(): ProjectedThingRecord[] {
-  return listProjectedPurchaseLineItems()
-    .filter((item) => item.assetCandidateFlag && item.thingId)
-    .map((item) => buildProjectedThingRecord(item))
+  return readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .flatMap((record) => getStoredPurchaseGraph(record).thingRecords)
     .sort((left, right) => right.acquiredAt.localeCompare(left.acquiredAt));
 }
 
@@ -674,6 +686,7 @@ export function submitLiveReceiptReview(receiptId: string): ReceiptStudioLivePay
     },
   };
   nextRecord.purchaseProjection = buildPurchaseProjection(nextRecord, now);
+  nextRecord.purchaseGraph = buildStoredPurchaseGraph(nextRecord, now);
 
   records[index] = nextRecord;
   writeStoredReceipts(records);
@@ -862,10 +875,18 @@ function materializeRecord(record: StoredReceiptRecord): StoredReceiptRecord {
         };
 
   if (nextRecord.status !== 'processing') {
-    if (nextRecord.status === 'trusted' && !nextRecord.purchaseProjection) {
+    if (nextRecord.status === 'trusted' && (!nextRecord.purchaseProjection || !nextRecord.purchaseGraph)) {
+      const purchaseProjection = nextRecord.purchaseProjection ?? buildPurchaseProjection(nextRecord, nextRecord.updatedAt);
       return {
         ...nextRecord,
-        purchaseProjection: buildPurchaseProjection(nextRecord, nextRecord.updatedAt),
+        purchaseProjection,
+        purchaseGraph: nextRecord.purchaseGraph ?? buildStoredPurchaseGraph(
+          {
+            ...nextRecord,
+            purchaseProjection,
+          },
+          nextRecord.updatedAt,
+        ),
       };
     }
 
@@ -967,12 +988,15 @@ function materializeParsedData(record: StoredReceiptRecord): StoredParsedData {
 
 function buildProjectedPurchaseEventRecord(record: StoredReceiptRecord): ProjectedPurchaseEventRecord {
   const purchaseProjection = record.purchaseProjection ?? buildPurchaseProjection(record, record.updatedAt);
+  const merchantKey = slugify(record.header.merchantName);
+  const merchantDirectoryId = `merchant_directory_${merchantKey}`;
 
   return {
     id: purchaseProjection.purchaseEventId,
     receiptId: record.id,
     sourceDocumentId: record.sourceDocument.id,
     merchantId: `merchant_${slugify(record.header.merchantName)}`,
+    merchantDirectoryId,
     merchantName: record.header.merchantName,
     purchasedAt: record.header.purchasedAt,
     grandTotal: record.header.grandTotal,
@@ -981,6 +1005,7 @@ function buildProjectedPurchaseEventRecord(record: StoredReceiptRecord): Project
     retailerProfile: record.structuredData.retailerProfile,
     merchantMatchStatus: record.structuredData.merchantMatchStatus,
     merchantMatchConfidence: record.structuredData.merchantMatchConfidence,
+    merchantResolutionSource: record.structuredData.merchantMatchStatus === 'confirmed' ? 'reviewed_receipt' : 'directory_match',
     taxTags: record.structuredData.taxTags,
     lifestyleTags: record.structuredData.lifestyleTags,
     productCategories: record.structuredData.productCategories,
@@ -1026,6 +1051,8 @@ function buildProjectedPurchaseLineItemRecords(record: StoredReceiptRecord): Pro
         assetCandidateFlag: item.assetCandidateFlag,
         productMatchStatus: item.productMatchStatus,
         productMatchConfidence: item.productMatchConfidence,
+        productCandidateKey: `product_${slugify(`${record.header.merchantName}-${item.descriptionNormalized}`)}`,
+        productCandidateLabel: item.descriptionNormalized,
         householdTags: item.householdTags,
         lemTags: item.lemTags,
         category: classification.category,
@@ -1098,6 +1125,30 @@ function buildPurchaseProjection(record: StoredReceiptRecord, projectedAt: strin
       .filter((item) => item.assetCandidateFlag)
       .map((item) => buildProjectedThingId(record.id, item)),
   };
+}
+
+function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string): StoredPurchaseGraphRecords {
+  const purchaseProjection = record.purchaseProjection ?? buildPurchaseProjection(record, savedAt);
+  const projectedRecord = {
+    ...record,
+    purchaseProjection,
+  };
+  const purchaseEvent = buildProjectedPurchaseEventRecord(projectedRecord);
+  const purchaseLineItems = buildProjectedPurchaseLineItemRecords(projectedRecord);
+  const thingRecords = purchaseLineItems
+    .filter((item) => item.assetCandidateFlag && item.thingId)
+    .map((item) => buildProjectedThingRecord(item));
+
+  return {
+    savedAt,
+    purchaseEvent,
+    purchaseLineItems,
+    thingRecords,
+  };
+}
+
+function getStoredPurchaseGraph(record: StoredReceiptRecord): StoredPurchaseGraphRecords {
+  return record.purchaseGraph ?? buildStoredPurchaseGraph(record, record.updatedAt);
 }
 
 function buildStudioPayload(record: StoredReceiptRecord): ReceiptStudioLivePayload {
@@ -1199,7 +1250,7 @@ function refreshRecordAfterReviewEdit(
   const duplicateDetected = detectPossibleDuplicate(siblingRecords, merchant, purchasedAt, grandTotal);
   const evidenceSpans = buildEvidenceSpans(record.id, lineItems, merchant, purchasedAt, grandTotal);
 
-  return {
+  const nextRecord: StoredReceiptRecord = {
     ...record,
     note: `${merchant} receipt changes saved. Parsed and structured layers now reflect the reviewed values.`,
     header: {
@@ -1252,6 +1303,13 @@ function refreshRecordAfterReviewEdit(
       sourceDocument: record.sourceDocument,
     }),
   };
+
+  if (nextRecord.status === 'trusted') {
+    nextRecord.purchaseProjection = buildPurchaseProjection(nextRecord, nextRecord.updatedAt);
+    nextRecord.purchaseGraph = buildStoredPurchaseGraph(nextRecord, nextRecord.updatedAt);
+  }
+
+  return nextRecord;
 }
 
 function buildReviewedLineItem(item: ReceiptLineItemRecord, description: string): ReceiptLineItemRecord {
