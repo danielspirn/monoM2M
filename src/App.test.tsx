@@ -177,6 +177,41 @@ describe('Milestone 1 shell', () => {
     expect(screen.getAllByText(/Air Fryer/i).length).toBeGreaterThan(0);
   });
 
+  it('shows concrete duplicate candidates during receipt review', () => {
+    vi.useFakeTimers();
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
+    fireEvent.click(screen.getByText('Add Receipt'));
+    fireEvent.change(screen.getByLabelText('Merchant'), { target: { value: 'Safeway' } });
+    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-03-10' } });
+    fireEvent.change(screen.getByLabelText('Capture source'), { target: { value: 'Upload photo' } });
+    fireEvent.change(screen.getByLabelText('Extracted summary'), { target: { value: 'Bananas, yogurt' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Process receipt capture' }));
+
+    act(() => {
+      vi.advanceTimersByTime(2200);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
+    fireEvent.click(screen.getByText('Add Receipt'));
+    fireEvent.change(screen.getByLabelText('Merchant'), { target: { value: 'Safeway' } });
+    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-03-10' } });
+    fireEvent.change(screen.getByLabelText('Capture source'), { target: { value: 'Upload photo' } });
+    fireEvent.change(screen.getByLabelText('Extracted summary'), { target: { value: 'Bananas, yogurt' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Process receipt capture' }));
+
+    act(() => {
+      vi.advanceTimersByTime(2200);
+    });
+
+    expect(screen.getByText('Possible duplicates')).toBeTruthy();
+    expect(screen.getAllByText('Possible duplicate receipt').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Safeway/i).length).toBeGreaterThan(0);
+    expect(screen.getByText('$0.00 delta')).toBeTruthy();
+  });
+
   it('can preload a real uploaded fixture into the receipt capture flow', () => {
     render(<App />);
 

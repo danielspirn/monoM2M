@@ -4,6 +4,7 @@ import {
   answerSemanticReceiptQuestion,
   createLiveReceiptBatch,
   getLiveReceiptStudioPayload,
+  listLiveDuplicateCandidates,
   listProjectedExtractionRuns,
   listProjectedEvidenceRecords,
   listProjectedLocations,
@@ -231,6 +232,36 @@ describe('receiptWorkflowStore projections', () => {
     expect(payload?.lineItems[0]?.reviewState).toBe('edited');
     expect(payload?.parsedData.fieldCandidates[0]?.value).toBe('Target Run');
     expect(payload?.structuredData.merchantMatchStatus).toBe('confirmed');
+  });
+
+  it('builds duplicate candidate records for similar receipts', () => {
+    const firstCapture = createLiveReceiptBatch({
+      merchant: 'Safeway',
+      purchaseDate: '2026-03-10',
+      source: 'Upload photo',
+      summary: 'Bananas, yogurt',
+    });
+
+    vi.advanceTimersByTime(2200);
+
+    const secondCapture = createLiveReceiptBatch({
+      merchant: 'Safeway',
+      purchaseDate: '2026-03-10',
+      source: 'Upload photo',
+      summary: 'Bananas, yogurt',
+    });
+
+    vi.advanceTimersByTime(2200);
+
+    const payload = getLiveReceiptStudioPayload(secondCapture.primaryReceiptId);
+    const duplicateCandidates = listLiveDuplicateCandidates();
+
+    expect(payload?.duplicateCandidates).toHaveLength(1);
+    expect(payload?.duplicateCandidates[0]?.matchedReceiptId).toBe(firstCapture.primaryReceiptId);
+    expect(payload?.duplicateCandidates[0]?.matchedMerchantName).toBe('Safeway');
+    expect(payload?.duplicateCandidates[0]?.confidenceScore).toBeGreaterThan(0.9);
+    expect(payload?.alerts.some((alert) => alert.kind === 'duplicate')).toBe(true);
+    expect(duplicateCandidates.some((candidate) => candidate.receiptId === secondCapture.primaryReceiptId)).toBe(true);
   });
 
   it('refreshes stored purchase graph records after trusted edits', () => {

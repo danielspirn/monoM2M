@@ -138,6 +138,18 @@ type EvidenceSpanRecord = {
   height: number | null;
 };
 
+type DuplicateCandidateRecord = {
+  id: string;
+  matchedReceiptId: string;
+  matchedMerchantName: string;
+  matchedPurchasedAt: string;
+  matchedGrandTotal: number;
+  matchedStatus: ReceiptWorkflowStatus;
+  totalDelta: number;
+  confidenceScore: number;
+  note: string;
+};
+
 type StoredReceiptRecord = {
   id: string;
   createdAt: string;
@@ -173,6 +185,7 @@ type StoredReceiptRecord = {
     memoryState: 'candidate';
     suggestedTitle: string;
   }>;
+  duplicateCandidates: DuplicateCandidateRecord[];
   structuredData: {
     merchantMatchStatus: 'suggested' | 'confirmed';
     merchantMatchConfidence: number;
@@ -255,6 +268,7 @@ export type ReceiptStudioLivePayload = {
     memoryState: 'candidate';
     suggestedTitle: string;
   }>;
+  duplicateCandidates: Array<DuplicateCandidateRecord & { action: string }>;
   actions: {
     canSave: boolean;
     canConvertToThing: boolean;
@@ -290,6 +304,20 @@ export type StoredReceiptCard = {
   note: string;
   tags: string[];
   action: string;
+};
+
+export type LiveDuplicateCandidateRecord = {
+  receiptId: string;
+  merchantName: string;
+  purchasedAt: string;
+  grandTotal: number;
+  candidateReceiptId: string;
+  candidateMerchantName: string;
+  candidatePurchasedAt: string;
+  candidateGrandTotal: number;
+  candidateStatus: ReceiptWorkflowStatus;
+  totalDelta: number;
+  confidenceScore: number;
 };
 
 export type ProjectedPurchaseReceiptRecord = {
@@ -792,7 +820,7 @@ function buildStoredReceiptRecord(params: {
   const warrantySnippet = lineItems.some((item) => item.assetCandidateFlag)
     ? 'Warranty candidate detected from durable-goods language and merchant pattern.'
     : null;
-  const duplicateDetected = detectPossibleDuplicate(existingRecords, merchant, receiptDate, total);
+  const duplicateCandidates = buildDuplicateCandidates(existingRecords, merchant, receiptDate, total);
   const merchantProfile = buildRetailerProfile(merchant);
   const taxTags = buildTaxTags(lineItems, merchant);
   const lifestyleTags = buildLifestyleTags(lineItems, merchant);
@@ -867,6 +895,7 @@ function buildStoredReceiptRecord(params: {
             suggestedTitle: buildMemoryTitle(merchant, lineItems),
           },
     ],
+    duplicateCandidates,
     structuredData: {
       merchantMatchStatus: 'suggested',
       merchantMatchConfidence: merchantProfile === 'known retailer' ? 0.95 : 0.85,
@@ -888,7 +917,7 @@ function buildStoredReceiptRecord(params: {
       embeddingVersion: 'receipt-embedding-v1',
     },
     alerts: buildAlerts({
-      duplicateDetected,
+      duplicateCandidates,
       merchant,
       lineItems,
       merchantProfile,
@@ -919,6 +948,29 @@ export function listLiveReceiptCards(): StoredReceiptCard[] {
       action: `route:/ingest/${record.id}`,
     }))
     .sort((left, right) => right.purchasedAt.localeCompare(left.purchasedAt));
+}
+
+export function listLiveDuplicateCandidates(): LiveDuplicateCandidateRecord[] {
+  return readStoredReceipts()
+    .flatMap((record) =>
+      record.duplicateCandidates.map((candidate) => ({
+        receiptId: record.id,
+        merchantName: record.header.merchantName,
+        purchasedAt: record.header.purchasedAt,
+        grandTotal: record.header.grandTotal,
+        candidateReceiptId: candidate.matchedReceiptId,
+        candidateMerchantName: candidate.matchedMerchantName,
+        candidatePurchasedAt: candidate.matchedPurchasedAt,
+        candidateGrandTotal: candidate.matchedGrandTotal,
+        candidateStatus: candidate.matchedStatus,
+        totalDelta: candidate.totalDelta,
+        confidenceScore: candidate.confidenceScore,
+      })),
+    )
+    .sort((left, right) =>
+      right.confidenceScore - left.confidenceScore
+      || left.receiptId.localeCompare(right.receiptId),
+    );
 }
 
 export function listProjectedPurchaseReceipts(): ProjectedPurchaseReceiptRecord[] {
@@ -2545,6 +2597,13 @@ function buildStudioPayload(record: StoredReceiptRecord): ReceiptStudioLivePaylo
           })),
     peopleSuggestions: record.status === 'processing' ? [] : record.peopleSuggestions,
     memorySuggestions: record.status === 'processing' ? [] : record.memorySuggestions,
+    duplicateCandidates:
+      record.status === 'processing'
+        ? []
+        : record.duplicateCandidates.map((candidate) => ({
+            ...candidate,
+            action: `route:/ingest/${candidate.matchedReceiptId}`,
+          })),
     actions: {
       canSave: record.status !== 'processing',
       canConvertToThing: record.status !== 'processing' && record.lineItems.some((item) => item.assetCandidateFlag),
@@ -2593,7 +2652,7 @@ function refreshRecordAfterReviewEdit(
     ? 'Warranty candidate detected from durable-goods language and merchant pattern.'
     : null;
   const merchantProfile = buildRetailerProfile(merchant);
-  const duplicateDetected = detectPossibleDuplicate(siblingRecords, merchant, purchasedAt, grandTotal);
+  const duplicateCandidates = buildDuplicateCandidates(siblingRecords, merchant, purchasedAt, grandTotal);
   const evidenceSpans = buildEvidenceSpans(record.id, lineItems, merchant, purchasedAt, grandTotal);
 
   const nextRecord: StoredReceiptRecord = {
@@ -2622,6 +2681,7 @@ function refreshRecordAfterReviewEdit(
     lineItems,
     selectedLineItemId,
     evidenceSpans,
+    duplicateCandidates,
     structuredData: {
       ...record.structuredData,
       merchantMatchStatus: 'confirmed',
@@ -2644,7 +2704,7 @@ function refreshRecordAfterReviewEdit(
       embeddingVersion: record.searchDocument.embeddingVersion || 'receipt-embedding-v1',
     },
     alerts: buildAlerts({
-      duplicateDetected,
+      duplicateCandidates,
       merchant,
       lineItems,
       merchantProfile,
@@ -3303,7 +3363,7 @@ function defaultBatchDrafts(captureChannel: CaptureChannel, purchaseDate: string
 }
 
 function buildAlerts(params: {
-  duplicateDetected: boolean;
+  duplicateCandidates: DuplicateCandidateRecord[];
   merchant: string;
   lineItems: ReceiptLineItemRecord[];
   merchantProfile: string;
@@ -3311,13 +3371,14 @@ function buildAlerts(params: {
 }) {
   const alerts: StoredReceiptRecord['alerts'] = [];
 
-  if (params.duplicateDetected) {
+  if (params.duplicateCandidates.length) {
+    const topCandidate = params.duplicateCandidates[0];
     alerts.push({
       id: nextId('alert_dup'),
       kind: 'duplicate',
       level: 'issue',
       title: 'Possible duplicate receipt',
-      body: `We found a recent ${params.merchant} receipt with a similar total. Review only if this looks like the same purchase.`,
+      body: `We found a similar ${topCandidate?.matchedMerchantName ?? params.merchant} receipt from ${topCandidate?.matchedPurchasedAt.slice(0, 10) ?? 'recently'}. Review only if this looks like the same purchase.`,
     });
   }
 
@@ -3354,14 +3415,41 @@ function buildAlerts(params: {
   return alerts;
 }
 
-function detectPossibleDuplicate(records: StoredReceiptRecord[], merchant: string, purchasedAt: string, total: number) {
-  return records.some((record) => {
+function buildDuplicateCandidates(
+  records: StoredReceiptRecord[],
+  merchant: string,
+  purchasedAt: string,
+  total: number,
+): DuplicateCandidateRecord[] {
+  return records
+    .filter((record) => {
     const sameMerchant = record.header.merchantName.toLowerCase() === merchant.toLowerCase();
     const sameDay = record.header.purchasedAt.slice(0, 10) === purchasedAt.slice(0, 10);
     const totalDelta = Math.abs(record.header.grandTotal - total);
 
     return sameMerchant && sameDay && totalDelta < 3;
-  });
+    })
+    .map((record) => {
+      const totalDelta = roundCurrency(Math.abs(record.header.grandTotal - total));
+      const confidenceScore = Math.max(0.72, roundCurrency(0.98 - (totalDelta / 10)));
+
+      return {
+        id: `dup_${record.id}_${slugify(`${merchant}-${purchasedAt}`)}`,
+        matchedReceiptId: record.id,
+        matchedMerchantName: record.header.merchantName,
+        matchedPurchasedAt: record.header.purchasedAt,
+        matchedGrandTotal: record.header.grandTotal,
+        matchedStatus: record.status,
+        totalDelta,
+        confidenceScore,
+        note: `Possible duplicate based on same merchant, same purchase day, and only $${totalDelta.toFixed(2)} difference in total.`,
+      };
+    })
+    .sort((left, right) =>
+      right.confidenceScore - left.confidenceScore
+      || left.totalDelta - right.totalDelta
+      || right.matchedPurchasedAt.localeCompare(left.matchedPurchasedAt),
+    );
 }
 
 function buildRetailerProfile(merchant: string) {

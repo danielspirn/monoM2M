@@ -419,3 +419,16 @@ Shipped:
 
 Success signal:
 - purchases, Things, and memories now share a stable place layer instead of treating location as presentation-only text
+
+#### Slice 26: Structured duplicate candidate records
+
+Status:
+- complete
+
+Shipped:
+- duplicate detection now produces first-class candidate records instead of only a boolean alert
+- Receipt Studio now shows the concrete possible match, confidence, and total delta during review
+- future dedupe workflows and grounded agent answers can reuse the same duplicate-candidate layer
+
+Success signal:
+- duplicate review is grounded in an explicit candidate record with a linked receipt instead of a generic warning banner

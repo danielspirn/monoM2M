@@ -979,6 +979,7 @@ export function ReceiptStudioView({ state, payload, onAction }: PageProps<Receip
   const selectedLineItem = payload.lineItems.find((lineItem) => lineItem.id === payload.selectedLineItemId) ?? payload.lineItems[0] ?? null;
   const issueAlerts = (payload.alerts ?? []).filter((alert) => alert.level === 'issue');
   const infoAlerts = (payload.alerts ?? []).filter((alert) => alert.level === 'info');
+  const duplicateCandidates = payload.duplicateCandidates ?? [];
   const submitEditedValue = (actionPrefix: string, nextValue: string, currentValue: string) => {
     const normalizedNext = nextValue.trim();
     if (!normalizedNext || normalizedNext === currentValue.trim()) {
@@ -1067,6 +1068,32 @@ export function ReceiptStudioView({ state, payload, onAction }: PageProps<Receip
                 </div>
                 <p>{alert.body}</p>
               </article>
+            ))}
+          </div>
+        </SectionCard>
+      ) : null}
+
+      {duplicateCandidates.length ? (
+        <SectionCard title="Possible duplicates">
+          <div className="card-list">
+            {duplicateCandidates.map((candidate) => (
+              <button className="entity-row entity-row--receipt" key={candidate.id} type="button" onClick={() => onAction(candidate.action)}>
+                <div className="entity-row__body">
+                  <div className="list-card__header">
+                    <div>
+                      <p className="eyebrow">{candidate.matchedMerchantName}</p>
+                      <h3>{money.format(candidate.matchedGrandTotal)}</h3>
+                      <p>{candidate.note}</p>
+                    </div>
+                    <span className={`chip chip--${candidate.matchedStatus}`}>{candidate.matchedStatus.replace('_', ' ')}</span>
+                  </div>
+                  <div className="chip-row">
+                    <span className="chip chip--accent">{Math.round(candidate.confidenceScore * 100)}% match</span>
+                    <span className="chip">{candidate.matchedPurchasedAt.slice(0, 10)}</span>
+                    <span className="chip">${candidate.totalDelta.toFixed(2)} delta</span>
+                  </div>
+                </div>
+              </button>
             ))}
           </div>
         </SectionCard>
