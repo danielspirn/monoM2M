@@ -125,6 +125,32 @@ describe('Milestone 1 shell', () => {
     expect(screen.getByText('Air Fryer')).toBeTruthy();
   });
 
+  it('shows receipt-linked ownership support on promoted Things', () => {
+    vi.useFakeTimers();
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
+    fireEvent.click(screen.getByText('Add Receipt'));
+
+    fireEvent.change(screen.getByLabelText('Merchant'), { target: { value: 'Target' } });
+    fireEvent.change(screen.getByLabelText('Capture source'), { target: { value: 'Upload photo' } });
+    fireEvent.change(screen.getByLabelText('Extracted summary'), { target: { value: 'Air fryer, parchment liners' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Process receipt capture' }));
+
+    act(() => {
+      vi.advanceTimersByTime(2200);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mark review complete' }));
+    fireEvent.click(screen.getByRole('navigation', { name: 'Primary navigation' }).querySelectorAll('button')[1]);
+    fireEvent.click(screen.getByText('Air Fryer'));
+
+    expect(screen.getByText('Ownership support')).toBeTruthy();
+    expect(screen.getByText('Receipt linked')).toBeTruthy();
+    expect(screen.getByText('Receipt document')).toBeTruthy();
+  });
+
   it('can preload a real uploaded fixture into the receipt capture flow', () => {
     render(<App />);
 

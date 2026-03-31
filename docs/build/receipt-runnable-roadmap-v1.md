@@ -175,14 +175,13 @@ Success signal:
 
 #### Slice 12: Thing promotion and ownership support
 
-Goal:
-- turn durable purchases into ownership intelligence
+Status:
+- complete
 
-Deliver:
-- convert line item to Thing
-- returnability facts
-- warranty stub creation
-- document linking
+Shipped:
+- promoted Things now carry receipt-linked ownership support fields
+- returnability and warranty stubs now flow through promoted Thing records
+- Things detail now surfaces receipt-linked ownership support and document linkage
 
 Success signal:
 - durable-goods receipts feel more valuable than archive-only storage

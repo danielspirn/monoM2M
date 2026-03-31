@@ -368,6 +368,7 @@ export type ProjectedPurchaseLineItemRecord = {
 export type ProjectedThingRecord = {
   id: string;
   purchaseEventId: string;
+  sourceDocumentId: string;
   displayName: string;
   category: string;
   subcategory: string;
@@ -381,6 +382,8 @@ export type ProjectedThingRecord = {
   warrantyEndsAt?: string;
   returnWindowEndsAt?: string;
   badgeLabels: string[];
+  supportLabels: string[];
+  linkedDocumentCount: number;
   personIds: string[];
   memoryIds: string[];
 };
@@ -1092,13 +1095,20 @@ function buildProjectedPurchaseReceiptRecord(
   };
 }
 
-function buildProjectedThingRecord(item: ProjectedPurchaseLineItemRecord): ProjectedThingRecord {
+function buildProjectedThingRecord(item: ProjectedPurchaseLineItemRecord, record?: StoredReceiptRecord): ProjectedThingRecord {
   const returnWindowEndsAt = item.returnable ? addDays(item.purchasedAt, inferReturnWindowDays(item.merchantName)) : undefined;
   const warrantyEndsAt = item.warrantyEligible ? addDays(item.purchasedAt, 365) : undefined;
+  const sourceDocumentId = record?.sourceDocument.id ?? `srcdoc_${item.receiptId}`;
+  const supportLabels = [
+    'Receipt linked',
+    returnWindowEndsAt ? 'Return policy tracked' : 'Return window closed',
+    warrantyEndsAt ? 'Warranty stub ready' : 'No warranty stub',
+  ];
 
   return {
     id: item.thingId ?? `thing_${slugify(`${item.receiptId}-${item.lineIndex}-${item.description}`)}`,
     purchaseEventId: item.purchaseEventId,
+    sourceDocumentId,
     displayName: item.description,
     category: item.category,
     subcategory: item.subcategory,
@@ -1112,6 +1122,8 @@ function buildProjectedThingRecord(item: ProjectedPurchaseLineItemRecord): Proje
     warrantyEndsAt,
     returnWindowEndsAt,
     badgeLabels: buildThingBadges(returnWindowEndsAt, warrantyEndsAt, item.purchasedAt),
+    supportLabels,
+    linkedDocumentCount: 1,
     personIds: item.personIds,
     memoryIds: [],
   };
@@ -1137,7 +1149,7 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
   const purchaseLineItems = buildProjectedPurchaseLineItemRecords(projectedRecord);
   const thingRecords = purchaseLineItems
     .filter((item) => item.assetCandidateFlag && item.thingId)
-    .map((item) => buildProjectedThingRecord(item));
+    .map((item) => buildProjectedThingRecord(item, projectedRecord));
 
   return {
     savedAt,

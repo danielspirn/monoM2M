@@ -392,6 +392,18 @@ export function ThingDetailView({ state, payload, onAction }: PageProps<ThingDet
         <MetadataList items={payload.metadata} />
       </SectionCard>
 
+      {payload.detail.supportLabels.length ? (
+        <SectionCard title="Ownership support">
+          <div className="chip-row">
+            {payload.detail.supportLabels.map((label) => (
+              <span className="chip chip--accent" key={label}>
+                {label}
+              </span>
+            ))}
+          </div>
+        </SectionCard>
+      ) : null}
+
       {payload.purchaseSource ? (
         <SectionCard title="Purchase source">
           <ReceiptRow receipt={payload.purchaseSource} onAction={onAction} />

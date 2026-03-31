@@ -58,6 +58,9 @@ describe('receiptWorkflowStore projections', () => {
     expect(projectedThings[0]?.displayName).toBe('Air Fryer');
     expect(projectedThings[0]?.category).toBe('Kitchen');
     expect(projectedThings[0]?.badgeLabels).toContain('From receipt review');
+    expect(projectedThings[0]?.sourceDocumentId).toBeTruthy();
+    expect(projectedThings[0]?.linkedDocumentCount).toBe(1);
+    expect(projectedThings[0]?.supportLabels).toContain('Receipt linked');
   });
 
   it('uses OCR snapshot item candidates for uncurated uploaded files', () => {

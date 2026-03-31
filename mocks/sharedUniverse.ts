@@ -38,9 +38,12 @@ type ThingRecord = {
   merchantName: string;
   receiptId: string;
   notes: string;
+  sourceDocumentId?: string;
   warrantyEndsAt?: string;
   returnWindowEndsAt?: string;
   badgeLabels: string[];
+  supportLabels?: string[];
+  linkedDocumentCount?: number;
   personIds: string[];
   memoryIds: string[];
 };
@@ -225,6 +228,7 @@ export type ThingDetailPayload = {
     merchantName: string;
     notes: string;
     badges: string[];
+    supportLabels: string[];
     headerSummary: string;
   };
   metadata: Array<{ label: string; value: string }>;
@@ -770,9 +774,12 @@ function projectedThingRecords(): ThingRecord[] {
     merchantName: thing.merchantName,
     receiptId: thing.receiptId,
     notes: thing.notes,
+    sourceDocumentId: thing.sourceDocumentId,
     warrantyEndsAt: thing.warrantyEndsAt,
     returnWindowEndsAt: thing.returnWindowEndsAt,
     badgeLabels: thing.badgeLabels,
+    supportLabels: thing.supportLabels,
+    linkedDocumentCount: thing.linkedDocumentCount,
     personIds: thing.personIds,
     memoryIds: thing.memoryIds,
   }));
@@ -1246,12 +1253,15 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
       merchantName: thing.merchantName,
       notes: thing.notes,
       badges: thing.badgeLabels,
-      headerSummary: `Bought at ${thing.merchantName} and connected to ${thing.personIds.length || 0} people and ${thing.memoryIds.length || 0} memories.`,
+      supportLabels: thing.supportLabels ?? [],
+      headerSummary: `Bought at ${thing.merchantName}, linked to ${thing.linkedDocumentCount ?? 0} receipt document${thing.linkedDocumentCount === 1 ? '' : 's'}, and connected to ${thing.personIds.length || 0} people and ${thing.memoryIds.length || 0} memories.`,
     },
     metadata: [
       { label: 'Category', value: `${thing.category} / ${thing.subcategory}` },
       { label: 'Purchase source', value: thing.merchantName },
       { label: 'Purchase date', value: thing.acquiredAt },
+      { label: 'Receipt document', value: thing.sourceDocumentId ?? 'No linked source document' },
+      { label: 'Linked documents', value: String(thing.linkedDocumentCount ?? 0) },
       { label: 'Warranty', value: thing.warrantyEndsAt ?? 'No warranty tracked' },
       { label: 'Return window', value: thing.returnWindowEndsAt ?? 'Closed' },
     ],
