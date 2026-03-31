@@ -12,6 +12,7 @@
     "ocr:snapshots:gemini": "node ./scripts/build-gemini-ocr-snapshots.mjs",
     "figma:parse-url": "node ./scripts/parse-figma-url.mjs",
     "ocr:smoke:gemini": "node ./scripts/run-gemini-receipt-smoke.mjs",
+    "ocr:smoke:openai": "node ./scripts/run-openai-receipt-smoke.mjs",
     "receipts:index-fixtures": "node ./scripts/build-receipt-fixture-catalog.mjs",
     "test:receipts": "vitest run test/receiptFixtureValidation.test.ts",
     "typecheck": "tsc --noEmit",

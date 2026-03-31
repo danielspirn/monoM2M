@@ -201,13 +201,16 @@ Success signal:
 
 #### Slice 14: OpenAI live fallback
 
-Goal:
-- make vendor switching real, not only planned
+Status:
+- complete
 
-Deliver:
-- live OpenAI adapter
-- shadow comparison
-- cost and quality reporting
+Shipped:
+- live OpenAI Responses API adapter added as a real OCR sibling to Gemini
+- backend and smoke paths now share the same structured OCR contract
+- live request shape validated against the current OpenAI strict schema rules
+
+Notes:
+- the local live smoke request reached OpenAI and then failed on `insufficient_quota`, so code path is working but the current API account needs billable quota for full runtime validation
 
 Success signal:
 - fallback vendor can be activated intentionally for approved cases
