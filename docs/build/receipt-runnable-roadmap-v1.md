@@ -380,3 +380,16 @@ Shipped:
 
 Success signal:
 - return windows are represented as stable support records rather than only a field or badge on the Thing
+
+#### Slice 23: Structured evidence records
+
+Status:
+- complete
+
+Shipped:
+- projected evidence records now expose receipt grounding as first-class graph records
+- Thing detail now shows evidence links for promoted items
+- future agent and review flows can reuse the same evidence layer instead of reading only receipt-local spans
+
+Success signal:
+- ownership surfaces can point back to concrete evidence records that grounded the promoted Thing

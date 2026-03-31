@@ -1,4 +1,5 @@
 import {
+  listProjectedEvidenceRecords,
   answerSemanticReceiptQuestion,
   getLiveReceiptStudioPayload,
   hasLiveReceipt,
@@ -265,6 +266,13 @@ export type ThingDetailPayload = {
     status: string;
     note: string;
   } | null;
+  evidenceLinks: Array<{
+    id: string;
+    label: string;
+    evidenceType: string;
+    snippet: string;
+    note: string;
+  }>;
   documents: Array<{
     id: string;
     title: string;
@@ -1421,6 +1429,7 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
     ?? null;
   const warranty = listProjectedWarranties().find((candidate) => candidate.thingId === thing.id) ?? null;
   const returnSupport = listProjectedReturnSupports().find((candidate) => candidate.thingId === thing.id) ?? null;
+  const evidenceLinks = listProjectedEvidenceRecords().filter((candidate) => candidate.linkedThingIds.includes(thing.id));
   const documents = listProjectedThingDocuments().filter((candidate) => candidate.thingId === thing.id);
   const documentLinks = listProjectedDocumentLinks().filter((candidate) =>
     candidate.targetObjectId === thing.id || candidate.receiptId === thing.receiptId,
@@ -1471,6 +1480,13 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
           note: returnSupport.note,
         }
       : null,
+    evidenceLinks: evidenceLinks.map((evidence) => ({
+      id: evidence.id,
+      label: evidence.label,
+      evidenceType: evidence.evidenceType,
+      snippet: evidence.snippet,
+      note: evidence.note,
+    })),
     documents: documents.map((document) => ({
       id: document.id,
       title: document.title,

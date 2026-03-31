@@ -558,6 +558,20 @@ export type ProjectedReturnSupportRecord = {
   note: string;
 };
 
+export type ProjectedEvidenceRecord = {
+  id: string;
+  receiptId: string;
+  purchaseEventId: string;
+  targetObjectType: 'purchase_event' | 'purchase_line_item';
+  targetRecordId: string;
+  label: string;
+  evidenceType: 'image_region' | 'text_span';
+  pageNumber: number | null;
+  snippet: string;
+  linkedThingIds: string[];
+  note: string;
+};
+
 export type ProjectedThingDocumentRecord = {
   id: string;
   thingId: string;
@@ -648,6 +662,7 @@ type StoredPurchaseGraphRecords = {
   memoryRecords: ProjectedMemoryRecord[];
   warrantyRecords: ProjectedWarrantyRecord[];
   returnSupportRecords: ProjectedReturnSupportRecord[];
+  evidenceRecords: ProjectedEvidenceRecord[];
   documentRecords: ProjectedThingDocumentRecord[];
   documentLinkRecords: ProjectedDocumentLinkRecord[];
   semanticRecord: ProjectedSemanticRecord;
@@ -1047,6 +1062,16 @@ export function listProjectedReturnSupports(): ProjectedReturnSupportRecord[] {
     .sort((left, right) => right.windowEndsAt.localeCompare(left.windowEndsAt));
 }
 
+export function listProjectedEvidenceRecords(): ProjectedEvidenceRecord[] {
+  return readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .flatMap((record) => getStoredPurchaseGraph(record).evidenceRecords)
+    .sort((left, right) =>
+      right.purchaseEventId.localeCompare(left.purchaseEventId)
+      || left.label.localeCompare(right.label),
+    );
+}
+
 export function listProjectedThingDocuments(): ProjectedThingDocumentRecord[] {
   return readStoredReceipts()
     .filter((record) => record.status === 'trusted')
@@ -1413,6 +1438,7 @@ function materializeRecord(record: StoredReceiptRecord): StoredReceiptRecord {
         || !nextRecord.purchaseGraph.memoryRecords
         || !nextRecord.purchaseGraph.warrantyRecords
         || !nextRecord.purchaseGraph.returnSupportRecords
+        || !nextRecord.purchaseGraph.evidenceRecords
         || !nextRecord.purchaseGraph.documentRecords
         || !nextRecord.purchaseGraph.documentLinkRecords
         || !nextRecord.purchaseGraph.semanticRecord
@@ -2141,6 +2167,36 @@ function buildProjectedReturnSupportRecords(thingRecords: ProjectedThingRecord[]
     }));
 }
 
+function buildProjectedEvidenceRecords(
+  record: StoredReceiptRecord,
+  purchaseEvent: ProjectedPurchaseEventRecord,
+  purchaseLineItems: ProjectedPurchaseLineItemRecord[],
+): ProjectedEvidenceRecord[] {
+  return record.evidenceSpans.map((span) => {
+    const linkedLineItem = purchaseLineItems.find((item) => item.sourceLineItemId === span.targetObjectId);
+
+    return {
+      id: span.id,
+      receiptId: record.id,
+      purchaseEventId: purchaseEvent.id,
+      targetObjectType: span.targetObjectType,
+      targetRecordId:
+        span.targetObjectType === 'purchase_event'
+          ? purchaseEvent.id
+          : (linkedLineItem?.id ?? span.targetObjectId),
+      label: span.label,
+      evidenceType: span.evidenceType,
+      pageNumber: span.pageNumber,
+      snippet: span.snippet,
+      linkedThingIds: linkedLineItem?.thingId ? [linkedLineItem.thingId] : [],
+      note:
+        span.targetObjectType === 'purchase_event'
+          ? 'Header evidence remains linked to the trusted purchase event.'
+          : 'Line-item evidence remains linked to the reviewed purchase line item and any promoted Thing.',
+    };
+  });
+}
+
 function buildProjectedThingDocumentRecords(
   record: StoredReceiptRecord,
   thingRecords: ProjectedThingRecord[],
@@ -2270,6 +2326,7 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
   const semanticRecord = buildProjectedSemanticRecord(projectedRecord, purchaseEvent, purchaseLineItems, thingRecords, memoryRecords);
   const warrantyRecords = buildProjectedWarrantyRecords(thingRecords);
   const returnSupportRecords = buildProjectedReturnSupportRecords(thingRecords);
+  const evidenceRecords = buildProjectedEvidenceRecords(projectedRecord, purchaseEvent, purchaseLineItems);
   const documentRecords = buildProjectedThingDocumentRecords(projectedRecord, thingRecords, warrantyRecords);
   const documentLinkRecords = buildProjectedDocumentLinkRecords(
     projectedRecord,
@@ -2301,6 +2358,7 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
     memoryRecords,
     warrantyRecords,
     returnSupportRecords,
+    evidenceRecords,
     documentRecords,
     documentLinkRecords,
     semanticRecord,

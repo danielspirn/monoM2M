@@ -150,6 +150,7 @@ describe('Milestone 1 shell', () => {
     expect(screen.getAllByText('confirmed').length).toBeGreaterThan(0);
     expect(screen.getByText('Warranty stub')).toBeTruthy();
     expect(screen.getByText('Return support')).toBeTruthy();
+    expect(screen.getByText('Evidence links')).toBeTruthy();
     expect(screen.getAllByText('Linked documents').length).toBeGreaterThan(0);
     expect(screen.getByText('Document links')).toBeTruthy();
     expect(screen.getByText('Tag graph')).toBeTruthy();
@@ -169,6 +170,7 @@ describe('Milestone 1 shell', () => {
     expect(screen.getByText('receipt-embedding-v1')).toBeTruthy();
     expect(screen.getAllByText('upload photo').length).toBeGreaterThan(0);
     expect(screen.getByText('Target return window')).toBeTruthy();
+    expect(screen.getAllByText(/Air Fryer/i).length).toBeGreaterThan(0);
   });
 
   it('can preload a real uploaded fixture into the receipt capture flow', () => {

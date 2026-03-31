@@ -440,6 +440,23 @@ export function ThingDetailView({ state, payload, onAction }: PageProps<ThingDet
         </SectionCard>
       ) : null}
 
+      {payload.evidenceLinks.length ? (
+        <SectionCard title="Evidence links">
+          <div className="card-list">
+            {payload.evidenceLinks.map((evidence) => (
+              <article className="data-card" key={evidence.id}>
+                <div>
+                  <p className="eyebrow">{evidence.label}</p>
+                  <h3>{evidence.evidenceType.replace('_', ' ')}</h3>
+                  <p>{evidence.snippet}</p>
+                  <p>{evidence.note}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </SectionCard>
+      ) : null}
+
       {payload.documents.length ? (
         <SectionCard title="Linked documents">
           <div className="card-list">
