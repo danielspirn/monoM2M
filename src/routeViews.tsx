@@ -846,11 +846,37 @@ export function ReceiptStudioView({ state, payload, onAction }: PageProps<Receip
               </div>
             </article>
             <article className="list-card receipt-layer-card">
+              <p className="eyebrow">Line-item candidates</p>
+              <div className="mini-stack">
+                {payload.parsedData.lineItemCandidates.map((candidate) => (
+                  <MetricLine
+                    key={candidate.id}
+                    label={candidate.description}
+                    value={`${money.format(candidate.lineTotal)} · ${Math.round(candidate.confidence * 100)}%`}
+                  />
+                ))}
+              </div>
+              <div className="chip-row">
+                <span className="chip">{payload.parsedData.requestProvenance.parserMode.replace(/_/g, ' ')}</span>
+                <span className="chip">{payload.parsedData.requestProvenance.captureChannel.replace(/_/g, ' ')}</span>
+              </div>
+            </article>
+            <article className="list-card receipt-layer-card">
               <p className="eyebrow">Raw text</p>
               <pre className="receipt-raw-text">{payload.parsedData.rawText}</pre>
               <div className="chip-row">
                 {payload.parsedData.returnPolicySnippet ? <span className="chip">{payload.parsedData.returnPolicySnippet}</span> : null}
                 {payload.parsedData.warrantySnippet ? <span className="chip chip--accent">{payload.parsedData.warrantySnippet}</span> : null}
+              </div>
+            </article>
+            <article className="list-card receipt-layer-card">
+              <p className="eyebrow">Parser provenance</p>
+              <div className="mini-stack">
+                <MetricLine label="Provider" value={payload.parsedData.providerTrace.providerLabel} />
+                <MetricLine label="Parser version" value={payload.parsedData.requestProvenance.parserVersion} />
+                <MetricLine label="Routing mode" value={payload.parsedData.providerTrace.routingMode.replace(/_/g, ' ')} />
+                <MetricLine label="Source files" value={String(payload.parsedData.requestProvenance.sourceFileCount)} />
+                <MetricLine label="Source checksum" value={payload.parsedData.requestProvenance.sourceDocumentChecksum} />
               </div>
             </article>
             {payload.evidenceTrail?.length ? (

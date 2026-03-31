@@ -74,5 +74,16 @@ describe('receiptWorkflowStore projections', () => {
       'Wild Mushroom And Leek',
     ]);
     expect(payload?.structuredData.retailerProfile).toBe('new retailer');
+    expect(payload?.parsedData.lineItemCandidates.map((item) => item.description)).toEqual([
+      'Pineapple And Coconut',
+      'Wild Mushroom And Leek',
+    ]);
+    expect(payload?.parsedData.requestProvenance.parserMode).toBe('live_ocr_snapshot');
+    expect(payload?.parsedData.providerTrace.providerLabel).toBeTruthy();
+
+    const reopenedPayload = getLiveReceiptStudioPayload(capture.primaryReceiptId);
+
+    expect(reopenedPayload?.parsedData.lineItemCandidates).toEqual(payload?.parsedData.lineItemCandidates);
+    expect(reopenedPayload?.parsedData.requestProvenance).toEqual(payload?.parsedData.requestProvenance);
   });
 });

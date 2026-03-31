@@ -164,6 +164,30 @@ describe('Milestone 1 shell', () => {
     expect(screen.getByText('Uploaded files')).toBeTruthy();
   });
 
+  it('shows persisted OCR line-item candidates and parser provenance for unknown uploaded files', () => {
+    vi.useFakeTimers();
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
+    fireEvent.click(screen.getByText('Add Receipt'));
+
+    const fileInput = screen.getByLabelText('Choose receipt image or video');
+    const file = new File(['receipt'], 'IMG_7558.jpeg', { type: 'image/jpeg' });
+
+    fireEvent.change(fileInput, { target: { files: [file] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Process receipt capture' }));
+
+    act(() => {
+      vi.advanceTimersByTime(2200);
+    });
+
+    expect(screen.getByText('Line-item candidates')).toBeTruthy();
+    expect(screen.getByText('Parser provenance')).toBeTruthy();
+    expect(screen.getAllByText('Pineapple And Coconut').length).toBeGreaterThan(0);
+    expect(screen.getByText('Source checksum')).toBeTruthy();
+  });
+
   it('submits the form when return is pressed in a receipt field', () => {
     vi.useFakeTimers();
 

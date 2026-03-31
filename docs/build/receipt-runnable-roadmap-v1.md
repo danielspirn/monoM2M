@@ -94,7 +94,7 @@ Shipped:
 #### Slice 7: Live OCR into receipt workflow
 
 Status:
-- next active slice
+- complete
 
 Goal:
 - use live Gemini OCR for unknown uploaded images while keeping known fixtures deterministic
@@ -112,21 +112,21 @@ Deliver:
 Success signal:
 - unknown uploaded images enter Receipt Studio with real OCR-derived candidates instead of generic seed text
 
-### Next
-
 #### Slice 8: Persist parsed extraction runs
 
-Goal:
-- move live OCR output out of transient memory and into explicit parsed-layer records
+Status:
+- complete
 
-Deliver:
-- stored `extraction_runs`
-- stored field candidates
-- stored line-item candidates
-- provider metadata and request provenance
+Shipped:
+- durable parsed-layer records stored alongside each live receipt
+- stored field candidates and line-item candidates
+- stored provider metadata and request provenance
+- Receipt Studio now shows parser provenance for reopened receipts
 
 Success signal:
 - a receipt can be reopened and show the same parsed candidates without rerunning OCR
+
+### Next
 
 #### Slice 9: Evidence grounding
 

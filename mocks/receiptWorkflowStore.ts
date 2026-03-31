@@ -76,9 +76,50 @@ export type ReceiptLineItemRecord = {
 };
 
 type ParsedFieldCandidate = {
+  id: string;
   label: string;
   value: string;
   confidence: number;
+  source: 'ocr' | 'derived';
+};
+
+type ParsedLineItemCandidate = {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+  confidence: number;
+  source: 'ocr' | 'summary_fallback';
+  thingCandidateHint: boolean;
+};
+
+type ParsedRequestProvenance = {
+  parserMode: string;
+  parserVersion: string;
+  processingNote: string;
+  sourceDocumentId: string;
+  sourceDocumentChecksum: string;
+  sourceFileCount: number;
+  captureChannel: CaptureChannel;
+};
+
+type ParsedProviderTrace = {
+  providerId: ReceiptOcrProviderId;
+  providerLabel: string;
+  routingMode: ReceiptOcrRoutingMode;
+  evaluationStage: ReceiptOcrEvaluationStage;
+  fallbackProviderLabel: string | null;
+};
+
+type StoredParsedData = {
+  rawText: string;
+  fieldCandidates: ParsedFieldCandidate[];
+  lineItemCandidates: ParsedLineItemCandidate[];
+  requestProvenance: ParsedRequestProvenance;
+  providerTrace: ParsedProviderTrace;
+  returnPolicySnippet: string | null;
+  warrantySnippet: string | null;
 };
 
 type EvidenceSpanRecord = {
@@ -116,12 +157,7 @@ type StoredReceiptRecord = {
     grandTotal: number;
     currency: string;
   };
-  parsedData: {
-    rawText: string;
-    fieldCandidates: ParsedFieldCandidate[];
-    returnPolicySnippet: string | null;
-    warrantySnippet: string | null;
-  };
+  parsedData: StoredParsedData;
   lineItems: ReceiptLineItemRecord[];
   selectedLineItemId: string | null;
   evidenceSpans: EvidenceSpanRecord[];
@@ -440,6 +476,16 @@ function buildStoredReceiptRecord(params: {
   const lifestyleTags = buildLifestyleTags(lineItems, merchant);
   const productCategories = buildProductCategories(lineItems);
   const thingCandidateCount = lineItems.filter((item) => item.assetCandidateFlag).length;
+  const parsedData = buildParsedData({
+    draft,
+    lineItems,
+    merchant,
+    parserResult,
+    receiptDate,
+    receiptId,
+    sourceDocument,
+    total,
+  });
 
   return {
     id: receiptId,
@@ -482,12 +528,7 @@ function buildStoredReceiptRecord(params: {
       currency: 'USD',
     },
     parsedData: {
-      rawText: buildRawText(merchant, receiptDate, lineItems, total),
-      fieldCandidates: [
-        { label: 'Merchant', value: merchant, confidence: 0.96 },
-        { label: 'Purchase date', value: receiptDate, confidence: 0.9 },
-        { label: 'Grand total', value: `$${total.toFixed(2)}`, confidence: 0.88 },
-      ],
+      ...parsedData,
       returnPolicySnippet,
       warrantySnippet,
     },
@@ -682,29 +723,38 @@ function safeParseRecords(raw: string | null): StoredReceiptRecord[] {
 }
 
 function materializeRecord(record: StoredReceiptRecord): StoredReceiptRecord {
-  if (record.status !== 'processing') {
-    if (record.status === 'trusted' && !record.purchaseProjection) {
+  const materializedParsedData = materializeParsedData(record);
+  const nextRecord =
+    materializedParsedData === record.parsedData
+      ? record
+      : {
+          ...record,
+          parsedData: materializedParsedData,
+        };
+
+  if (nextRecord.status !== 'processing') {
+    if (nextRecord.status === 'trusted' && !nextRecord.purchaseProjection) {
       return {
-        ...record,
-        purchaseProjection: buildPurchaseProjection(record, record.updatedAt),
+        ...nextRecord,
+        purchaseProjection: buildPurchaseProjection(nextRecord, nextRecord.updatedAt),
       };
     }
 
-    return record;
+    return nextRecord;
   }
 
   const nowMs = Date.now();
-  const createdAtMs = Date.parse(record.createdAt);
+  const createdAtMs = Date.parse(nextRecord.createdAt);
   const elapsed = Math.max(0, nowMs - createdAtMs);
 
   if (elapsed >= EXTRACTION_DELAY_MS) {
     return {
-      ...record,
+      ...nextRecord,
       updatedAt: new Date(nowMs).toISOString(),
       status: 'needs_review',
-      note: `${record.header.merchantName} receipt is ready for line-item review and evidence-based correction.`,
+      note: `${nextRecord.header.merchantName} receipt is ready for line-item review and evidence-based correction.`,
       extractionRun: {
-        ...record.extractionRun,
+        ...nextRecord.extractionRun,
         status: 'completed',
         completedAt: new Date(createdAtMs + EXTRACTION_DELAY_MS).toISOString(),
         stage: 'ready_for_review',
@@ -722,13 +772,65 @@ function materializeRecord(record: StoredReceiptRecord): StoredReceiptRecord {
         : { stage: 'building_structure', label: 'Organizing parsed output into searchable purchase data.' };
 
   return {
-    ...record,
+    ...nextRecord,
     extractionRun: {
-      ...record.extractionRun,
+      ...nextRecord.extractionRun,
       status: 'processing',
       stage: nextStage.stage,
       stageLabel: nextStage.label,
     },
+  };
+}
+
+function materializeParsedData(record: StoredReceiptRecord): StoredParsedData {
+  const parsedData = record.parsedData as Partial<StoredParsedData>;
+
+  if (parsedData.lineItemCandidates && parsedData.requestProvenance && parsedData.providerTrace) {
+    return parsedData as StoredParsedData;
+  }
+
+  return {
+    rawText: parsedData.rawText ?? buildRawText(record.header.merchantName, record.header.purchasedAt, record.lineItems, record.header.grandTotal),
+    fieldCandidates:
+      parsedData.fieldCandidates?.map((field, index) => ({
+        id: field.id ?? `${record.id}_field_${index + 1}`,
+        label: field.label,
+        value: field.value,
+        confidence: field.confidence,
+        source: field.source ?? 'derived',
+      })) ?? [],
+    lineItemCandidates:
+      parsedData.lineItemCandidates ??
+      record.lineItems.map((item) => ({
+        id: `${record.id}_candidate_line_${item.lineIndex}`,
+        description: item.descriptionNormalized,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        lineTotal: item.lineTotal,
+        confidence: item.confidenceScore,
+        source: 'summary_fallback' as const,
+        thingCandidateHint: item.assetCandidateFlag,
+      })),
+    requestProvenance:
+      parsedData.requestProvenance ?? {
+        parserMode: 'legacy_materialized',
+        parserVersion: record.extractionRun.parserVersion,
+        processingNote: 'Parsed-layer records were materialized from stored receipt review data.',
+        sourceDocumentId: record.sourceDocument.id,
+        sourceDocumentChecksum: record.sourceDocument.checksum,
+        sourceFileCount: record.sourceDocument.sourceFiles.length,
+        captureChannel: record.sourceDocument.captureChannel,
+      },
+    providerTrace:
+      parsedData.providerTrace ?? {
+        providerId: record.extractionRun.providerId,
+        providerLabel: record.extractionRun.providerLabel,
+        routingMode: record.extractionRun.routingMode,
+        evaluationStage: record.extractionRun.evaluationStage,
+        fallbackProviderLabel: record.extractionRun.fallbackProviderLabel,
+      },
+    returnPolicySnippet: parsedData.returnPolicySnippet ?? null,
+    warrantySnippet: parsedData.warrantySnippet ?? null,
   };
 }
 
@@ -939,6 +1041,89 @@ function buildStudioPayload(record: StoredReceiptRecord): ReceiptStudioLivePaylo
     structuredData: record.structuredData,
     searchDocument: record.searchDocument,
     alerts: record.status === 'processing' ? [] : record.alerts,
+  };
+}
+
+function buildParsedData(params: {
+  draft: {
+    merchant: string;
+    purchaseDate: string;
+    summary: string;
+    itemCandidates?: Array<{
+      description: string;
+      quantity: number;
+      unitPrice: number;
+      lineTotal: number;
+      confidence: number;
+    }>;
+  };
+  lineItems: ReceiptLineItemRecord[];
+  merchant: string;
+  parserResult: ReturnType<typeof parseReceiptCaptureInput>;
+  receiptDate: string;
+  receiptId: string;
+  sourceDocument: StoredSourceDocument;
+  total: number;
+}): StoredParsedData {
+  const { draft, lineItems, merchant, parserResult, receiptDate, receiptId, sourceDocument, total } = params;
+  const candidateSource = draft.itemCandidates?.length ? 'ocr' : 'summary_fallback';
+
+  return {
+    rawText: buildRawText(merchant, receiptDate, lineItems, total),
+    fieldCandidates: [
+      {
+        id: `${receiptId}_field_merchant`,
+        label: 'Merchant',
+        value: merchant,
+        confidence: draft.itemCandidates?.length ? 0.98 : 0.96,
+        source: draft.itemCandidates?.length ? 'ocr' : 'derived',
+      },
+      {
+        id: `${receiptId}_field_date`,
+        label: 'Purchase date',
+        value: receiptDate,
+        confidence: draft.itemCandidates?.length ? 0.94 : 0.9,
+        source: draft.itemCandidates?.length ? 'ocr' : 'derived',
+      },
+      {
+        id: `${receiptId}_field_total`,
+        label: 'Grand total',
+        value: `$${total.toFixed(2)}`,
+        confidence: draft.itemCandidates?.length ? 0.84 : 0.88,
+        source: draft.itemCandidates?.length ? 'ocr' : 'derived',
+      },
+    ],
+    lineItemCandidates: (draft.itemCandidates?.length ? draft.itemCandidates : lineItems).slice(0, 6).map((item, index) => ({
+      id: `${receiptId}_candidate_line_${index + 1}`,
+      description: 'descriptionNormalized' in item ? item.descriptionNormalized : titleCase(item.description),
+      quantity: item.quantity,
+      unitPrice: roundCurrency(item.unitPrice),
+      lineTotal: roundCurrency(item.lineTotal),
+      confidence: coerceConfidenceScore('confidence' in item ? item.confidence : item.confidenceScore),
+      source: candidateSource,
+      thingCandidateHint:
+        'assetCandidateFlag' in item
+          ? item.assetCandidateFlag
+          : (resolveObjectDirectoryEntry(titleCase(item.description))?.thingCandidate ?? looksLikeThing(titleCase(item.description))),
+    })),
+    requestProvenance: {
+      parserMode: parserResult.parserMode,
+      parserVersion: parserResult.parserVersion,
+      processingNote: parserResult.processingNote,
+      sourceDocumentId: sourceDocument.id,
+      sourceDocumentChecksum: sourceDocument.checksum,
+      sourceFileCount: sourceDocument.sourceFiles.length,
+      captureChannel: sourceDocument.captureChannel,
+    },
+    providerTrace: {
+      providerId: parserResult.ocrRoute.provider.id,
+      providerLabel: parserResult.ocrRoute.provider.displayName,
+      routingMode: parserResult.ocrRoute.routingMode,
+      evaluationStage: parserResult.ocrRoute.evaluationStage,
+      fallbackProviderLabel: parserResult.ocrRoute.fallbackProvider?.displayName ?? null,
+    },
+    returnPolicySnippet: null,
+    warrantySnippet: null,
   };
 }
 
