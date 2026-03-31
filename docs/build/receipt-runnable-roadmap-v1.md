@@ -300,3 +300,18 @@ What is not realistic:
 This roadmap is complete.
 
 That is the shortest path from today’s live Gemini progress to a real end-user receipt workflow.
+
+## Post-roadmap expansion
+
+#### Slice 17: Structured purchase participants
+
+Status:
+- complete
+
+Shipped:
+- projected `purchase_participants` records now sit alongside `purchase_events`
+- People summaries can read structured purchase involvement instead of only reverse-inferring from receipts
+- Person detail now shows purchase participation role, line-item count, linked Things, linked memories, and spend share
+
+Success signal:
+- person context is grounded in explicit purchase participation facts instead of only loose relationship links

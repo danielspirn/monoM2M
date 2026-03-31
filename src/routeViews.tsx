@@ -635,6 +635,33 @@ export function PersonDetailView({ state, payload, onAction }: PageProps<PersonD
       />
       <SummaryBand items={payload.summaryMetrics} />
 
+      <SectionCard title="Purchase participation">
+        {payload.purchaseParticipation ? (
+          <article className="story-card">
+            <div className="chip-row">
+              {payload.purchaseParticipation.roles.map((role) => (
+                <span className="chip" key={role}>
+                  {role}
+                </span>
+              ))}
+            </div>
+            <p>{payload.purchaseParticipation.note}</p>
+            <div className="detail-metadata">
+              <MetadataList
+                items={[
+                  { label: 'Line items', value: String(payload.purchaseParticipation.linkedLineItemCount) },
+                  { label: 'Linked Things', value: String(payload.purchaseParticipation.linkedThingCount) },
+                  { label: 'Linked memories', value: String(payload.purchaseParticipation.linkedMemoryCount) },
+                  { label: 'Spend share', value: payload.purchaseParticipation.spendLabel },
+                ]}
+              />
+            </div>
+          </article>
+        ) : (
+          <BlankCard title="No structured participation yet" body="Trusted receipts will create purchase participation records when this person is linked to the purchase graph." />
+        )}
+      </SectionCard>
+
       <SectionCard title="Associated Things">
         {payload.associatedThings.length ? (
           <div className="card-list">

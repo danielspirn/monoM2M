@@ -8,6 +8,7 @@ import {
   listProjectedObjects,
   listProjectedPurchaseEvents,
   listProjectedPurchaseLineItems,
+  listProjectedPurchaseParticipants,
   listProjectedProducts,
   listProjectedThingDocuments,
   listProjectedThings,
@@ -322,6 +323,14 @@ export type PersonDetailPayload = {
     headerSummary: string;
   };
   summaryMetrics: SummaryMetric[];
+  purchaseParticipation: {
+    roles: string[];
+    linkedLineItemCount: number;
+    linkedThingCount: number;
+    linkedMemoryCount: number;
+    spendLabel: string;
+    note: string;
+  } | null;
   associatedThings: ThingCardData[];
   associatedMemories: MemoryCardData[];
   relatedReceipts: ReceiptCardData[];
@@ -946,15 +955,23 @@ function personCard(person: PersonRecord): PersonCardData {
   const linkedThingIds = getLinkedThingIdsForPerson(person.id);
   const linkedMemoryIds = getLinkedMemoryIdsForPerson(person.id);
   const linkedReceipts = linkedReceiptIds.map((id) => getReceipt(id)).filter(Boolean) as ReceiptRecord[];
+  const participantRecords = getProjectedPurchaseParticipantsForPerson(person.id);
+  const participantSpend = participantRecords.reduce((sum, participant) => sum + participant.spendShare, 0);
   return {
     id: person.id,
     displayName: person.displayName,
     relationshipType: person.relationshipType,
     tags: person.tags,
-    linkedPurchaseCount: linkedReceipts.length,
+    linkedPurchaseCount: Math.max(linkedReceipts.length, participantRecords.length),
     linkedThingCount: linkedThingIds.length,
     linkedMemoryCount: linkedMemoryIds.length,
-    totalSpend: linkedReceipts.reduce((sum, receipt) => sum + receipt.grandTotal, 0),
+    totalSpend: Number(
+      (
+        participantRecords.length
+          ? participantSpend
+          : linkedReceipts.reduce((sum, receipt) => sum + receipt.grandTotal, 0)
+      ).toFixed(2),
+    ),
     note: person.notes,
     action: `route:/people/${person.id}`,
   };
@@ -1078,6 +1095,10 @@ function getLinkedMemoryIdsForPerson(personId: string) {
   });
 
   return Array.from(ids);
+}
+
+function getProjectedPurchaseParticipantsForPerson(personId: string) {
+  return listProjectedPurchaseParticipants().filter((participant) => participant.personId === personId);
 }
 
 function recentMemoryCards(limit: number) {
@@ -1551,12 +1572,17 @@ function buildPersonDetailPayload(options: RouteBuilderOptions): PersonDetailPay
   const linkedThingIds = getLinkedThingIdsForPerson(person.id);
   const linkedReceiptIds = getLinkedReceiptIdsForPerson(person.id);
   const linkedMemoryIds = getLinkedMemoryIdsForPerson(person.id);
+  const participantRecords = getProjectedPurchaseParticipantsForPerson(person.id);
   const linkedThingCards = linkedThingIds.map((id) => thingCard(getThing(id) ?? allThings()[0]));
   const linkedMemoryCards = linkedMemoryIds.map((id) => memoryCard(getMemory(id) ?? allMemories()[0]));
   const linkedReceiptCards = linkedReceiptIds.map((id) => receiptCard(getReceipt(id) ?? allReceipts()[0]));
-  const totalSpend = linkedReceiptIds
-    .map((id) => getReceipt(id)?.grandTotal ?? 0)
-    .reduce((sum, value) => sum + value, 0);
+  const totalSpend = participantRecords.length
+    ? participantRecords.reduce((sum, participant) => sum + participant.spendShare, 0)
+    : linkedReceiptIds.map((id) => getReceipt(id)?.grandTotal ?? 0).reduce((sum, value) => sum + value, 0);
+  const participationRoles = Array.from(new Set(participantRecords.map((participant) => participant.participationRole.replace(/_/g, ' '))));
+  const linkedLineItemCount = participantRecords.reduce((sum, participant) => sum + participant.linkedLineItemCount, 0);
+  const linkedThingCount = participantRecords.reduce((sum, participant) => sum + participant.linkedThingCount, 0);
+  const linkedMemoryCount = participantRecords.reduce((sum, participant) => sum + participant.linkedMemoryCount, 0);
   return {
     detail: {
       id: person.id,
@@ -1564,15 +1590,17 @@ function buildPersonDetailPayload(options: RouteBuilderOptions): PersonDetailPay
       relationshipType: person.relationshipType,
       notes: person.notes,
       tags: person.tags,
-      headerSummary: `${linkedThingIds.length} things, ${linkedMemoryIds.length} memories, and ${linkedReceiptIds.length} linked purchases.`,
+      headerSummary: participantRecords.length
+        ? `${participantRecords.length} purchase events, ${linkedThingIds.length} things, and ${linkedMemoryIds.length} memories now connect through structured participation records.`
+        : `${linkedThingIds.length} things, ${linkedMemoryIds.length} memories, and ${linkedReceiptIds.length} linked purchases.`,
     },
     summaryMetrics: [
       {
         label: 'Purchases',
-        value: String(linkedReceiptIds.length),
-        note: 'Receipts involving this person',
+        value: String(participantRecords.length || linkedReceiptIds.length),
+        note: participantRecords.length ? 'Structured purchase events involving this person' : 'Receipts involving this person',
         tone: 'blue',
-        trend: trend(linkedReceiptIds.length || 1),
+        trend: trend(participantRecords.length || linkedReceiptIds.length || 1),
       },
       {
         label: 'Things',
@@ -1584,11 +1612,21 @@ function buildPersonDetailPayload(options: RouteBuilderOptions): PersonDetailPay
       {
         label: 'Spend',
         value: `$${totalSpend.toFixed(0)}`,
-        note: 'Mocked linked spend total',
+        note: participantRecords.length ? 'Structured spend share across trusted purchases' : 'Mocked linked spend total',
         tone: 'amber',
         trend: trend(Math.max(1, Math.round(totalSpend / 40))),
       },
     ],
+    purchaseParticipation: participantRecords.length
+      ? {
+          roles: participationRoles,
+          linkedLineItemCount,
+          linkedThingCount,
+          linkedMemoryCount,
+          spendLabel: `$${totalSpend.toFixed(2)} structured spend share`,
+          note: participantRecords[0]?.note ?? 'This person is linked to trusted purchase participation records.',
+        }
+      : null,
     associatedThings: linkedThingCards,
     associatedMemories: linkedMemoryCards,
     relatedReceipts: linkedReceiptCards,

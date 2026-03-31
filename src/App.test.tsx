@@ -352,4 +352,31 @@ describe('Milestone 1 shell', () => {
     expect(screen.getAllByText(/Target .* (day|moment)/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/(project or setup moment|household routine|lightweight memory candidate)/i)).toBeTruthy();
   });
+
+  it('shows structured purchase participation on a linked person', () => {
+    vi.useFakeTimers();
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
+    fireEvent.click(screen.getByText('Add Receipt'));
+
+    fireEvent.change(screen.getByLabelText('Merchant'), { target: { value: 'Target' } });
+    fireEvent.change(screen.getByLabelText('Capture source'), { target: { value: 'Upload photo' } });
+    fireEvent.change(screen.getByLabelText('Extracted summary'), { target: { value: 'Air fryer, parchment liners' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Process receipt capture' }));
+
+    act(() => {
+      vi.advanceTimersByTime(2200);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mark review complete' }));
+    fireEvent.click(screen.getByRole('navigation', { name: 'Primary navigation' }).querySelectorAll('button')[3]);
+    fireEvent.click(screen.getAllByText('Shanshan').find((element) => element.tagName === 'H3')?.closest('button') as HTMLElement);
+
+    expect(screen.getByText('Purchase participation')).toBeTruthy();
+    expect(screen.getByText('household member')).toBeTruthy();
+    expect(screen.getByText('Structured spend share across trusted purchases')).toBeTruthy();
+    expect(screen.getByText(/\$\d+\.\d{2} structured spend share/i)).toBeTruthy();
+  });
 });

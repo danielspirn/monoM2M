@@ -6,6 +6,7 @@ import {
   getLiveReceiptStudioPayload,
   listProjectedPurchaseEvents,
   listProjectedPurchaseLineItems,
+  listProjectedPurchaseParticipants,
   listProjectedMemories,
   listProjectedMerchants,
   listProjectedObjects,
@@ -45,6 +46,7 @@ describe('receiptWorkflowStore projections', () => {
     const projectedReceipts = listProjectedPurchaseReceipts();
     const projectedPurchaseEvents = listProjectedPurchaseEvents();
     const projectedPurchaseLineItems = listProjectedPurchaseLineItems();
+    const projectedParticipants = listProjectedPurchaseParticipants();
     const projectedMerchants = listProjectedMerchants();
     const projectedObjects = listProjectedObjects();
     const projectedProducts = listProjectedProducts();
@@ -69,6 +71,10 @@ describe('receiptWorkflowStore projections', () => {
     expect(projectedPurchaseLineItems[0]?.purchaseEventId).toBe(`purchase_${capture.primaryReceiptId}`);
     expect(projectedPurchaseLineItems[0]?.productCandidateKey).toBeTruthy();
     expect(projectedPurchaseLineItems.find((item) => item.description === 'Air Fryer')?.thingId).toBeTruthy();
+    expect(projectedParticipants).toHaveLength(2);
+    expect(projectedParticipants.find((participant) => participant.personId === 'person_self')?.participationRole).toBe('self');
+    expect(projectedParticipants.find((participant) => participant.personId === 'person_shanshan')?.participationRole).toBe('household_member');
+    expect(projectedParticipants.find((participant) => participant.personId === 'person_shanshan')?.spendShare).toBeCloseTo((projectedPurchaseEvents[0]?.grandTotal ?? 0) / 2, 2);
 
     expect(projectedProducts).toHaveLength(2);
     expect(projectedProducts.find((product) => product.displayName === 'Air Fryer')?.linkedThingId).toBeTruthy();

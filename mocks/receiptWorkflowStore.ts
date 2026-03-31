@@ -383,6 +383,22 @@ export type ProjectedPurchaseLineItemRecord = {
   personIds: string[];
 };
 
+export type ProjectedPurchaseParticipantRecord = {
+  id: string;
+  purchaseEventId: string;
+  receiptId: string;
+  personId: string;
+  displayName: string;
+  relationshipType: string;
+  participationRole: 'self' | 'household_member' | 'shared_context';
+  linkedLineItemCount: number;
+  linkedThingCount: number;
+  linkedMemoryCount: number;
+  spendShare: number;
+  confidenceScore: number;
+  note: string;
+};
+
 export type ProjectedProductRecord = {
   id: string;
   purchaseEventId: string;
@@ -529,6 +545,7 @@ type StoredPurchaseGraphRecords = {
   merchantRecord: ProjectedMerchantRecord;
   purchaseEvent: ProjectedPurchaseEventRecord;
   purchaseLineItems: ProjectedPurchaseLineItemRecord[];
+  participantRecords: ProjectedPurchaseParticipantRecord[];
   productRecords: ProjectedProductRecord[];
   objectRecords: ProjectedObjectRecord[];
   thingRecords: ProjectedThingRecord[];
@@ -773,6 +790,16 @@ export function listProjectedPurchaseEvents(): ProjectedPurchaseEventRecord[] {
     .filter((record) => record.status === 'trusted')
     .map((record) => getStoredPurchaseGraph(record).purchaseEvent)
     .sort((left, right) => right.purchasedAt.localeCompare(left.purchasedAt));
+}
+
+export function listProjectedPurchaseParticipants(): ProjectedPurchaseParticipantRecord[] {
+  return readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .flatMap((record) => getStoredPurchaseGraph(record).participantRecords)
+    .sort((left, right) =>
+      right.purchaseEventId.localeCompare(left.purchaseEventId)
+      || left.displayName.localeCompare(right.displayName),
+    );
 }
 
 export function listProjectedMerchants(): ProjectedMerchantRecord[] {
@@ -1208,6 +1235,7 @@ function materializeRecord(record: StoredReceiptRecord): StoredReceiptRecord {
         !nextRecord.purchaseProjection
         || !nextRecord.purchaseGraph
         || !nextRecord.purchaseGraph.merchantRecord
+        || !nextRecord.purchaseGraph.participantRecords
         || !nextRecord.purchaseGraph.productRecords
         || !nextRecord.purchaseGraph.objectRecords
         || !nextRecord.purchaseGraph.memoryRecords
@@ -1435,6 +1463,41 @@ function buildProjectedPurchaseLineItemRecords(record: StoredReceiptRecord): Pro
         personIds: record.peopleSuggestions.map((person) => person.id),
       };
     });
+}
+
+function buildProjectedPurchaseParticipantRecords(
+  record: StoredReceiptRecord,
+  purchaseEvent: ProjectedPurchaseEventRecord,
+  purchaseLineItems: ProjectedPurchaseLineItemRecord[],
+  thingRecords: ProjectedThingRecord[],
+  memoryRecords: ProjectedMemoryRecord[],
+): ProjectedPurchaseParticipantRecord[] {
+  const participantCount = Math.max(record.peopleSuggestions.length, 1);
+  const spendShare = roundCurrency(purchaseEvent.grandTotal / participantCount);
+
+  return record.peopleSuggestions.map((person) => {
+    const linkedThings = thingRecords.filter((thing) => thing.personIds.includes(person.id));
+    const linkedMemories = memoryRecords.filter((memory) => memory.personIds.includes(person.id));
+
+    return {
+      id: `participant_${purchaseEvent.id}_${person.id}`,
+      purchaseEventId: purchaseEvent.id,
+      receiptId: record.id,
+      personId: person.id,
+      displayName: person.displayName,
+      relationshipType: person.relationshipType,
+      participationRole: resolvePurchaseParticipationRole(person.relationshipType),
+      linkedLineItemCount: purchaseLineItems.filter((item) => item.personIds.includes(person.id)).length,
+      linkedThingCount: linkedThings.length,
+      linkedMemoryCount: linkedMemories.length,
+      spendShare,
+      confidenceScore: person.id === 'person_self' ? 0.99 : 0.82,
+      note:
+        person.id === 'person_self'
+          ? `${person.displayName} is the primary participant on this reviewed purchase event.`
+          : `${person.displayName} is linked through household or shared-context signals on this reviewed purchase event.`,
+    };
+  });
 }
 
 function buildProjectedProductRecords(
@@ -1766,12 +1829,20 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
   }));
   const warrantyRecords = buildProjectedWarrantyRecords(thingRecords);
   const documentRecords = buildProjectedThingDocumentRecords(projectedRecord, thingRecords, warrantyRecords);
+  const participantRecords = buildProjectedPurchaseParticipantRecords(
+    projectedRecord,
+    purchaseEvent,
+    purchaseLineItems,
+    thingRecords,
+    memoryRecords,
+  );
 
   return {
     savedAt,
     merchantRecord,
     purchaseEvent,
     purchaseLineItems,
+    participantRecords,
     productRecords,
     objectRecords,
     thingRecords,
@@ -2237,6 +2308,18 @@ function buildPeopleSuggestions(merchant: string, lineItems: ReceiptLineItemReco
     { id: 'person_self', displayName: 'You', relationshipType: 'self' },
     { id: 'person_shanshan', displayName: 'Shanshan', relationshipType: 'spouse' },
   ];
+}
+
+function resolvePurchaseParticipationRole(relationshipType: string): ProjectedPurchaseParticipantRecord['participationRole'] {
+  if (relationshipType === 'self') {
+    return 'self';
+  }
+
+  if (['spouse', 'child', 'partner', 'parent'].includes(relationshipType)) {
+    return 'household_member';
+  }
+
+  return 'shared_context';
 }
 
 function buildMemoryTitle(merchant: string, lineItems: ReceiptLineItemRecord[]) {
