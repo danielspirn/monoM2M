@@ -130,16 +130,19 @@ Success signal:
 
 #### Slice 9: Evidence grounding
 
-Goal:
-- make important fields traceable back to evidence
+Status:
+- complete
 
-Deliver:
-- evidence span model for merchant, date, total, and line items
-- UI evidence trail backed by stored evidence
-- retry and rerun support
+Shipped:
+- parsed field candidates now carry evidence links
+- parsed line-item candidates now carry evidence links
+- Receipt Studio shows evidence-backed parsed output and supports rerun
+- rerun timing now tracks the extraction run instead of original receipt creation
 
 Success signal:
 - every important reviewed field in Receipt Studio has evidence linkage
+
+### Next
 
 #### Slice 10: Live Receipt Studio persistence
 

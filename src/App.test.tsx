@@ -188,6 +188,36 @@ describe('Milestone 1 shell', () => {
     expect(screen.getByText('Source checksum')).toBeTruthy();
   });
 
+  it('can rerun extraction from receipt review and return to evidence-backed review', () => {
+    vi.useFakeTimers();
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
+    fireEvent.click(screen.getByText('Add Receipt'));
+
+    const fileInput = screen.getByLabelText('Choose receipt image or video');
+    const file = new File(['receipt'], 'IMG_7558.jpeg', { type: 'image/jpeg' });
+
+    fireEvent.change(fileInput, { target: { files: [file] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Process receipt capture' }));
+
+    act(() => {
+      vi.advanceTimersByTime(2200);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rerun extraction' }));
+
+    expect(screen.getByText('Extraction running')).toBeTruthy();
+
+    act(() => {
+      vi.advanceTimersByTime(2200);
+    });
+
+    expect(screen.getByText('Evidence trail')).toBeTruthy();
+    expect(screen.getAllByText(/evidence linked/i).length).toBeGreaterThan(0);
+  });
+
   it('submits the form when return is pressed in a receipt field', () => {
     vi.useFakeTimers();
 

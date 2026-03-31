@@ -12,7 +12,7 @@ import {
   receiptFixtureScenarioOptions,
   resolveReceiptFixtureFilesFromDraft,
 } from '@/mocks/receiptFixtureScenarios';
-import { createLiveReceiptBatch, submitLiveReceiptReview } from '@/mocks/receiptWorkflowStore';
+import { createLiveReceiptBatch, rerunLiveReceiptExtraction, submitLiveReceiptReview } from '@/mocks/receiptWorkflowStore';
 import {
   getDefaultState,
   getPersonaDefinitions,
@@ -275,6 +275,17 @@ function Shell() {
             nextPayload
               ? `${nextPayload.header.merchantName} is now trusted and ready to feed Things, People, and Memories.`
               : 'Receipt review is only live for newly captured receipts in this slice.'
+          );
+          return;
+        }
+        if (action.startsWith('receipt:rerun:')) {
+          const receiptId = action.replace('receipt:rerun:', '');
+          const nextPayload = rerunLiveReceiptExtraction(receiptId);
+          setReceiptRefreshToken((current) => current + 1);
+          setNotice(
+            nextPayload
+              ? `${nextPayload.header.merchantName} is rerunning extraction so parsed fields and evidence can be refreshed.`
+              : 'Receipt rerun is only live for newly captured receipts in this slice.'
           );
           return;
         }

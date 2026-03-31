@@ -841,7 +841,11 @@ export function ReceiptStudioView({ state, payload, onAction }: PageProps<Receip
               <p className="eyebrow">Field candidates</p>
               <div className="mini-stack">
                 {payload.parsedData.fieldCandidates.map((field) => (
-                  <MetricLine key={`${field.label}-${field.value}`} label={field.label} value={`${field.value} · ${Math.round(field.confidence * 100)}%`} />
+                  <MetricLine
+                    key={`${field.label}-${field.value}`}
+                    label={field.label}
+                    value={`${field.value} · ${Math.round(field.confidence * 100)}%${field.evidenceSpanId ? ' · evidence linked' : ''}`}
+                  />
                 ))}
               </div>
             </article>
@@ -852,7 +856,7 @@ export function ReceiptStudioView({ state, payload, onAction }: PageProps<Receip
                   <MetricLine
                     key={candidate.id}
                     label={candidate.description}
-                    value={`${money.format(candidate.lineTotal)} · ${Math.round(candidate.confidence * 100)}%`}
+                    value={`${money.format(candidate.lineTotal)} · ${Math.round(candidate.confidence * 100)}%${candidate.evidenceSpanId ? ' · evidence linked' : ''}`}
                   />
                 ))}
               </div>
@@ -1030,6 +1034,10 @@ export function ReceiptStudioView({ state, payload, onAction }: PageProps<Receip
 
       <SectionCard title="Next actions">
         <div className="receipt-action-row">
+          <ActionButton
+            label="Rerun extraction"
+            onClick={() => onAction(`receipt:rerun:${payload.receipt.id}`)}
+          />
           <ActionButton
             label={payload.receipt.status === 'trusted' ? 'Receipt trusted' : 'Mark review complete'}
             onClick={() => onAction(`receipt:submit:${payload.receipt.id}`)}

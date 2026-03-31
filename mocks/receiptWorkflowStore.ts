@@ -81,6 +81,7 @@ type ParsedFieldCandidate = {
   value: string;
   confidence: number;
   source: 'ocr' | 'derived';
+  evidenceSpanId: string | null;
 };
 
 type ParsedLineItemCandidate = {
@@ -92,6 +93,7 @@ type ParsedLineItemCandidate = {
   confidence: number;
   source: 'ocr' | 'summary_fallback';
   thingCandidateHint: boolean;
+  evidenceSpanId: string | null;
 };
 
 type ParsedRequestProvenance = {
@@ -476,8 +478,10 @@ function buildStoredReceiptRecord(params: {
   const lifestyleTags = buildLifestyleTags(lineItems, merchant);
   const productCategories = buildProductCategories(lineItems);
   const thingCandidateCount = lineItems.filter((item) => item.assetCandidateFlag).length;
+  const evidenceSpans = buildEvidenceSpans(receiptId, lineItems, merchant, receiptDate, total);
   const parsedData = buildParsedData({
     draft,
+    evidenceSpans,
     lineItems,
     merchant,
     parserResult,
@@ -534,7 +538,7 @@ function buildStoredReceiptRecord(params: {
     },
     lineItems,
     selectedLineItemId,
-    evidenceSpans: buildEvidenceSpans(receiptId, lineItems, merchant, receiptDate, total),
+    evidenceSpans,
     peopleSuggestions: buildPeopleSuggestions(merchant, lineItems),
     memorySuggestions: [
       {
@@ -677,6 +681,41 @@ export function submitLiveReceiptReview(receiptId: string): ReceiptStudioLivePay
   return buildStudioPayload(nextRecord);
 }
 
+export function rerunLiveReceiptExtraction(receiptId: string): ReceiptStudioLivePayload | null {
+  const records = readStoredReceipts();
+  const index = records.findIndex((record) => record.id === receiptId);
+
+  if (index === -1) {
+    return null;
+  }
+
+  const record = records[index];
+  const now = new Date().toISOString();
+  const rerunCount = record.extractionRun.parserVersion.includes('+rerun')
+    ? Number.parseInt(record.extractionRun.parserVersion.split('+rerun').pop() ?? '1', 10) + 1
+    : 1;
+  const nextRecord: StoredReceiptRecord = {
+    ...record,
+    updatedAt: now,
+    status: 'processing',
+    note: `${record.header.merchantName} receipt is rerunning extraction so field evidence can be rechecked.`,
+    extractionRun: {
+      ...record.extractionRun,
+      status: 'queued',
+      parserVersion: `${record.extractionRun.parserVersion.split('+rerun')[0]}+rerun${rerunCount}`,
+      startedAt: now,
+      completedAt: null,
+      stage: 'queueing_document',
+      stageLabel: `Rechecking parsed fields and evidence with ${record.extractionRun.providerLabel}.`,
+    },
+  };
+
+  records[index] = nextRecord;
+  writeStoredReceipts(records);
+
+  return buildStudioPayload(nextRecord);
+}
+
 export function resetLiveReceiptStore() {
   if (typeof window === 'undefined') {
     return;
@@ -744,8 +783,8 @@ function materializeRecord(record: StoredReceiptRecord): StoredReceiptRecord {
   }
 
   const nowMs = Date.now();
-  const createdAtMs = Date.parse(nextRecord.createdAt);
-  const elapsed = Math.max(0, nowMs - createdAtMs);
+  const extractionStartedAtMs = Date.parse(nextRecord.extractionRun.startedAt || nextRecord.createdAt);
+  const elapsed = Math.max(0, nowMs - extractionStartedAtMs);
 
   if (elapsed >= EXTRACTION_DELAY_MS) {
     return {
@@ -756,7 +795,7 @@ function materializeRecord(record: StoredReceiptRecord): StoredReceiptRecord {
       extractionRun: {
         ...nextRecord.extractionRun,
         status: 'completed',
-        completedAt: new Date(createdAtMs + EXTRACTION_DELAY_MS).toISOString(),
+        completedAt: new Date(extractionStartedAtMs + EXTRACTION_DELAY_MS).toISOString(),
         stage: 'ready_for_review',
         stageLabel: 'Extraction complete. Review line items and confirm the purchase graph.',
       },
@@ -798,6 +837,7 @@ function materializeParsedData(record: StoredReceiptRecord): StoredParsedData {
         value: field.value,
         confidence: field.confidence,
         source: field.source ?? 'derived',
+        evidenceSpanId: field.evidenceSpanId ?? null,
       })) ?? [],
     lineItemCandidates:
       parsedData.lineItemCandidates ??
@@ -810,6 +850,7 @@ function materializeParsedData(record: StoredReceiptRecord): StoredParsedData {
         confidence: item.confidenceScore,
         source: 'summary_fallback' as const,
         thingCandidateHint: item.assetCandidateFlag,
+        evidenceSpanId: record.evidenceSpans.find((span) => span.targetObjectId === item.id)?.id ?? null,
       })),
     requestProvenance:
       parsedData.requestProvenance ?? {
@@ -1057,6 +1098,7 @@ function buildParsedData(params: {
       confidence: number;
     }>;
   };
+  evidenceSpans: EvidenceSpanRecord[];
   lineItems: ReceiptLineItemRecord[];
   merchant: string;
   parserResult: ReturnType<typeof parseReceiptCaptureInput>;
@@ -1065,8 +1107,11 @@ function buildParsedData(params: {
   sourceDocument: StoredSourceDocument;
   total: number;
 }): StoredParsedData {
-  const { draft, lineItems, merchant, parserResult, receiptDate, receiptId, sourceDocument, total } = params;
+  const { draft, evidenceSpans, lineItems, merchant, parserResult, receiptDate, receiptId, sourceDocument, total } = params;
   const candidateSource = draft.itemCandidates?.length ? 'ocr' : 'summary_fallback';
+  const merchantEvidence = evidenceSpans.find((span) => span.id === `${receiptId}_evidence_merchant`) ?? null;
+  const dateEvidence = evidenceSpans.find((span) => span.id === `${receiptId}_evidence_date`) ?? null;
+  const totalEvidence = evidenceSpans.find((span) => span.id === `${receiptId}_evidence_total`) ?? null;
 
   return {
     rawText: buildRawText(merchant, receiptDate, lineItems, total),
@@ -1077,6 +1122,7 @@ function buildParsedData(params: {
         value: merchant,
         confidence: draft.itemCandidates?.length ? 0.98 : 0.96,
         source: draft.itemCandidates?.length ? 'ocr' : 'derived',
+        evidenceSpanId: merchantEvidence?.id ?? null,
       },
       {
         id: `${receiptId}_field_date`,
@@ -1084,6 +1130,7 @@ function buildParsedData(params: {
         value: receiptDate,
         confidence: draft.itemCandidates?.length ? 0.94 : 0.9,
         source: draft.itemCandidates?.length ? 'ocr' : 'derived',
+        evidenceSpanId: dateEvidence?.id ?? null,
       },
       {
         id: `${receiptId}_field_total`,
@@ -1091,6 +1138,7 @@ function buildParsedData(params: {
         value: `$${total.toFixed(2)}`,
         confidence: draft.itemCandidates?.length ? 0.84 : 0.88,
         source: draft.itemCandidates?.length ? 'ocr' : 'derived',
+        evidenceSpanId: totalEvidence?.id ?? null,
       },
     ],
     lineItemCandidates: (draft.itemCandidates?.length ? draft.itemCandidates : lineItems).slice(0, 6).map((item, index) => ({
@@ -1105,6 +1153,7 @@ function buildParsedData(params: {
         'assetCandidateFlag' in item
           ? item.assetCandidateFlag
           : (resolveObjectDirectoryEntry(titleCase(item.description))?.thingCandidate ?? looksLikeThing(titleCase(item.description))),
+      evidenceSpanId: evidenceSpans.find((span) => span.id === `${receiptId}_evidence_line_${index + 1}`)?.id ?? null,
     })),
     requestProvenance: {
       parserMode: parserResult.parserMode,

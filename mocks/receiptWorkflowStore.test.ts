@@ -8,6 +8,7 @@ import {
   listProjectedPurchaseReceipts,
   listProjectedThings,
   resetLiveReceiptStore,
+  rerunLiveReceiptExtraction,
   submitLiveReceiptReview,
 } from './receiptWorkflowStore';
 
@@ -85,5 +86,32 @@ describe('receiptWorkflowStore projections', () => {
 
     expect(reopenedPayload?.parsedData.lineItemCandidates).toEqual(payload?.parsedData.lineItemCandidates);
     expect(reopenedPayload?.parsedData.requestProvenance).toEqual(payload?.parsedData.requestProvenance);
+  });
+
+  it('can rerun extraction while preserving parsed evidence links', () => {
+    const capture = createLiveReceiptBatch({
+      merchant: '',
+      purchaseDate: '2026-03-30',
+      source: 'Upload photo',
+      summary: '',
+      fixtureFiles: ['receipt_images/IMG_7558.jpeg'],
+    });
+
+    vi.advanceTimersByTime(2200);
+
+    const initialPayload = getLiveReceiptStudioPayload(capture.primaryReceiptId);
+    const rerunPayload = rerunLiveReceiptExtraction(capture.primaryReceiptId);
+
+    expect(rerunPayload?.receipt.status).toBe('processing');
+    expect(rerunPayload?.progress?.stage).toBe('queueing_document');
+
+    vi.advanceTimersByTime(2200);
+
+    const reopenedPayload = getLiveReceiptStudioPayload(capture.primaryReceiptId);
+
+    expect(reopenedPayload?.receipt.status).toBe('needs_review');
+    expect(reopenedPayload?.parsedData.fieldCandidates.every((field) => Boolean(field.evidenceSpanId))).toBe(true);
+    expect(reopenedPayload?.parsedData.lineItemCandidates.every((item) => Boolean(item.evidenceSpanId))).toBe(true);
+    expect(reopenedPayload?.parsedData.lineItemCandidates).toEqual(initialPayload?.parsedData.lineItemCandidates);
   });
 });
