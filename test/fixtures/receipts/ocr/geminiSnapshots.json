@@ -1,0 +1,111 @@
+{
+  "generatedAt": "2026-03-31T17:36:16.567Z",
+  "snapshots": [
+    {
+      "id": "img_7573_safeway",
+      "filePath": "receipt_images/IMG_7573.jpeg",
+      "provider": "google_gemini_2_5_flash",
+      "model": "gemini-2.5-flash",
+      "merchant": "Safeway",
+      "purchaseDate": "2025-05-22",
+      "grandTotal": "21.45",
+      "itemCandidates": [
+        {
+          "description": "OPN NAT GRANOLA",
+          "quantity": 1,
+          "unitPrice": 3.99,
+          "lineTotal": 3.49,
+          "confidence": 0.9
+        },
+        {
+          "description": "A2 MILK WHOLE MILK",
+          "quantity": 3,
+          "unitPrice": 5.49,
+          "lineTotal": 14.97,
+          "confidence": 0.95
+        },
+        {
+          "description": "BANANAS GREEN",
+          "quantity": 3.02,
+          "unitPrice": 0.99,
+          "lineTotal": 2.99,
+          "confidence": 0.98
+        }
+      ],
+      "rawTextPreview": "SAFEWAY S Store 985 Dir Natalie Sutter Main:(415) 665-4565 Rx:(415) 665-8456 2350 Noriega Street SAN FRANCISCO CA 94122 00098505100632505221230 YOUR CASHIER TODAY WAS SELF GROCERY 7989311115 OPN NAT GRANOLA Price You Pay Member Savings -0.5"
+    },
+    {
+      "id": "img_20230404_cleaning_invoice",
+      "filePath": "receipt_images/IMG_20230404_210830_01.jpeg",
+      "provider": "google_gemini_2_5_flash",
+      "model": "gemini-2.5-flash",
+      "merchant": "Daniel Stone",
+      "purchaseDate": "2023-03-28",
+      "grandTotal": "120",
+      "itemCandidates": [
+        {
+          "description": "Bathrooms (3)",
+          "quantity": 0,
+          "unitPrice": 0,
+          "lineTotal": 0,
+          "confidence": 0.2
+        },
+        {
+          "description": "Kitchen / fridge / Stove",
+          "quantity": 0,
+          "unitPrice": 0,
+          "lineTotal": 0,
+          "confidence": 0.2
+        },
+        {
+          "description": "Glass sliders",
+          "quantity": 0,
+          "unitPrice": 0,
+          "lineTotal": 0,
+          "confidence": 0.2
+        },
+        {
+          "description": "Dusting",
+          "quantity": 0,
+          "unitPrice": 0,
+          "lineTotal": 0,
+          "confidence": 0.2
+        },
+        {
+          "description": "Floors mop / vacuum",
+          "quantity": 0,
+          "unitPrice": 0,
+          "lineTotal": 120,
+          "confidence": 0.8
+        }
+      ],
+      "rawTextPreview": "CLEANING INVOICEBill FromName: Daniel StoneCompany Name:Street Address:City, ST ZIP Code:Phone: 760 708 6556Bill ToName: Dan SpirnCompany Name:Street Address: 1286 WoodviewCity, ST ZIP Code:Phone:Invoice No. 5Invoice Date: 3-28-23Due Date:D"
+    },
+    {
+      "id": "img_7558_uncurated",
+      "filePath": "receipt_images/IMG_7558.jpeg",
+      "provider": "google_gemini_2_5_flash",
+      "model": "gemini-2.5-flash",
+      "merchant": "Hotel Royal Orchid Re:gen:ta",
+      "purchaseDate": "2025-04-08",
+      "grandTotal": "1006.00",
+      "itemCandidates": [
+        {
+          "description": "Pineapple and coconut",
+          "quantity": 1,
+          "unitPrice": 330,
+          "lineTotal": 330,
+          "confidence": 0.95
+        },
+        {
+          "description": "Wild mushroom and leek",
+          "quantity": 1,
+          "unitPrice": 475,
+          "lineTotal": 475,
+          "confidence": 0.95
+        }
+      ],
+      "rawTextPreview": "HOTEL ROYAL ORCHID RE:GEN:TA TAX INVOICE Bill Number: IRDTZ--228 Date: 2025-04-08 23:24:06 Kote: 35 Covers: 1 Item Rate Qty Amt Smoothies Pineapple and coconut -RS 330 1 330.00 Wild mushroom and leek -RS 475 1 475.00 SubTotal 805.00 Tax Con"
+    }
+  ]
+}

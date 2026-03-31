@@ -1,0 +1,2273 @@
+openapi: 3.1.0
+info:
+  title: Money to Memories API
+  version: 1.1.0
+  summary: Consumer-first API for purchases, Things, People, Memories, plans, and agent interactions.
+  description: >
+    Money to Memories helps users capture purchases, understand spending at the
+    line-item level, organize what they own as Things, connect purchases to
+    people and memories, and use an agent to ask grounded questions.
+
+    This OpenAPI file is the canonical HTTP contract for v1.1.
+    It is intentionally aligned to the UX-first mocked implementation and the
+    core data model v1.1.
+
+servers:
+  - url: https://api.moneytomemories.com
+    description: Production
+  - url: https://staging-api.moneytomemories.com
+    description: Staging
+  - url: http://localhost:3000
+    description: Local
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Health
+  - name: Account
+  - name: Plans
+  - name: Home
+  - name: Ingest
+  - name: Purchases
+  - name: Things
+  - name: People
+  - name: Memories
+  - name: Settings
+  - name: Agent
+  - name: Documents
+  - name: Dev Mock
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      operationId: getHealth
+      security: []
+      responses:
+        '200':
+          description: Service health
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, version]
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+                  version:
+                    type: string
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /v1/account/me:
+    get:
+      tags: [Account]
+      summary: Get current account
+      operationId: getCurrentAccount
+      responses:
+        '200':
+          description: Current account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+
+  /v1/settings:
+    get:
+      tags: [Settings]
+      summary: Get user settings
+      operationId: getSettings
+      responses:
+        '200':
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsResponse'
+    patch:
+      tags: [Settings]
+      summary: Update user settings
+      operationId: updateSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSettingsRequest'
+      responses:
+        '200':
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsResponse'
+
+  /v1/plans:
+    get:
+      tags: [Plans]
+      summary: Get plan comparison and current subscription
+      operationId: getPlans
+      responses:
+        '200':
+          description: Plans
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlansResponse'
+
+  /v1/home:
+    get:
+      tags: [Home]
+      summary: Get Home route data
+      operationId: getHome
+      parameters:
+        - $ref: '#/components/parameters/PersonaId'
+        - $ref: '#/components/parameters/RouteState'
+        - name: period
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [7d, 30d, 90d, all]
+            default: 30d
+      responses:
+        '200':
+          description: Home view model
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomeResponse'
+
+  /v1/receipts:
+    get:
+      tags: [Ingest]
+      summary: List receipts
+      operationId: listReceipts
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/PurchaseStatus'
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Receipt list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedReceiptListResponse'
+
+    post:
+      tags: [Ingest]
+      summary: Create a receipt ingest record
+      operationId: createReceipt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReceiptRequest'
+      responses:
+        '201':
+          description: Receipt created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateReceiptResponse'
+
+  /v1/receipts/{receiptId}:
+    get:
+      tags: [Ingest]
+      summary: Get receipt studio view
+      operationId: getReceiptStudio
+      parameters:
+        - $ref: '#/components/parameters/ReceiptId'
+      responses:
+        '200':
+          description: Receipt studio payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceiptStudioResponse'
+
+  /v1/receipts/{receiptId}/submit:
+    post:
+      tags: [Ingest]
+      summary: Mark receipt review complete
+      operationId: submitReceiptReview
+      parameters:
+        - $ref: '#/components/parameters/ReceiptId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                markTrusted:
+                  type: boolean
+                  default: true
+      responses:
+        '200':
+          description: Updated receipt studio payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceiptStudioResponse'
+
+  /v1/receipt-line-items/{lineItemId}:
+    patch:
+      tags: [Purchases]
+      summary: Update a line item
+      operationId: updateReceiptLineItem
+      parameters:
+        - $ref: '#/components/parameters/LineItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLineItemRequest'
+      responses:
+        '200':
+          description: Updated line item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceiptLineItem'
+
+  /v1/receipt-line-items/{lineItemId}/convert-to-thing:
+    post:
+      tags: [Things]
+      summary: Convert a purchase line item into a Thing
+      operationId: convertLineItemToThing
+      parameters:
+        - $ref: '#/components/parameters/LineItemId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConvertToThingRequest'
+      responses:
+        '201':
+          description: Thing created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThingDetailResponse'
+
+  /v1/receipt-line-items/{lineItemId}/participants:
+    put:
+      tags: [People]
+      summary: Set purchase participants on a line item or its purchase event
+      operationId: setLineItemParticipants
+      parameters:
+        - $ref: '#/components/parameters/LineItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetParticipantsRequest'
+      responses:
+        '200':
+          description: Participants updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ParticipantsResponse'
+
+  /v1/things:
+    get:
+      tags: [Things]
+      summary: Get Things route data
+      operationId: getThings
+      parameters:
+        - $ref: '#/components/parameters/PersonaId'
+        - $ref: '#/components/parameters/RouteState'
+        - name: view
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [overview, by_category, by_merchant, owned, consumables]
+            default: overview
+      responses:
+        '200':
+          description: Things route payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThingsResponse'
+
+  /v1/things/{thingId}:
+    get:
+      tags: [Things]
+      summary: Get Thing detail
+      operationId: getThingDetail
+      parameters:
+        - $ref: '#/components/parameters/ThingId'
+        - $ref: '#/components/parameters/RouteState'
+      responses:
+        '200':
+          description: Thing detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThingDetailResponse'
+
+  /v1/things/{thingId}/warranty:
+    patch:
+      tags: [Things]
+      summary: Update Thing warranty
+      operationId: updateThingWarranty
+      parameters:
+        - $ref: '#/components/parameters/ThingId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWarrantyRequest'
+      responses:
+        '200':
+          description: Updated warranty
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Warranty'
+
+  /v1/people:
+    get:
+      tags: [People]
+      summary: Get People route data
+      operationId: getPeople
+      parameters:
+        - $ref: '#/components/parameters/PersonaId'
+        - $ref: '#/components/parameters/RouteState'
+        - name: view
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [network, list, household, gifts, shared]
+            default: network
+      responses:
+        '200':
+          description: People route payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PeopleResponse'
+    post:
+      tags: [People]
+      summary: Create person
+      operationId: createPerson
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePersonRequest'
+      responses:
+        '201':
+          description: Person created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Person'
+
+  /v1/people/{personId}:
+    get:
+      tags: [People]
+      summary: Get person detail
+      operationId: getPersonDetail
+      parameters:
+        - $ref: '#/components/parameters/PersonId'
+        - $ref: '#/components/parameters/RouteState'
+      responses:
+        '200':
+          description: Person detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PersonDetailResponse'
+
+  /v1/memories:
+    get:
+      tags: [Memories]
+      summary: Get Memories route data
+      operationId: getMemories
+      parameters:
+        - $ref: '#/components/parameters/PersonaId'
+        - $ref: '#/components/parameters/RouteState'
+        - name: view
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [timeline, map, people]
+            default: timeline
+      responses:
+        '200':
+          description: Memories route payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoriesResponse'
+    post:
+      tags: [Memories]
+      summary: Create or confirm a memory
+      operationId: createMemory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMemoryRequest'
+      responses:
+        '201':
+          description: Memory created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryDetailResponse'
+
+  /v1/memories/{memoryId}:
+    get:
+      tags: [Memories]
+      summary: Get memory detail
+      operationId: getMemoryDetail
+      parameters:
+        - $ref: '#/components/parameters/MemoryId'
+        - $ref: '#/components/parameters/RouteState'
+      responses:
+        '200':
+          description: Memory detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryDetailResponse'
+    patch:
+      tags: [Memories]
+      summary: Update memory
+      operationId: updateMemory
+      parameters:
+        - $ref: '#/components/parameters/MemoryId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMemoryRequest'
+      responses:
+        '200':
+          description: Updated memory
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryDetailResponse'
+
+  /v1/documents/uploads:
+    post:
+      tags: [Documents]
+      summary: Create an upload target for a document
+      operationId: createDocumentUpload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDocumentUploadRequest'
+      responses:
+        '201':
+          description: Upload URL and document metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateDocumentUploadResponse'
+
+  /v1/documents/{documentId}/links:
+    post:
+      tags: [Documents]
+      summary: Link a document to an object
+      operationId: createDocumentLink
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDocumentLinkRequest'
+      responses:
+        '201':
+          description: Document link created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentLink'
+
+  /v1/agent/chat:
+    post:
+      tags: [Agent]
+      summary: Ask the agent by chat
+      operationId: chatWithAgent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentChatRequest'
+      responses:
+        '200':
+          description: Agent chat response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentChatResponse'
+
+  /v1/agent/voice:
+    post:
+      tags: [Agent]
+      summary: Ask the agent by voice transcript
+      operationId: voiceWithAgent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentVoiceRequest'
+      responses:
+        '200':
+          description: Agent voice response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentVoiceResponse'
+
+  /v1/agent/sessions:
+    get:
+      tags: [Agent]
+      summary: List agent sessions
+      operationId: listAgentSessions
+      responses:
+        '200':
+          description: Agent sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AgentSession'
+
+  /v1/dev/mock/home:
+    get:
+      tags: [Dev Mock]
+      summary: Mock Home payload
+      operationId: getMockHome
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PersonaId'
+        - $ref: '#/components/parameters/RouteState'
+      responses:
+        '200':
+          description: Mock home payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomeResponse'
+
+  /v1/dev/mock/things:
+    get:
+      tags: [Dev Mock]
+      summary: Mock Things payload
+      operationId: getMockThings
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PersonaId'
+        - $ref: '#/components/parameters/RouteState'
+      responses:
+        '200':
+          description: Mock things payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThingsResponse'
+
+  /v1/dev/mock/people:
+    get:
+      tags: [Dev Mock]
+      summary: Mock People payload
+      operationId: getMockPeople
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PersonaId'
+        - $ref: '#/components/parameters/RouteState'
+      responses:
+        '200':
+          description: Mock people payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PeopleResponse'
+
+  /v1/dev/mock/memories:
+    get:
+      tags: [Dev Mock]
+      summary: Mock Memories payload
+      operationId: getMockMemories
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/PersonaId'
+        - $ref: '#/components/parameters/RouteState'
+      responses:
+        '200':
+          description: Mock memories payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoriesResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    PersonaId:
+      name: personaId
+      in: query
+      required: false
+      description: Optional mock/dev persona selector
+      schema:
+        $ref: '#/components/schemas/PersonaId'
+
+    RouteState:
+      name: state
+      in: query
+      required: false
+      description: Optional mock/dev route state selector
+      schema:
+        type: string
+
+    ReceiptId:
+      name: receiptId
+      in: path
+      required: true
+      schema:
+        type: string
+
+    LineItemId:
+      name: lineItemId
+      in: path
+      required: true
+      schema:
+        type: string
+
+    ThingId:
+      name: thingId
+      in: path
+      required: true
+      schema:
+        type: string
+
+    PersonId:
+      name: personId
+      in: path
+      required: true
+      schema:
+        type: string
+
+    MemoryId:
+      name: memoryId
+      in: path
+      required: true
+      schema:
+        type: string
+
+    DocumentId:
+      name: documentId
+      in: path
+      required: true
+      schema:
+        type: string
+
+  schemas:
+    PersonaId:
+      type: string
+      enum:
+        - teen
+        - college_student
+        - single_adult_male
+        - single_adult_female
+        - couple_pet
+        - parent_2_2
+        - single_parent
+        - grandparents
+        - uncle
+        - single_elder
+        - adult_caring_for_parents
+        - roommates
+        - homeowner_diy
+        - gig_worker
+
+    Money:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount:
+          type: number
+        currency:
+          type: string
+          example: USD
+
+    PurchaseStatus:
+      type: string
+      enum: [draft, needs_review, trusted]
+
+    MemoryState:
+      type: string
+      enum: [candidate, confirmed, dismissed]
+
+    ProductMatchStatus:
+      type: string
+      enum: [unmatched, suggested, confirmed, rejected]
+
+    MerchantMatchStatus:
+      type: string
+      enum: [unmatched, suggested, confirmed, rejected]
+
+    RelationshipType:
+      type: string
+      enum:
+        - self
+        - spouse
+        - child
+        - parent
+        - sibling
+        - cousin
+        - friend
+        - coworker
+        - other
+
+    PlanTier:
+      type: string
+      enum: [free, personal_pro, family_pro, family_trust]
+
+    BillingStatus:
+      type: string
+      enum: [active, trialing, past_due, canceled, incomplete]
+
+    MemoryType:
+      type: string
+      enum:
+        - trip
+        - celebration
+        - routine
+        - home_project
+        - school_event
+        - gifting
+        - repair_story
+        - other
+
+    HouseholdMemberRole:
+      type: string
+      enum: [owner, admin, member, viewer, delegate, advisor_future]
+
+    SourceDocumentType:
+      type: string
+      enum:
+        - receipt_image
+        - receipt_pdf
+        - email_html
+        - email_pdf
+        - manual
+        - warranty
+        - repair_invoice
+        - policy_doc
+        - property_doc
+        - other
+
+    CoverageType:
+      type: string
+      enum: [manufacturer, retailer, extended, insurance, service_plan]
+
+    NotificationPreference:
+      type: object
+      properties:
+        receiptReviewReminders:
+          type: boolean
+        warrantyAlerts:
+          type: boolean
+
+    Profile:
+      type: object
+      required: [displayName, email]
+      properties:
+        displayName:
+          type: string
+        email:
+          type: string
+          format: email
+        avatarUrl:
+          type: string
+          format: uri
+          nullable: true
+
+    Session:
+      type: object
+      required: [id, deviceLabel, lastActiveAt, current]
+      properties:
+        id:
+          type: string
+        deviceLabel:
+          type: string
+        lastActiveAt:
+          type: string
+          format: date-time
+        current:
+          type: boolean
+
+    HouseholdMembership:
+      type: object
+      required: [householdId, householdName, role]
+      properties:
+        householdId:
+          type: string
+        householdName:
+          type: string
+        role:
+          $ref: '#/components/schemas/HouseholdMemberRole'
+
+    Subscription:
+      type: object
+      required: [planTier, billingStatus]
+      properties:
+        planTier:
+          $ref: '#/components/schemas/PlanTier'
+        billingStatus:
+          $ref: '#/components/schemas/BillingStatus'
+        renewalAt:
+          type: string
+          format: date-time
+          nullable: true
+        trialEndsAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    Entitlement:
+      type: object
+      required: [key, enabled]
+      properties:
+        key:
+          type: string
+        enabled:
+          type: boolean
+        limitValue:
+          type: integer
+          nullable: true
+
+    AccountResponse:
+      type: object
+      required: [profile, subscription, sessions, householdMemberships]
+      properties:
+        profile:
+          $ref: '#/components/schemas/Profile'
+        subscription:
+          $ref: '#/components/schemas/Subscription'
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Session'
+        householdMemberships:
+          type: array
+          items:
+            $ref: '#/components/schemas/HouseholdMembership'
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/RouteAction'
+
+    SettingsSectionItem:
+      oneOf:
+        - $ref: '#/components/schemas/SelectSettingItem'
+        - $ref: '#/components/schemas/ToggleSettingItem'
+        - $ref: '#/components/schemas/LinkSettingItem'
+
+    SelectSettingItem:
+      type: object
+      required: [type, key, label, value, options]
+      properties:
+        type:
+          const: select
+        key:
+          type: string
+        label:
+          type: string
+        value:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+
+    ToggleSettingItem:
+      type: object
+      required: [type, key, label, value]
+      properties:
+        type:
+          const: toggle
+        key:
+          type: string
+        label:
+          type: string
+        value:
+          type: boolean
+
+    LinkSettingItem:
+      type: object
+      required: [type, key, label, route]
+      properties:
+        type:
+          const: link
+        key:
+          type: string
+        label:
+          type: string
+        route:
+          type: string
+
+    SettingsSection:
+      type: object
+      required: [key, title, items]
+      properties:
+        key:
+          type: string
+        title:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettingsSectionItem'
+
+    SettingsResponse:
+      type: object
+      required: [sections]
+      properties:
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/SettingsSection'
+
+    UpdateSettingsRequest:
+      type: object
+      properties:
+        defaultCurrency:
+          type: string
+        timezone:
+          type: string
+        autoOpenReview:
+          type: boolean
+        saveOriginalReceipts:
+          type: boolean
+        notifications:
+          $ref: '#/components/schemas/NotificationPreference'
+
+    Plan:
+      type: object
+      required: [key, label, priceLabel, features, ctaLabel]
+      properties:
+        key:
+          $ref: '#/components/schemas/PlanTier'
+        label:
+          type: string
+        priceLabel:
+          type: string
+        features:
+          type: array
+          items:
+            type: string
+        ctaLabel:
+          type: string
+
+    FamilyTrustCard:
+      type: object
+      required: [label, description, ctaLabel]
+      properties:
+        label:
+          type: string
+        description:
+          type: string
+        ctaLabel:
+          type: string
+
+    PlansResponse:
+      type: object
+      required: [currentPlan, plans]
+      properties:
+        currentPlan:
+          $ref: '#/components/schemas/PlanTier'
+        plans:
+          type: array
+          items:
+            $ref: '#/components/schemas/Plan'
+        familyTrustCard:
+          $ref: '#/components/schemas/FamilyTrustCard'
+
+    HeaderSearch:
+      type: object
+      properties:
+        title:
+          type: string
+        searchPlaceholder:
+          type: string
+
+    HeroCta:
+      type: object
+      required: [label, action]
+      properties:
+        label:
+          type: string
+        action:
+          type: string
+
+    Hero:
+      type: object
+      properties:
+        headline:
+          type: string
+        primaryCta:
+          $ref: '#/components/schemas/HeroCta'
+        secondaryCta:
+          $ref: '#/components/schemas/HeroCta'
+
+    SpendSummary:
+      type: object
+      properties:
+        periodLabel:
+          type: string
+        purchaseCount:
+          type: integer
+        totalSpend:
+          type: number
+        currency:
+          type: string
+
+    ReceiptListItem:
+      type: object
+      required: [id, merchantName, purchasedAt, status, lineItemCount, grandTotal, currency]
+      properties:
+        id:
+          type: string
+        merchantName:
+          type: string
+        purchasedAt:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/PurchaseStatus'
+        lineItemCount:
+          type: integer
+        grandTotal:
+          type: number
+        currency:
+          type: string
+
+    MemorySuggestion:
+      type: object
+      required: [id, memoryState]
+      properties:
+        id:
+          type: string
+        memoryState:
+          $ref: '#/components/schemas/MemoryState'
+        suggestedTitle:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        startsAt:
+          type: string
+          format: date-time
+        placeLabel:
+          type: string
+          nullable: true
+        relatedPurchaseEventIds:
+          type: array
+          items:
+            type: string
+
+    InsightCard:
+      type: object
+      required: [id, type, title, body]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        metrics:
+          type: object
+          additionalProperties: true
+
+    UpgradeCard:
+      type: object
+      required: [tier, title, body, ctaLabel]
+      properties:
+        id:
+          type: string
+          nullable: true
+        tier:
+          $ref: '#/components/schemas/PlanTier'
+        title:
+          type: string
+        body:
+          type: string
+        ctaLabel:
+          type: string
+
+    HomeResponse:
+      type: object
+      required: [header]
+      properties:
+        header:
+          $ref: '#/components/schemas/HeaderSearch'
+        hero:
+          $ref: '#/components/schemas/Hero'
+        summary:
+          $ref: '#/components/schemas/SpendSummary'
+        reviewQueue:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReceiptListItem'
+        recentReceipts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReceiptListItem'
+        thingsSummary:
+          type: object
+          additionalProperties: true
+          nullable: true
+        memorySuggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemorySuggestion'
+        insightCards:
+          type: array
+          items:
+            $ref: '#/components/schemas/InsightCard'
+        upgradeCard:
+          $ref: '#/components/schemas/UpgradeCard'
+
+    PaginatedReceiptListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReceiptListItem'
+        nextCursor:
+          type: string
+          nullable: true
+
+    CreateReceiptRequest:
+      type: object
+      required: [sourceType]
+      properties:
+        sourceType:
+          $ref: '#/components/schemas/SourceDocumentType'
+        fileName:
+          type: string
+          nullable: true
+        mimeType:
+          type: string
+          nullable: true
+        capturedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    CreateReceiptResponse:
+      type: object
+      required: [receiptId, upload]
+      properties:
+        receiptId:
+          type: string
+        upload:
+          type: object
+          required: [uploadUrl, method]
+          properties:
+            uploadUrl:
+              type: string
+              format: uri
+            method:
+              type: string
+              enum: [PUT, POST]
+            headers:
+              type: object
+              additionalProperties:
+                type: string
+
+    PurchaseEventHeader:
+      type: object
+      required: [title, currency]
+      properties:
+        title:
+          type: string
+        merchantName:
+          type: string
+          nullable: true
+        purchasedAt:
+          type: string
+          format: date-time
+          nullable: true
+        grandTotal:
+          type: number
+          nullable: true
+        currency:
+          type: string
+
+    Evidence:
+      type: object
+      properties:
+        targetObjectType:
+          type: string
+        targetObjectId:
+          type: string
+        evidenceType:
+          type: string
+          enum: [image_region, text_span]
+        pageNumber:
+          type: integer
+          nullable: true
+        x:
+          type: number
+          nullable: true
+        y:
+          type: number
+          nullable: true
+        width:
+          type: number
+          nullable: true
+        height:
+          type: number
+          nullable: true
+        snippet:
+          type: string
+          nullable: true
+
+    ReceiptLineItem:
+      type: object
+      required: [id, lineIndex, descriptionRaw]
+      properties:
+        id:
+          type: string
+        lineIndex:
+          type: integer
+        descriptionRaw:
+          type: string
+        descriptionNormalized:
+          type: string
+          nullable: true
+        quantity:
+          type: number
+          nullable: true
+        unitPrice:
+          type: number
+          nullable: true
+        lineTotal:
+          type: number
+          nullable: true
+        reviewState:
+          type: string
+          enum: [auto, edited, needs_review]
+        confidenceScore:
+          type: number
+          nullable: true
+        assetCandidateFlag:
+          type: boolean
+        productMatchStatus:
+          $ref: '#/components/schemas/ProductMatchStatus'
+        productMatchConfidence:
+          type: number
+          nullable: true
+        householdTags:
+          type: array
+          items:
+            type: string
+        lemTags:
+          type: array
+          items:
+            type: string
+
+    ReceiptStudioProgress:
+      type: object
+      required: [stage, label]
+      properties:
+        stage:
+          type: string
+        label:
+          type: string
+
+    PersonReference:
+      type: object
+      required: [id, displayName, relationshipType]
+      properties:
+        id:
+          type: string
+        displayName:
+          type: string
+        relationshipType:
+          $ref: '#/components/schemas/RelationshipType'
+
+    ReceiptStudioResponse:
+      type: object
+      required: [receipt, header, lineItems, actions]
+      properties:
+        receipt:
+          type: object
+          required: [id, status, sourceType]
+          properties:
+            id:
+              type: string
+            status:
+              $ref: '#/components/schemas/PurchaseStatus'
+            sourceType:
+              $ref: '#/components/schemas/SourceDocumentType'
+            capturedAt:
+              type: string
+              format: date-time
+              nullable: true
+        header:
+          $ref: '#/components/schemas/PurchaseEventHeader'
+        progress:
+          $ref: '#/components/schemas/ReceiptStudioProgress'
+        lineItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReceiptLineItem'
+        selectedLineItemId:
+          type: string
+          nullable: true
+        evidence:
+          $ref: '#/components/schemas/Evidence'
+        peopleSuggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PersonReference'
+        memorySuggestions:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemorySuggestion'
+        upgradeCard:
+          $ref: '#/components/schemas/UpgradeCard'
+        actions:
+          type: object
+          required: [canSave, canConvertToThing, canTagPeople, canAddToMemory]
+          properties:
+            canSave:
+              type: boolean
+            canConvertToThing:
+              type: boolean
+            canTagPeople:
+              type: boolean
+            canAddToMemory:
+              type: boolean
+
+    UpdateLineItemRequest:
+      type: object
+      properties:
+        descriptionNormalized:
+          type: string
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+        lineTotal:
+          type: number
+        householdTags:
+          type: array
+          items:
+            type: string
+        lemTags:
+          type: array
+          items:
+            type: string
+        productMatchStatus:
+          $ref: '#/components/schemas/ProductMatchStatus'
+
+    ConvertToThingRequest:
+      type: object
+      properties:
+        displayName:
+          type: string
+        assetType:
+          type: string
+        notes:
+          type: string
+        createWarrantyStub:
+          type: boolean
+          default: false
+
+    ThingSummary:
+      type: object
+      required: [id, displayName]
+      properties:
+        id:
+          type: string
+        displayName:
+          type: string
+        status:
+          type: string
+          nullable: true
+        purchasePrice:
+          type: number
+          nullable: true
+        purchaseDate:
+          type: string
+          format: date
+          nullable: true
+        hasWarranty:
+          type: boolean
+          nullable: true
+        hasManual:
+          type: boolean
+          nullable: true
+        locked:
+          type: boolean
+          nullable: true
+
+    VisualizationSeriesItem:
+      type: object
+      required: [id, label, value]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        value:
+          type: number
+
+    ThingsGroup:
+      type: object
+      required: [id, label]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        thingCount:
+          type: integer
+          nullable: true
+        totalSpend:
+          type: number
+          nullable: true
+        topItems:
+          type: array
+          items:
+            type: string
+
+    ThingsResponse:
+      type: object
+      required: [header, actionStrip]
+      properties:
+        header:
+          type: object
+          required: [title, viewOptions, selectedView]
+          properties:
+            title:
+              type: string
+            viewOptions:
+              type: array
+              items:
+                type: string
+            selectedView:
+              type: string
+        actionStrip:
+          type: array
+          items:
+            type: string
+        summary:
+          type: object
+          additionalProperties: true
+          nullable: true
+        visualization:
+          type: object
+          nullable: true
+          properties:
+            type:
+              type: string
+            series:
+              type: array
+              items:
+                $ref: '#/components/schemas/VisualizationSeriesItem'
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/ThingsGroup'
+        ownedThings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ThingSummary'
+        upgradeCard:
+          $ref: '#/components/schemas/UpgradeCard'
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+        canonicalName:
+          type: string
+        brand:
+          type: string
+          nullable: true
+        modelNumber:
+          type: string
+          nullable: true
+        productCategory:
+          type: string
+          nullable: true
+
+    Warranty:
+      type: object
+      properties:
+        id:
+          type: string
+        providerName:
+          type: string
+          nullable: true
+        coverageType:
+          $ref: '#/components/schemas/CoverageType'
+        startsAt:
+          type: string
+          format: date-time
+          nullable: true
+        endsAt:
+          type: string
+          format: date-time
+          nullable: true
+        coverageNotes:
+          type: string
+          nullable: true
+        locked:
+          type: boolean
+          nullable: true
+
+    ThingLifecycleEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        eventType:
+          type: string
+        eventDate:
+          type: string
+          format: date-time
+        notes:
+          type: string
+          nullable: true
+
+    DocumentReference:
+      type: object
+      required: [id, title]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        documentRole:
+          type: string
+        documentType:
+          $ref: '#/components/schemas/SourceDocumentType'
+
+    ThingDetailResponse:
+      type: object
+      required: [thing]
+      properties:
+        thing:
+          type: object
+          required: [id, displayName]
+          properties:
+            id:
+              type: string
+            displayName:
+              type: string
+            assetType:
+              type: string
+              nullable: true
+            status:
+              type: string
+              nullable: true
+            purchasePrice:
+              type: number
+              nullable: true
+            currency:
+              type: string
+              nullable: true
+            acquiredAt:
+              type: string
+              format: date-time
+              nullable: true
+            merchantName:
+              type: string
+              nullable: true
+            serialNumber:
+              type: string
+              nullable: true
+            notes:
+              type: string
+              nullable: true
+        product:
+          $ref: '#/components/schemas/Product'
+        warranty:
+          $ref: '#/components/schemas/Warranty'
+        documents:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentReference'
+        lifecycle:
+          type: array
+          items:
+            $ref: '#/components/schemas/ThingLifecycleEvent'
+        linkedMemories:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemoryReference'
+        linkedPeople:
+          type: array
+          items:
+            $ref: '#/components/schemas/PersonReference'
+        priceTrend:
+          type: object
+          additionalProperties: true
+          nullable: true
+        upgradeCard:
+          $ref: '#/components/schemas/UpgradeCard'
+        actions:
+          type: object
+          additionalProperties:
+            type: boolean
+
+    UpdateWarrantyRequest:
+      type: object
+      properties:
+        providerName:
+          type: string
+        coverageType:
+          $ref: '#/components/schemas/CoverageType'
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        coverageNotes:
+          type: string
+
+    PeopleNode:
+      type: object
+      required: [id, label]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        relationshipType:
+          $ref: '#/components/schemas/RelationshipType'
+
+    PeopleRing:
+      type: object
+      required: [label, count, nodes]
+      properties:
+        label:
+          type: string
+        count:
+          type: integer
+        nodes:
+          type: array
+          items:
+            $ref: '#/components/schemas/PeopleNode'
+
+    PersonSummary:
+      allOf:
+        - $ref: '#/components/schemas/PersonReference'
+        - type: object
+          properties:
+            linkedPurchaseCount:
+              type: integer
+            linkedMemoryCount:
+              type: integer
+            giftCount:
+              type: integer
+
+    PeopleResponse:
+      type: object
+      required: [header, actionStrip]
+      properties:
+        header:
+          type: object
+          required: [title, viewOptions, selectedView]
+          properties:
+            title:
+              type: string
+            viewOptions:
+              type: array
+              items:
+                type: string
+            selectedView:
+              type: string
+        actionStrip:
+          type: array
+          items:
+            type: string
+        summary:
+          type: object
+          additionalProperties: true
+          nullable: true
+        network:
+          type: object
+          nullable: true
+          properties:
+            rings:
+              type: array
+              items:
+                $ref: '#/components/schemas/PeopleRing'
+        people:
+          type: array
+          items:
+            $ref: '#/components/schemas/PersonSummary'
+        selectedPerson:
+          $ref: '#/components/schemas/PersonDetail'
+        upgradeCard:
+          $ref: '#/components/schemas/UpgradeCard'
+
+    CreatePersonRequest:
+      type: object
+      required: [displayName, relationshipType]
+      properties:
+        displayName:
+          type: string
+        relationshipType:
+          $ref: '#/components/schemas/RelationshipType'
+        notes:
+          type: string
+          nullable: true
+
+    Person:
+      allOf:
+        - $ref: '#/components/schemas/PersonReference'
+        - type: object
+          properties:
+            notes:
+              type: string
+              nullable: true
+
+    LinkedPurchase:
+      type: object
+      properties:
+        purchaseEventId:
+          type: string
+        merchantName:
+          type: string
+        purchasedAt:
+          type: string
+          format: date-time
+          nullable: true
+        grandTotal:
+          type: number
+          nullable: true
+        role:
+          type: string
+          nullable: true
+
+    MemoryReference:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        memoryState:
+          $ref: '#/components/schemas/MemoryState'
+        startsAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    PersonDetail:
+      allOf:
+        - $ref: '#/components/schemas/Person'
+        - type: object
+          properties:
+            linkedPurchases:
+              type: array
+              items:
+                $ref: '#/components/schemas/LinkedPurchase'
+            linkedMemories:
+              type: array
+              items:
+                $ref: '#/components/schemas/MemoryReference'
+            giftHistory:
+              type: array
+              items:
+                $ref: '#/components/schemas/LinkedPurchase'
+
+    PersonDetailResponse:
+      type: object
+      required: [person]
+      properties:
+        person:
+          $ref: '#/components/schemas/PersonDetail'
+        summary:
+          type: object
+          additionalProperties: true
+
+    MemoryCard:
+      type: object
+      required: [id, memoryState]
+      properties:
+        id:
+          type: string
+        memoryState:
+          $ref: '#/components/schemas/MemoryState'
+        autoCreatedFlag:
+          type: boolean
+          nullable: true
+        candidateConfidence:
+          type: number
+          nullable: true
+        suggestedTitle:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        startsAt:
+          type: string
+          format: date-time
+          nullable: true
+        endsAt:
+          type: string
+          format: date-time
+          nullable: true
+        placeLabel:
+          type: string
+          nullable: true
+        relatedPurchaseEventIds:
+          type: array
+          items:
+            type: string
+        peoplePreview:
+          type: array
+          items:
+            type: string
+        notes:
+          type: string
+          nullable: true
+
+    MemoriesResponse:
+      type: object
+      required: [header, actionStrip]
+      properties:
+        header:
+          type: object
+          required: [title, viewOptions, selectedView]
+          properties:
+            title:
+              type: string
+            viewOptions:
+              type: array
+              items:
+                type: string
+            selectedView:
+              type: string
+        actionStrip:
+          type: array
+          items:
+            type: string
+        summary:
+          type: object
+          additionalProperties: true
+          nullable: true
+        timeline:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemoryCard'
+        selectedMemory:
+          $ref: '#/components/schemas/MemoryDetail'
+
+    MemoryDetail:
+      type: object
+      required: [id, memoryState]
+      properties:
+        id:
+          type: string
+        memoryState:
+          $ref: '#/components/schemas/MemoryState'
+        autoCreatedFlag:
+          type: boolean
+          nullable: true
+        candidateConfidence:
+          type: number
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        suggestedTitle:
+          type: string
+          nullable: true
+        memoryType:
+          $ref: '#/components/schemas/MemoryType'
+        startsAt:
+          type: string
+          format: date-time
+          nullable: true
+        endsAt:
+          type: string
+          format: date-time
+          nullable: true
+        placeLabel:
+          type: string
+          nullable: true
+        summary:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+
+    MemoryDetailResponse:
+      type: object
+      required: [memory]
+      properties:
+        memory:
+          $ref: '#/components/schemas/MemoryDetail'
+        people:
+          type: array
+          items:
+            $ref: '#/components/schemas/PersonReference'
+        linkedPurchases:
+          type: array
+          items:
+            $ref: '#/components/schemas/LinkedPurchase'
+        linkedThings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ThingSummary'
+        actions:
+          type: object
+          additionalProperties:
+            type: boolean
+
+    CreateMemoryRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        memoryState:
+          $ref: '#/components/schemas/MemoryState'
+        memoryType:
+          $ref: '#/components/schemas/MemoryType'
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        placeLabel:
+          type: string
+        notes:
+          type: string
+        linkedPurchaseEventIds:
+          type: array
+          items:
+            type: string
+        peopleIds:
+          type: array
+          items:
+            type: string
+
+    UpdateMemoryRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        memoryState:
+          $ref: '#/components/schemas/MemoryState'
+        notes:
+          type: string
+        peopleIds:
+          type: array
+          items:
+            type: string
+
+    CreateDocumentUploadRequest:
+      type: object
+      required: [documentType, fileName, mimeType]
+      properties:
+        documentType:
+          $ref: '#/components/schemas/SourceDocumentType'
+        fileName:
+          type: string
+        mimeType:
+          type: string
+        linkedObjectType:
+          type: string
+          nullable: true
+        linkedObjectId:
+          type: string
+          nullable: true
+
+    CreateDocumentUploadResponse:
+      type: object
+      required: [documentId, upload]
+      properties:
+        documentId:
+          type: string
+        upload:
+          type: object
+          required: [uploadUrl, method]
+          properties:
+            uploadUrl:
+              type: string
+              format: uri
+            method:
+              type: string
+              enum: [PUT, POST]
+            headers:
+              type: object
+              additionalProperties:
+                type: string
+
+    CreateDocumentLinkRequest:
+      type: object
+      required: [linkedObjectType, linkedObjectId, documentRole]
+      properties:
+        linkedObjectType:
+          type: string
+        linkedObjectId:
+          type: string
+        documentRole:
+          type: string
+
+    DocumentLink:
+      type: object
+      required: [id, documentId, linkedObjectType, linkedObjectId, documentRole]
+      properties:
+        id:
+          type: string
+        documentId:
+          type: string
+        linkedObjectType:
+          type: string
+        linkedObjectId:
+          type: string
+        documentRole:
+          type: string
+
+    AgentCitation:
+      type: object
+      properties:
+        type:
+          type: string
+        id:
+          type: string
+          nullable: true
+        label:
+          type: string
+
+    AgentMessage:
+      type: object
+      required: [id, role, content]
+      properties:
+        id:
+          type: string
+        role:
+          type: string
+          enum: [user, assistant, tool]
+        content:
+          type: string
+        citations:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentCitation'
+        suggestedFollowUps:
+          type: array
+          items:
+            type: string
+        upgradeCard:
+          $ref: '#/components/schemas/UpgradeCard'
+
+    AgentSession:
+      type: object
+      required: [id, mode, startedAt]
+      properties:
+        id:
+          type: string
+        mode:
+          type: string
+          enum: [chat, voice]
+        startedAt:
+          type: string
+          format: date-time
+        endedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    AgentChatRequest:
+      type: object
+      required: [message]
+      properties:
+        sessionId:
+          type: string
+          nullable: true
+        message:
+          type: string
+        routeContext:
+          type: string
+          nullable: true
+        linkedObjectType:
+          type: string
+          nullable: true
+        linkedObjectId:
+          type: string
+          nullable: true
+
+    AgentChatResponse:
+      type: object
+      required: [mode, conversation]
+      properties:
+        mode:
+          type: string
+          const: chat
+        title:
+          type: string
+        session:
+          $ref: '#/components/schemas/AgentSession'
+        conversation:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentMessage'
+        suggestedPrompts:
+          type: array
+          items:
+            type: string
+
+    AgentVoiceRequest:
+      type: object
+      required: [transcript]
+      properties:
+        sessionId:
+          type: string
+          nullable: true
+        transcript:
+          type: string
+        routeContext:
+          type: string
+          nullable: true
+
+    AgentVoiceResponse:
+      type: object
+      required: [mode, state]
+      properties:
+        mode:
+          type: string
+          const: voice
+        title:
+          type: string
+        state:
+          type: string
+          enum: [idle, listening, processing, answered, error]
+        prompt:
+          type: string
+          nullable: true
+        transcript:
+          type: string
+          nullable: true
+        response:
+          type: object
+          nullable: true
+          properties:
+            content:
+              type: string
+            citations:
+              type: array
+              items:
+                $ref: '#/components/schemas/AgentCitation'
+            suggestedFollowUps:
+              type: array
+              items:
+                type: string
+
+    SetParticipantsRequest:
+      type: object
+      required: [participants]
+      properties:
+        participants:
+          type: array
+          items:
+            type: object
+            required: [personId, participantRole]
+            properties:
+              personId:
+                type: string
+              participantRole:
+                type: string
+                enum: [buyer, recipient, participant, beneficiary, gift_for]
+
+    ParticipantsResponse:
+      type: object
+      required: [participants]
+      properties:
+        participants:
+          type: array
+          items:
+            type: object
+            required: [personId, participantRole]
+            properties:
+              personId:
+                type: string
+              participantRole:
+                type: string
+
+    RouteAction:
+      type: object
+      required: [label, route]
+      properties:
+        label:
+          type: string
+        route:
+          type: string

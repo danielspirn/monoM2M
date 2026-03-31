@@ -19,6 +19,7 @@ import fabMenuPayloads from '../mock-data/routes/fab-menu.payloads.json';
 import agentChatPayloads from '../mock-data/routes/agent-chat.payloads.json';
 import agentVoicePayloads from '../mock-data/routes/agent-voice.payloads.json';
 import upgradeModalPayloads from '../mock-data/routes/upgrade-modal.payloads.json';
+import { buildCoreRoutePayload } from './sharedUniverse';
 
 export type PersonaId =
     | 'teen'
@@ -115,6 +116,24 @@ function structuredCloneSafe<T>(value: T): T {
     return JSON.parse(JSON.stringify(value));
 }
 
+function injectRouteParams(routeKey: RouteKey, result: Record<string, unknown>, params?: Record<string, string>) {
+    if (!params) {
+        return result;
+    }
+
+    if (routeKey === '/ingest/:receiptId' && 'receipt' in result && result.receipt && typeof result.receipt === 'object') {
+        return {
+            ...result,
+            receipt: {
+                ...(result.receipt as Record<string, unknown>),
+                id: params.receiptId ?? (result.receipt as Record<string, unknown>).id,
+            },
+        };
+    }
+
+    return { ...result, ...params };
+}
+
 export function getDefaultState(
     personaId: PersonaId | undefined,
     routeKey: RouteKey
@@ -129,6 +148,16 @@ export function resolveMockPayload(
     options: ResolveOptions = {}
 ): unknown | MissingStatePayload {
     const { personaId, state, params } = options;
+    const dynamicPayload = buildCoreRoutePayload(routeKey, {
+        personaId,
+        state,
+        params
+    });
+
+    if (dynamicPayload) {
+        return structuredCloneSafe(dynamicPayload);
+    }
+
     const payloads = ROUTE_PAYLOADS[routeKey];
 
     if (!payloads) {
@@ -153,7 +182,7 @@ export function resolveMockPayload(
     const result = structuredCloneSafe(payload);
 
     if (params && typeof result === 'object' && result !== null) {
-        return { ...result, ...params };
+        return injectRouteParams(routeKey, result as Record<string, unknown>, params);
     }
 
     return result;

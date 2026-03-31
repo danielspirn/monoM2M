@@ -1,0 +1,116 @@
+{
+  "version": 1,
+  "description": "Canonical Figma MCP references for the Money to Memories mocked v1 consumer experience.",
+  "entries": [
+    {
+      "area": "shell",
+      "route": "shell",
+      "label": "Bottom navigation and dimple FAB",
+      "state": "canonical",
+      "figmaUrl": "",
+      "fileKey": "",
+      "nodeId": "",
+      "notes": "Use for the locked bottom navigation, center FAB, and context strip behavior."
+    },
+    {
+      "area": "shell",
+      "route": "shell",
+      "label": "Top bar and drawer",
+      "state": "canonical",
+      "figmaUrl": "",
+      "fileKey": "",
+      "nodeId": "",
+      "notes": "Use for the branded top bar, search-forward Home bar, and the standard drawer."
+    },
+    {
+      "area": "primary-route",
+      "route": "/home",
+      "label": "Home overview",
+      "state": "populated",
+      "figmaUrl": "",
+      "fileKey": "",
+      "nodeId": "",
+      "notes": "Search-first landing screen with recent activity and quick value summary."
+    },
+    {
+      "area": "primary-route",
+      "route": "/things",
+      "label": "Things overview",
+      "state": "populated",
+      "figmaUrl": "",
+      "fileKey": "",
+      "nodeId": "",
+      "notes": "Consumer-friendly Things experience, not an admin asset inventory."
+    },
+    {
+      "area": "primary-route",
+      "route": "/people",
+      "label": "People overview",
+      "state": "populated",
+      "figmaUrl": "",
+      "fileKey": "",
+      "nodeId": "",
+      "notes": "Relationship-centered view with household, gift, and linked purchase context."
+    },
+    {
+      "area": "primary-route",
+      "route": "/memories",
+      "label": "Memories timeline",
+      "state": "populated",
+      "figmaUrl": "",
+      "fileKey": "",
+      "nodeId": "",
+      "notes": "Timeline-first view with candidates and confirmed memories."
+    },
+    {
+      "area": "secondary-route",
+      "route": "/settings",
+      "label": "Settings",
+      "state": "default",
+      "figmaUrl": "",
+      "fileKey": "",
+      "nodeId": "",
+      "notes": "Preferences, privacy, and notifications."
+    },
+    {
+      "area": "secondary-route",
+      "route": "/account",
+      "label": "Account",
+      "state": "default",
+      "figmaUrl": "",
+      "fileKey": "",
+      "nodeId": "",
+      "notes": "Identity, sessions, household membership, and billing summary."
+    },
+    {
+      "area": "secondary-route",
+      "route": "/plans",
+      "label": "Plans and upgrade",
+      "state": "comparison",
+      "figmaUrl": "",
+      "fileKey": "",
+      "nodeId": "",
+      "notes": "Contextual upgrade flows for Free, Personal Pro, Family Pro, and Family Trust."
+    },
+    {
+      "area": "agent",
+      "route": "/agent/chat",
+      "label": "Ask Agent chat",
+      "state": "default",
+      "figmaUrl": "",
+      "fileKey": "",
+      "nodeId": "",
+      "notes": "Grounded, tool-based chat surface."
+    },
+    {
+      "area": "agent",
+      "route": "/agent/voice",
+      "label": "Ask Agent voice",
+      "state": "default",
+      "figmaUrl": "",
+      "fileKey": "",
+      "nodeId": "",
+      "notes": "Voice-first variant of the agent surface."
+    }
+  ]
+}

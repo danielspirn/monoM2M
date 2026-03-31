@@ -4,6 +4,8 @@ This directory contains visual reference screens for Money to Memories.
 
 These images are not final UI specs by themselves. They are visual anchors that support the route-by-route spec, mobile shell rules, and mocked UX build.
 
+If live Figma nodes are available, pair these hero screens with the route registry in `design-references/figma/route-node-registry.json` so implementation can inspect the actual design structure, variables, and states through MCP.
+
 ## Purpose
 
 Use these hero screens to:

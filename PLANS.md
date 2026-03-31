@@ -1,47 +1,43 @@
 # PLANS.md
 
 ## Current milestone
-Milestone 1 — UX Shell and Mocked Primary Routes
+Milestone 2.0 — Core Experience Buildout
 
 ## Goal
-Build the first reviewable consumer UX for Money to Memories using mocked data only.
+Turn the mocked shell into a believable, interactive prototype centered on the relationship between receipts, Things, People, and Memories.
 
 ## Included
-- mobile shell
-- drawer
-- bottom navigation with center dimple FAB
-- context action strips
-- Home
-- Things
-- People
-- Memories
-- Settings
-- Account
-- Plans
-- persona switcher
-- route-state switcher
-- mock provider integration
-- FAB actions for add / ask
+- upgraded Home dashboard with recent activity, reminders, relationship summaries, and add prompts
+- second-level detail routes for Thing, Person, and Memory
+- richer Things, People, and Memories overview screens
+- shared mock universe reused across routes so linked entities stay coherent
+- Add Actions bottom sheet and lightweight mocked creation flows
+- improved Ask Agent Chat and Ask Agent Voice mocked experiences
+- treemap, bubble chart, and selective micro-visual summaries where they improve comprehension
+- reusable internal patterns for headers, sections, summary cards, detail headers, related sections, empty states, action sheets, and metadata rows
 
 ## Excluded
 - backend integration
 - live API wiring
-- auth
+- production auth
 - billing
 - persistence
-- document upload implementation
+- production-grade upload or camera handling
 - real receipt extraction
 - production agent implementation
+- full visual polish pass
 
 ## Acceptance criteria
-- routes render with mocked data
-- shell matches v1 mobile-shell spec
-- consumer labels are correct
-- all major route states exist
-- premium conversion surfaces are contextual
-- no backend dependency is required to review UX
+- Home feels like a real dashboard rather than a shell placeholder
+- Things, People, and Memories each support overview and detail states
+- Add Actions launches useful mocked create flows
+- entity relationships are visible across Home, Things, People, Memories, and agent surfaces
+- mock data is coherent and reused across the app
+- charts and visual summaries support product understanding without overwhelming the mobile shell
+- no backend dependency is required to review the UX
 
 ## Validation
 - typecheck passes
 - lint passes
-- basic route smoke tests pass
+- tests pass
+- production build passes

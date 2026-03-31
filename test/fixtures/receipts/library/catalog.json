@@ -1,0 +1,1542 @@
+{
+  "version": 1,
+  "generatedAt": "2026-03-30T21:34:56.702Z",
+  "sourceDirectory": "receipt_images",
+  "fileCount": 148,
+  "duplicateGroupCount": 8,
+  "curatedScenarios": [
+    {
+      "id": "single_grocery_happy_path",
+      "file": "receipt_images/IMG_7573.jpeg",
+      "label": "Safeway grocery receipt",
+      "notes": "Clear single grocery receipt with visible line items and totals."
+    },
+    {
+      "id": "restaurant_payment_slip",
+      "file": "receipt_images/IMG_0030.jpeg",
+      "label": "Restaurant card payment slip",
+      "notes": "Non-itemized payment slip with merchant, date, and total but limited line-item detail."
+    },
+    {
+      "id": "service_invoice_nonstandard",
+      "file": "receipt_images/IMG_20230404_210830_01.jpeg",
+      "label": "Cleaning invoice",
+      "notes": "Service invoice variant to validate non-retail receipt handling."
+    },
+    {
+      "id": "duplicate_receipt_pair",
+      "files": [
+        "receipt_images/IMG_7373.jpeg",
+        "receipt_images/IMG_7373 (1).jpeg"
+      ],
+      "label": "Exact duplicate pair",
+      "notes": "Known duplicate files to validate dedupe surfacing."
+    }
+  ],
+  "duplicateGroups": [
+    {
+      "id": "dup_1",
+      "files": [
+        "receipt_images/image000001 (1).jpeg",
+        "receipt_images/image000001.jpeg"
+      ]
+    },
+    {
+      "id": "dup_2",
+      "files": [
+        "receipt_images/image000002 (1).jpeg",
+        "receipt_images/image000002.jpeg"
+      ]
+    },
+    {
+      "id": "dup_3",
+      "files": [
+        "receipt_images/image000003 (1).jpeg",
+        "receipt_images/image000003.jpeg"
+      ]
+    },
+    {
+      "id": "dup_4",
+      "files": [
+        "receipt_images/image000004 (1).jpeg",
+        "receipt_images/image000004.jpeg"
+      ]
+    },
+    {
+      "id": "dup_5",
+      "files": [
+        "receipt_images/image000005 (1).jpeg",
+        "receipt_images/image000005.jpeg"
+      ]
+    },
+    {
+      "id": "dup_6",
+      "files": [
+        "receipt_images/image000006 (1).jpeg",
+        "receipt_images/image000006.jpeg"
+      ]
+    },
+    {
+      "id": "dup_7",
+      "files": [
+        "receipt_images/IMG_20230602_122856_02 (1).jpeg",
+        "receipt_images/IMG_20230602_122856_02.jpeg"
+      ]
+    },
+    {
+      "id": "dup_8",
+      "files": [
+        "receipt_images/IMG_7373 (1).jpeg",
+        "receipt_images/IMG_7373.jpeg"
+      ]
+    }
+  ],
+  "entries": [
+    {
+      "fileName": "058282bc-dca0-49ac-94b2-ece23a6e2910.jpeg",
+      "relativePath": "receipt_images/058282bc-dca0-49ac-94b2-ece23a6e2910.jpeg",
+      "sizeBytes": 781202,
+      "md5": "eb6d87f9309b26d8e554b7070f1ab80e",
+      "tags": [],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "0f7e99a2-0874-4652-9206-99ce8a743acc.jpeg",
+      "relativePath": "receipt_images/0f7e99a2-0874-4652-9206-99ce8a743acc.jpeg",
+      "sizeBytes": 830179,
+      "md5": "17c7d8fc1e37837ec5c16a85dece4253",
+      "tags": [],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "11ca1800-8c82-4a8f-b896-acb97b127ca1.jpeg",
+      "relativePath": "receipt_images/11ca1800-8c82-4a8f-b896-acb97b127ca1.jpeg",
+      "sizeBytes": 878632,
+      "md5": "1f2fb3a12d82993a45ebf5787a351e73",
+      "tags": [],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "1df6f2cd-f9a3-4876-b473-f3f3302c63f5.jpeg",
+      "relativePath": "receipt_images/1df6f2cd-f9a3-4876-b473-f3f3302c63f5.jpeg",
+      "sizeBytes": 868630,
+      "md5": "8a44956739fd1fa39674bce007684620",
+      "tags": [],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "59640077421__6BA39090-2327-4F07-BE72-0CC02065C23E.jpeg",
+      "relativePath": "receipt_images/59640077421__6BA39090-2327-4F07-BE72-0CC02065C23E.jpeg",
+      "sizeBytes": 1033978,
+      "md5": "2cc3a2b624855209b98cc73e92592e60",
+      "tags": [],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "63666813835__CFF9D70E-420B-4178-B602-50E19B3FAF2F.jpeg",
+      "relativePath": "receipt_images/63666813835__CFF9D70E-420B-4178-B602-50E19B3FAF2F.jpeg",
+      "sizeBytes": 1957582,
+      "md5": "7d782bed5c52474554f6760035c2022c",
+      "tags": [],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "68083388120__FEA8CE54-EEFB-4613-9F09-3AFBB359106B.jpeg",
+      "relativePath": "receipt_images/68083388120__FEA8CE54-EEFB-4613-9F09-3AFBB359106B.jpeg",
+      "sizeBytes": 2358690,
+      "md5": "e229b9445bfffd390a8c1b423198d2d6",
+      "tags": [],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "70499498614__3974D3F5-24D1-413E-888B-48A7C1306E16.jpeg",
+      "relativePath": "receipt_images/70499498614__3974D3F5-24D1-413E-888B-48A7C1306E16.jpeg",
+      "sizeBytes": 2918103,
+      "md5": "6319c586b9bc9fd74055fda283ab45f5",
+      "tags": [],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "70596328625__91E231A7-A023-4812-919C-399B0845EC79.jpeg",
+      "relativePath": "receipt_images/70596328625__91E231A7-A023-4812-919C-399B0845EC79.jpeg",
+      "sizeBytes": 3205341,
+      "md5": "817e768d5099454cec8476da314d0940",
+      "tags": [],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "71485571834__3E770B16-0895-460B-A2F0-40AA35BBD987.jpeg",
+      "relativePath": "receipt_images/71485571834__3E770B16-0895-460B-A2F0-40AA35BBD987.jpeg",
+      "sizeBytes": 2243987,
+      "md5": "557aa46d3fda90bdce0faba922c095e3",
+      "tags": [],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "9ca4a063-1463-405d-8f30-00754d38d20a.jpeg",
+      "relativePath": "receipt_images/9ca4a063-1463-405d-8f30-00754d38d20a.jpeg",
+      "sizeBytes": 822653,
+      "md5": "8c76d843d869a03ce3408980fc871571",
+      "tags": [],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_0029.jpeg",
+      "relativePath": "receipt_images/IMG_0029.jpeg",
+      "sizeBytes": 1618874,
+      "md5": "e9cafb8455ed52c763554411cfbe8f9e",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_0030.jpeg",
+      "relativePath": "receipt_images/IMG_0030.jpeg",
+      "sizeBytes": 1809212,
+      "md5": "02ef6895788689738fefe984d63a85ef",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_0031.jpeg",
+      "relativePath": "receipt_images/IMG_0031.jpeg",
+      "sizeBytes": 1708742,
+      "md5": "81a89d2688b2469ef1cae86e62816ad8",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_0553.jpeg",
+      "relativePath": "receipt_images/IMG_0553.jpeg",
+      "sizeBytes": 194135,
+      "md5": "4346c63acedc2370c5cc89d7cf4973a5",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_0660.jpeg",
+      "relativePath": "receipt_images/IMG_0660.jpeg",
+      "sizeBytes": 1641670,
+      "md5": "55737b3ef897009fb4dc5abff31849f0",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_0661.jpeg",
+      "relativePath": "receipt_images/IMG_0661.jpeg",
+      "sizeBytes": 1619226,
+      "md5": "5c5dede677ab18795c22253470c665d7",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_0662.jpeg",
+      "relativePath": "receipt_images/IMG_0662.jpeg",
+      "sizeBytes": 1550134,
+      "md5": "1da8392d36ac96694472af9735fcd444",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_0663.jpeg",
+      "relativePath": "receipt_images/IMG_0663.jpeg",
+      "sizeBytes": 1673600,
+      "md5": "bd225cf9f819ad55b9f5d41f022a798b",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_0664.jpeg",
+      "relativePath": "receipt_images/IMG_0664.jpeg",
+      "sizeBytes": 1647269,
+      "md5": "649d336090653cfb02191e4be7a6f25c",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_0665.jpeg",
+      "relativePath": "receipt_images/IMG_0665.jpeg",
+      "sizeBytes": 1496084,
+      "md5": "2b3e8246ac91b4270410db5470208ee8",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_0775.jpeg",
+      "relativePath": "receipt_images/IMG_0775.jpeg",
+      "sizeBytes": 2213738,
+      "md5": "26c16188ce3592f027deeb788a638f67",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_0800.jpeg",
+      "relativePath": "receipt_images/IMG_0800.jpeg",
+      "sizeBytes": 1471050,
+      "md5": "5c0d7e8a0bdc48e2e3083491fffd0a12",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_20230307_150244_01.jpeg",
+      "relativePath": "receipt_images/IMG_20230307_150244_01.jpeg",
+      "sizeBytes": 347493,
+      "md5": "492b4c17badc18bb6021884cb1169ca8",
+      "tags": [],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_20230404_210830_01 (1).jpeg",
+      "relativePath": "receipt_images/IMG_20230404_210830_01 (1).jpeg",
+      "sizeBytes": 431594,
+      "md5": "2fbf96ddfc5435f3faa196d9f35d6b06",
+      "tags": [
+        "duplicate-name-copy"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_20230404_210830_01.jpeg",
+      "relativePath": "receipt_images/IMG_20230404_210830_01.jpeg",
+      "sizeBytes": 451177,
+      "md5": "dbd0ebd78615ed37cbc51e508408a68d",
+      "tags": [],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_20230602_122856_01.jpeg",
+      "relativePath": "receipt_images/IMG_20230602_122856_01.jpeg",
+      "sizeBytes": 199189,
+      "md5": "0e148e284c8dddf45fe4975a7cb7899e",
+      "tags": [],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_20230602_122856_02 (1).jpeg",
+      "relativePath": "receipt_images/IMG_20230602_122856_02 (1).jpeg",
+      "sizeBytes": 236531,
+      "md5": "d727476ec112128ed2194548d12a34ac",
+      "tags": [
+        "duplicate-name-copy"
+      ],
+      "duplicateGroupId": "dup_7"
+    },
+    {
+      "fileName": "IMG_20230602_122856_02.jpeg",
+      "relativePath": "receipt_images/IMG_20230602_122856_02.jpeg",
+      "sizeBytes": 236531,
+      "md5": "d727476ec112128ed2194548d12a34ac",
+      "tags": [],
+      "duplicateGroupId": "dup_7"
+    },
+    {
+      "fileName": "IMG_2971.jpeg",
+      "relativePath": "receipt_images/IMG_2971.jpeg",
+      "sizeBytes": 1557784,
+      "md5": "143bd15bd6ccaad92ff5de076d32d9c9",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_2974.jpeg",
+      "relativePath": "receipt_images/IMG_2974.jpeg",
+      "sizeBytes": 1770378,
+      "md5": "65a978eee47d2da166332b923c74e27e",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_3036.jpeg",
+      "relativePath": "receipt_images/IMG_3036.jpeg",
+      "sizeBytes": 1999712,
+      "md5": "09fa26398dfbd919ef8d625df018d2a5",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_3139.jpeg",
+      "relativePath": "receipt_images/IMG_3139.jpeg",
+      "sizeBytes": 1563527,
+      "md5": "3e1be0d2951a7d67c0c8413325daf4ee",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_3168.jpeg",
+      "relativePath": "receipt_images/IMG_3168.jpeg",
+      "sizeBytes": 3217865,
+      "md5": "aefb898494f8cb09007251e7604b8027",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_3398.jpeg",
+      "relativePath": "receipt_images/IMG_3398.jpeg",
+      "sizeBytes": 996674,
+      "md5": "75190f0d2838228e8d0ae046380516c6",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_3399.jpeg",
+      "relativePath": "receipt_images/IMG_3399.jpeg",
+      "sizeBytes": 1181410,
+      "md5": "1f987884222a20e8fa4d3842dfa02eef",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_3409.jpeg",
+      "relativePath": "receipt_images/IMG_3409.jpeg",
+      "sizeBytes": 4079405,
+      "md5": "11ffae4c99b2b8b2665d4ff1da1f98e1",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_4803.jpeg",
+      "relativePath": "receipt_images/IMG_4803.jpeg",
+      "sizeBytes": 3370128,
+      "md5": "6a4aea5df95b7143787bb7b8ad9661d5",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_5422.jpeg",
+      "relativePath": "receipt_images/IMG_5422.jpeg",
+      "sizeBytes": 2624143,
+      "md5": "73762a49f342c73fdc86fdba3a82c56a",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_5560.jpeg",
+      "relativePath": "receipt_images/IMG_5560.jpeg",
+      "sizeBytes": 2352942,
+      "md5": "35b27ca3e792b9783f392b37559eba54",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_5816.jpeg",
+      "relativePath": "receipt_images/IMG_5816.jpeg",
+      "sizeBytes": 2123849,
+      "md5": "58a14d299851abc74d415daf3a9ff3dd",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_5823.jpeg",
+      "relativePath": "receipt_images/IMG_5823.jpeg",
+      "sizeBytes": 1745588,
+      "md5": "1d1c831f151637f040c11e2e1ff5548c",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_6050.jpeg",
+      "relativePath": "receipt_images/IMG_6050.jpeg",
+      "sizeBytes": 3285252,
+      "md5": "2483b581dff5bbaf7b043e86a815703c",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_6371.jpeg",
+      "relativePath": "receipt_images/IMG_6371.jpeg",
+      "sizeBytes": 1984519,
+      "md5": "9ac1f8a104b1e750a85585147ddaae16",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_6372.jpeg",
+      "relativePath": "receipt_images/IMG_6372.jpeg",
+      "sizeBytes": 2036347,
+      "md5": "db1ebfcbfa4a678d1aae1af933218b4e",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_6476.jpeg",
+      "relativePath": "receipt_images/IMG_6476.jpeg",
+      "sizeBytes": 1535807,
+      "md5": "265020b8f13409774139b1e232862d71",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_6478.jpeg",
+      "relativePath": "receipt_images/IMG_6478.jpeg",
+      "sizeBytes": 2405787,
+      "md5": "200ce0f836a91e16353f4697148c0c0d",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_6479.jpeg",
+      "relativePath": "receipt_images/IMG_6479.jpeg",
+      "sizeBytes": 2274956,
+      "md5": "0f5f8c5f8c498dbee21a75b01cfc962d",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_6484.jpeg",
+      "relativePath": "receipt_images/IMG_6484.jpeg",
+      "sizeBytes": 1182938,
+      "md5": "38f06fc5b22c4276b69dccba2f09ba86",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_6525.jpeg",
+      "relativePath": "receipt_images/IMG_6525.jpeg",
+      "sizeBytes": 3513530,
+      "md5": "c5aab94bc9eddcc20747536c3821d715",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_6527.jpeg",
+      "relativePath": "receipt_images/IMG_6527.jpeg",
+      "sizeBytes": 2372662,
+      "md5": "632ed50bf778d4d5c6683f584a23d3f2",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_6533.jpeg",
+      "relativePath": "receipt_images/IMG_6533.jpeg",
+      "sizeBytes": 2205721,
+      "md5": "f5e20d8137592ea18e7c08cd9762f0bc",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_6539.jpeg",
+      "relativePath": "receipt_images/IMG_6539.jpeg",
+      "sizeBytes": 1190052,
+      "md5": "510ee6134c5b97197e57b4cdc817fe1e",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_6540.jpeg",
+      "relativePath": "receipt_images/IMG_6540.jpeg",
+      "sizeBytes": 2619800,
+      "md5": "47a910ce9c274723730383e2676739a0",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_6823.jpeg",
+      "relativePath": "receipt_images/IMG_6823.jpeg",
+      "sizeBytes": 1566674,
+      "md5": "146f9280d91488c61cffdf8c0e1edac8",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_6824.jpeg",
+      "relativePath": "receipt_images/IMG_6824.jpeg",
+      "sizeBytes": 1518063,
+      "md5": "e9f54965f9ad107eb7da62f3376644cc",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_6825.jpeg",
+      "relativePath": "receipt_images/IMG_6825.jpeg",
+      "sizeBytes": 1484769,
+      "md5": "e11738a02debca19648e0c01f001efa5",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_6938.jpeg",
+      "relativePath": "receipt_images/IMG_6938.jpeg",
+      "sizeBytes": 2236181,
+      "md5": "0c767a61db79df74e64053af44873fb7",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7013.jpeg",
+      "relativePath": "receipt_images/IMG_7013.jpeg",
+      "sizeBytes": 2091923,
+      "md5": "a6a88504462b2eae6176f76eb66f0354",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7065.jpeg",
+      "relativePath": "receipt_images/IMG_7065.jpeg",
+      "sizeBytes": 3565528,
+      "md5": "43bfe667e34b9c796206896c9a7cc3e3",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7133.jpeg",
+      "relativePath": "receipt_images/IMG_7133.jpeg",
+      "sizeBytes": 3648735,
+      "md5": "29304c5863cc1f3a8a9fef81f270f41d",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7134.jpeg",
+      "relativePath": "receipt_images/IMG_7134.jpeg",
+      "sizeBytes": 2510140,
+      "md5": "0c8dfa6d938c955d79941c8a0d6d88f8",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7373 (1).jpeg",
+      "relativePath": "receipt_images/IMG_7373 (1).jpeg",
+      "sizeBytes": 2481319,
+      "md5": "06f89813fb67e86c670d80e2993301bd",
+      "tags": [
+        "duplicate-name-copy"
+      ],
+      "duplicateGroupId": "dup_8"
+    },
+    {
+      "fileName": "IMG_7373.jpeg",
+      "relativePath": "receipt_images/IMG_7373.jpeg",
+      "sizeBytes": 2481319,
+      "md5": "06f89813fb67e86c670d80e2993301bd",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": "dup_8"
+    },
+    {
+      "fileName": "IMG_7558.jpeg",
+      "relativePath": "receipt_images/IMG_7558.jpeg",
+      "sizeBytes": 2667605,
+      "md5": "9832c0564c37c161c89acc81ee650154",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7559.jpeg",
+      "relativePath": "receipt_images/IMG_7559.jpeg",
+      "sizeBytes": 2940158,
+      "md5": "5cee0294422b81eaea6c26cae324846f",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7560.jpeg",
+      "relativePath": "receipt_images/IMG_7560.jpeg",
+      "sizeBytes": 2875948,
+      "md5": "4cbdcf00c34ef81f5b7350bcb738949a",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7562.jpeg",
+      "relativePath": "receipt_images/IMG_7562.jpeg",
+      "sizeBytes": 2335585,
+      "md5": "a4d1e268b46f0ab43af7cb6c8e7f9114",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7567.jpeg",
+      "relativePath": "receipt_images/IMG_7567.jpeg",
+      "sizeBytes": 3704816,
+      "md5": "ee200e5cd48d2ca082cac71ef8002528",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7568.jpeg",
+      "relativePath": "receipt_images/IMG_7568.jpeg",
+      "sizeBytes": 3823414,
+      "md5": "02455c6c0ef9011f30fe2d918bc72deb",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7569.jpeg",
+      "relativePath": "receipt_images/IMG_7569.jpeg",
+      "sizeBytes": 3426047,
+      "md5": "05dfaaef1e6c2dc919be1243929d5e0e",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7570.jpeg",
+      "relativePath": "receipt_images/IMG_7570.jpeg",
+      "sizeBytes": 3962517,
+      "md5": "e6e4ab169a6779abe0769084b877cf8c",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7571.jpeg",
+      "relativePath": "receipt_images/IMG_7571.jpeg",
+      "sizeBytes": 3710541,
+      "md5": "ee1f2eb1c88c7cb9bccb01e9d42c6f9a",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7572.jpeg",
+      "relativePath": "receipt_images/IMG_7572.jpeg",
+      "sizeBytes": 3758434,
+      "md5": "a2c72b7ae54dc10467099e52bcb08fe9",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7573.jpeg",
+      "relativePath": "receipt_images/IMG_7573.jpeg",
+      "sizeBytes": 3687681,
+      "md5": "b5cb04baaba8a83f247a99f51a99280a",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7574.jpeg",
+      "relativePath": "receipt_images/IMG_7574.jpeg",
+      "sizeBytes": 3285071,
+      "md5": "471cb337a6a5f94a0b5c550fdf1a75da",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7575.jpeg",
+      "relativePath": "receipt_images/IMG_7575.jpeg",
+      "sizeBytes": 1983795,
+      "md5": "70e6152f9ff1a722602d20cdfabe067d",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7576.jpeg",
+      "relativePath": "receipt_images/IMG_7576.jpeg",
+      "sizeBytes": 3942476,
+      "md5": "bc8c60cad311d8ebb883323781f9fb3a",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7577.jpeg",
+      "relativePath": "receipt_images/IMG_7577.jpeg",
+      "sizeBytes": 3634183,
+      "md5": "c735df1ac33ae0fd3660194561a4d4ea",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7578.jpeg",
+      "relativePath": "receipt_images/IMG_7578.jpeg",
+      "sizeBytes": 3821398,
+      "md5": "cb88716400b46331955fe522587cc783",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7579.jpeg",
+      "relativePath": "receipt_images/IMG_7579.jpeg",
+      "sizeBytes": 3808082,
+      "md5": "ad640d417abdfa8a722d523739211358",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7580.jpeg",
+      "relativePath": "receipt_images/IMG_7580.jpeg",
+      "sizeBytes": 3338464,
+      "md5": "d82cac3a3c749963ff20707db93291de",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7581.jpeg",
+      "relativePath": "receipt_images/IMG_7581.jpeg",
+      "sizeBytes": 1855290,
+      "md5": "73645661769d9297721b41da0b621870",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7582.jpeg",
+      "relativePath": "receipt_images/IMG_7582.jpeg",
+      "sizeBytes": 1591552,
+      "md5": "a6a3cd69a73a94ea7834260a20cd8dfb",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7593.jpeg",
+      "relativePath": "receipt_images/IMG_7593.jpeg",
+      "sizeBytes": 3062573,
+      "md5": "b3a58bd569b5e7c6efdbbbd4433cd787",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7594.jpeg",
+      "relativePath": "receipt_images/IMG_7594.jpeg",
+      "sizeBytes": 3499354,
+      "md5": "9b24c58d1082c4b3fc5c8de1a25b83db",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7595.jpeg",
+      "relativePath": "receipt_images/IMG_7595.jpeg",
+      "sizeBytes": 3378551,
+      "md5": "79c0c4c5922b757f8984dd5bab2b7ed1",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7596.jpeg",
+      "relativePath": "receipt_images/IMG_7596.jpeg",
+      "sizeBytes": 3082747,
+      "md5": "d8e03eaf9bdd9a098de7be53385c6fac",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7597.jpeg",
+      "relativePath": "receipt_images/IMG_7597.jpeg",
+      "sizeBytes": 3069574,
+      "md5": "00f40c6801bc04b09a02965eda4c1a23",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7598.jpeg",
+      "relativePath": "receipt_images/IMG_7598.jpeg",
+      "sizeBytes": 2838007,
+      "md5": "c430cda8daa2d284910b4acc7fa51b66",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7599.jpeg",
+      "relativePath": "receipt_images/IMG_7599.jpeg",
+      "sizeBytes": 1895747,
+      "md5": "267525ccc16f62fbe0f3d6ccd1b11c92",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7600.jpeg",
+      "relativePath": "receipt_images/IMG_7600.jpeg",
+      "sizeBytes": 2176559,
+      "md5": "5a3b4b1cf63c7b0194925a7d08184bd3",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7602.jpeg",
+      "relativePath": "receipt_images/IMG_7602.jpeg",
+      "sizeBytes": 2329726,
+      "md5": "a88eba88c4ab2ab189a2c57844275b6e",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7603.jpeg",
+      "relativePath": "receipt_images/IMG_7603.jpeg",
+      "sizeBytes": 2104029,
+      "md5": "10160ba96de3aaf23be85a91b48cf34e",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7604.jpeg",
+      "relativePath": "receipt_images/IMG_7604.jpeg",
+      "sizeBytes": 2204697,
+      "md5": "939fc961acc2c8d72e851674c8222c9f",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7605.jpeg",
+      "relativePath": "receipt_images/IMG_7605.jpeg",
+      "sizeBytes": 2818502,
+      "md5": "8660aca3d953a374afc1c1ad5bbca3d9",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7606.jpeg",
+      "relativePath": "receipt_images/IMG_7606.jpeg",
+      "sizeBytes": 4125150,
+      "md5": "2b508a9c8390071eb8df729c0047d411",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7607.jpeg",
+      "relativePath": "receipt_images/IMG_7607.jpeg",
+      "sizeBytes": 1976490,
+      "md5": "f0aace1bd25d0002ff652d6d8c1299fa",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7608.jpeg",
+      "relativePath": "receipt_images/IMG_7608.jpeg",
+      "sizeBytes": 1787421,
+      "md5": "87c510b44517955dc8d6c3d487552d14",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7611.jpeg",
+      "relativePath": "receipt_images/IMG_7611.jpeg",
+      "sizeBytes": 2489166,
+      "md5": "a89f5e376261128032b2e207f17705f3",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7612.jpeg",
+      "relativePath": "receipt_images/IMG_7612.jpeg",
+      "sizeBytes": 2798092,
+      "md5": "0b2c4d27249d53e6df0878885ddbc987",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7613.jpeg",
+      "relativePath": "receipt_images/IMG_7613.jpeg",
+      "sizeBytes": 2723840,
+      "md5": "af05467fc74030c0dfdf3c8fb2b24f4d",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7614.jpeg",
+      "relativePath": "receipt_images/IMG_7614.jpeg",
+      "sizeBytes": 2891201,
+      "md5": "e8ac52db1289c883d0442aae4f4f5bc9",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7615.jpeg",
+      "relativePath": "receipt_images/IMG_7615.jpeg",
+      "sizeBytes": 2699535,
+      "md5": "1054df3408cffa36d3f8f1c9f748ff0f",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7620.jpeg",
+      "relativePath": "receipt_images/IMG_7620.jpeg",
+      "sizeBytes": 2298701,
+      "md5": "3db7cc3006de534de461efd8036a75ad",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7621.jpeg",
+      "relativePath": "receipt_images/IMG_7621.jpeg",
+      "sizeBytes": 3102493,
+      "md5": "b1410342ffbeba9f24597592f45da7bc",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7622.jpeg",
+      "relativePath": "receipt_images/IMG_7622.jpeg",
+      "sizeBytes": 2249599,
+      "md5": "dbacdf419bdcab39d4f30cef48fa7d54",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7623.jpeg",
+      "relativePath": "receipt_images/IMG_7623.jpeg",
+      "sizeBytes": 2248791,
+      "md5": "dea68843552ec961a18037e61f93adf7",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7624.jpeg",
+      "relativePath": "receipt_images/IMG_7624.jpeg",
+      "sizeBytes": 2644232,
+      "md5": "4e47dc9be1856ce0e1fd43d7f1c90496",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7625.jpeg",
+      "relativePath": "receipt_images/IMG_7625.jpeg",
+      "sizeBytes": 3177275,
+      "md5": "b1b04f9c3d04a3a2e58153aed301ac9b",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7626.jpeg",
+      "relativePath": "receipt_images/IMG_7626.jpeg",
+      "sizeBytes": 2306773,
+      "md5": "6e01fe5132948e322925adec7c91fe4d",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7627.jpeg",
+      "relativePath": "receipt_images/IMG_7627.jpeg",
+      "sizeBytes": 2983776,
+      "md5": "74d1548fc50d76e11c3e2afaab4cbf92",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7631.jpeg",
+      "relativePath": "receipt_images/IMG_7631.jpeg",
+      "sizeBytes": 3084377,
+      "md5": "3e45d37fd38e4761c759eed4e29ead26",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7635.jpeg",
+      "relativePath": "receipt_images/IMG_7635.jpeg",
+      "sizeBytes": 3256260,
+      "md5": "467493396c75f8400ad5f58aecce63fe",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7636.jpeg",
+      "relativePath": "receipt_images/IMG_7636.jpeg",
+      "sizeBytes": 2122344,
+      "md5": "2d1dfe03e0318dc61499d3f89ed599a5",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7637.jpeg",
+      "relativePath": "receipt_images/IMG_7637.jpeg",
+      "sizeBytes": 2043227,
+      "md5": "3e365e9cdea04ff8053c87eb74264b08",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7743.jpeg",
+      "relativePath": "receipt_images/IMG_7743.jpeg",
+      "sizeBytes": 2416525,
+      "md5": "bef80e03abcc4e8eecda3a7d566ce13c",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7757.jpeg",
+      "relativePath": "receipt_images/IMG_7757.jpeg",
+      "sizeBytes": 1804743,
+      "md5": "38193e6221204f961762e8e957c92d26",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7762.jpeg",
+      "relativePath": "receipt_images/IMG_7762.jpeg",
+      "sizeBytes": 2407759,
+      "md5": "515d53fd9a8238b7b45d594564241ef7",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7767.jpeg",
+      "relativePath": "receipt_images/IMG_7767.jpeg",
+      "sizeBytes": 2190140,
+      "md5": "f0501141bc2d69d0bb25011380f51360",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7803.jpeg",
+      "relativePath": "receipt_images/IMG_7803.jpeg",
+      "sizeBytes": 3706446,
+      "md5": "b547360706f8948b068d364da19ec6dc",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7804.jpeg",
+      "relativePath": "receipt_images/IMG_7804.jpeg",
+      "sizeBytes": 2446491,
+      "md5": "5d57edfc9eca76aa6816c6a776bcffd9",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7806.jpeg",
+      "relativePath": "receipt_images/IMG_7806.jpeg",
+      "sizeBytes": 2295123,
+      "md5": "a22a8b6b94d5796829cf43020952c568",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7992.jpeg",
+      "relativePath": "receipt_images/IMG_7992.jpeg",
+      "sizeBytes": 1502826,
+      "md5": "98a7b9a333194e0bb2d2d4e2ebfa780b",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_7993.jpeg",
+      "relativePath": "receipt_images/IMG_7993.jpeg",
+      "sizeBytes": 1624428,
+      "md5": "2a43cecfddfda613f56a9ecdd0a3b04d",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_8162.jpeg",
+      "relativePath": "receipt_images/IMG_8162.jpeg",
+      "sizeBytes": 283623,
+      "md5": "fe184dd88ee392b6d42b2abd124f4a0f",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_8237.jpeg",
+      "relativePath": "receipt_images/IMG_8237.jpeg",
+      "sizeBytes": 2236160,
+      "md5": "211ab07b5e3233a8f816fe6153e50952",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_8370.jpeg",
+      "relativePath": "receipt_images/IMG_8370.jpeg",
+      "sizeBytes": 2030146,
+      "md5": "73bcda1f741430300d79a84eb6dc92b6",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_8374.jpeg",
+      "relativePath": "receipt_images/IMG_8374.jpeg",
+      "sizeBytes": 2687661,
+      "md5": "ecad4f48f1010f20913f6dbb50acacfd",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "IMG_8709.jpeg",
+      "relativePath": "receipt_images/IMG_8709.jpeg",
+      "sizeBytes": 2551099,
+      "md5": "57f0767e2db25fc1b9fa053120457fd4",
+      "tags": [
+        "mobile-photo"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "Resized_Resized_20230207_211317.jpeg",
+      "relativePath": "receipt_images/Resized_Resized_20230207_211317.jpeg",
+      "sizeBytes": 176392,
+      "md5": "41ef6f92bc1aa623da060652a5a16473",
+      "tags": [],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "c7d8670d-7bd4-449f-bc40-845bc9722c3a.jpeg",
+      "relativePath": "receipt_images/c7d8670d-7bd4-449f-bc40-845bc9722c3a.jpeg",
+      "sizeBytes": 771929,
+      "md5": "8e7685fdc1fe8fbd733c06b5ba401567",
+      "tags": [],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "c91d9c12-a02a-4ef5-ba23-2985e535ab11.jpeg",
+      "relativePath": "receipt_images/c91d9c12-a02a-4ef5-ba23-2985e535ab11.jpeg",
+      "sizeBytes": 703016,
+      "md5": "1a0a5ca686d38d3e47e016bf6c6de7aa",
+      "tags": [],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "d92340be-a66d-4973-947b-f427e8996f18.jpeg",
+      "relativePath": "receipt_images/d92340be-a66d-4973-947b-f427e8996f18.jpeg",
+      "sizeBytes": 784492,
+      "md5": "8f2619852cb018040f11d8fcb3d31ee1",
+      "tags": [],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "fa8afc8a-efaf-4262-b4c6-b1b7d2f3e1a0.jpeg",
+      "relativePath": "receipt_images/fa8afc8a-efaf-4262-b4c6-b1b7d2f3e1a0.jpeg",
+      "sizeBytes": 662805,
+      "md5": "c7351c70ddb262fa8b3d3179c3736690",
+      "tags": [],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "image000000.jpeg",
+      "relativePath": "receipt_images/image000000.jpeg",
+      "sizeBytes": 410614,
+      "md5": "25d7b4477d43fe74b0527016a0edda2d",
+      "tags": [
+        "exported-image"
+      ],
+      "duplicateGroupId": null
+    },
+    {
+      "fileName": "image000001 (1).jpeg",
+      "relativePath": "receipt_images/image000001 (1).jpeg",
+      "sizeBytes": 270875,
+      "md5": "3690c2df4b21540a85ae45c3481d7684",
+      "tags": [
+        "duplicate-name-copy",
+        "exported-image"
+      ],
+      "duplicateGroupId": "dup_1"
+    },
+    {
+      "fileName": "image000001.jpeg",
+      "relativePath": "receipt_images/image000001.jpeg",
+      "sizeBytes": 270875,
+      "md5": "3690c2df4b21540a85ae45c3481d7684",
+      "tags": [
+        "exported-image"
+      ],
+      "duplicateGroupId": "dup_1"
+    },
+    {
+      "fileName": "image000002 (1).jpeg",
+      "relativePath": "receipt_images/image000002 (1).jpeg",
+      "sizeBytes": 337294,
+      "md5": "296b45839b80d8570ebd3f57bcf6309d",
+      "tags": [
+        "duplicate-name-copy",
+        "exported-image"
+      ],
+      "duplicateGroupId": "dup_2"
+    },
+    {
+      "fileName": "image000002.jpeg",
+      "relativePath": "receipt_images/image000002.jpeg",
+      "sizeBytes": 337294,
+      "md5": "296b45839b80d8570ebd3f57bcf6309d",
+      "tags": [
+        "exported-image"
+      ],
+      "duplicateGroupId": "dup_2"
+    },
+    {
+      "fileName": "image000003 (1).jpeg",
+      "relativePath": "receipt_images/image000003 (1).jpeg",
+      "sizeBytes": 321912,
+      "md5": "d8a6fd29a2e2e17dd5f483d70f2a9366",
+      "tags": [
+        "duplicate-name-copy",
+        "exported-image"
+      ],
+      "duplicateGroupId": "dup_3"
+    },
+    {
+      "fileName": "image000003.jpeg",
+      "relativePath": "receipt_images/image000003.jpeg",
+      "sizeBytes": 321912,
+      "md5": "d8a6fd29a2e2e17dd5f483d70f2a9366",
+      "tags": [
+        "exported-image"
+      ],
+      "duplicateGroupId": "dup_3"
+    },
+    {
+      "fileName": "image000004 (1).jpeg",
+      "relativePath": "receipt_images/image000004 (1).jpeg",
+      "sizeBytes": 319605,
+      "md5": "3f81c88e1552d37ec5c30f78363d9eec",
+      "tags": [
+        "duplicate-name-copy",
+        "exported-image"
+      ],
+      "duplicateGroupId": "dup_4"
+    },
+    {
+      "fileName": "image000004.jpeg",
+      "relativePath": "receipt_images/image000004.jpeg",
+      "sizeBytes": 319605,
+      "md5": "3f81c88e1552d37ec5c30f78363d9eec",
+      "tags": [
+        "exported-image"
+      ],
+      "duplicateGroupId": "dup_4"
+    },
+    {
+      "fileName": "image000005 (1).jpeg",
+      "relativePath": "receipt_images/image000005 (1).jpeg",
+      "sizeBytes": 312203,
+      "md5": "34de98f785707e8dc76f93fdfeba5649",
+      "tags": [
+        "duplicate-name-copy",
+        "exported-image"
+      ],
+      "duplicateGroupId": "dup_5"
+    },
+    {
+      "fileName": "image000005.jpeg",
+      "relativePath": "receipt_images/image000005.jpeg",
+      "sizeBytes": 312203,
+      "md5": "34de98f785707e8dc76f93fdfeba5649",
+      "tags": [
+        "exported-image"
+      ],
+      "duplicateGroupId": "dup_5"
+    },
+    {
+      "fileName": "image000006 (1).jpeg",
+      "relativePath": "receipt_images/image000006 (1).jpeg",
+      "sizeBytes": 296597,
+      "md5": "1386bc9320dfd1869a90578d56d09bbe",
+      "tags": [
+        "duplicate-name-copy",
+        "exported-image"
+      ],
+      "duplicateGroupId": "dup_6"
+    },
+    {
+      "fileName": "image000006.jpeg",
+      "relativePath": "receipt_images/image000006.jpeg",
+      "sizeBytes": 296597,
+      "md5": "1386bc9320dfd1869a90578d56d09bbe",
+      "tags": [
+        "exported-image"
+      ],
+      "duplicateGroupId": "dup_6"
+    }
+  ]
+}

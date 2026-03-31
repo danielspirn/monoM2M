@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "description": "Receipt fixture scenarios for validating batch capture, quiet processing, enrichment, and issue-only alerts.",
+  "scenarios": [
+    {
+      "id": "single_grocery_happy_path",
+      "folder": "single",
+      "expectedCaptureBehavior": "single receipt upload should process quietly",
+      "expectedReceiptCount": 1,
+      "expectedIssueAlerts": [],
+      "expectedInfoSignals": [
+        "retailer enrichment applied",
+        "groceries lifestyle tagging",
+        "search document indexed"
+      ],
+      "notes": "Use a clear grocery receipt with a common retailer and legible totals."
+    },
+    {
+      "id": "multi_receipt_floor_photo",
+      "folder": "multi",
+      "expectedCaptureBehavior": "one image should split into multiple independent receipts",
+      "expectedReceiptCount": 3,
+      "expectedIssueAlerts": [],
+      "expectedInfoSignals": [
+        "multi-receipt upload split automatically",
+        "shared source-document lineage preserved"
+      ],
+      "notes": "This is the core UX validation for one upload producing many receipts."
+    },
+    {
+      "id": "emailed_pdf_receipt",
+      "folder": "pdf",
+      "expectedCaptureBehavior": "pdf should preserve raw document metadata and process without extra confirmation",
+      "expectedReceiptCount": 1,
+      "expectedIssueAlerts": [],
+      "expectedInfoSignals": [
+        "capture channel recorded as email or pdf",
+        "search document indexed"
+      ],
+      "notes": "Use an email-forwarded or downloaded retailer receipt PDF."
+    },
+    {
+      "id": "duplicate_receipt_pair",
+      "folder": "duplicates",
+      "expectedCaptureBehavior": "system should process quietly but raise a duplicate-risk alert on the second matching receipt",
+      "expectedReceiptCount": 1,
+      "expectedIssueAlerts": [
+        "duplicate"
+      ],
+      "expectedInfoSignals": [],
+      "notes": "Use two fixtures with the same merchant, same date, and very similar total."
+    },
+    {
+      "id": "durable_goods_warranty_candidate",
+      "folder": "durable-goods",
+      "expectedCaptureBehavior": "durable goods should become thing candidates with returnability and warranty hints",
+      "expectedReceiptCount": 1,
+      "expectedIssueAlerts": [
+        "needs_review"
+      ],
+      "expectedInfoSignals": [
+        "retailer enrichment applied",
+        "warranty candidate detected",
+        "product category tagging"
+      ],
+      "notes": "Use a receipt for furniture, electronics, sports gear, or appliances."
+    },
+    {
+      "id": "low_confidence_crumpled_receipt",
+      "folder": "low-confidence",
+      "expectedCaptureBehavior": "processing should still succeed, but user attention should be requested only if extraction confidence is genuinely weak",
+      "expectedReceiptCount": 1,
+      "expectedIssueAlerts": [
+        "needs_review"
+      ],
+      "expectedInfoSignals": [],
+      "notes": "Use a low-light, skewed, cropped, or crumpled receipt image."
+    }
+  ]
+}

@@ -88,9 +88,17 @@ using mocked data and persona switching before full backend integration.
 
 ### Build execution
 - `docs/build/codex-build-v1.md`
+- `docs/build/receipt-core-plan-v1.md`
+- `docs/build/receipt-ocr-backend-adapter-v1.md`
+- `docs/build/receipt-gemini-eval-v1.md`
+- `docs/build/receipt-gemini-live-smoke-v1.md`
+- `docs/build/receipt-ocr-vendor-eval-v1.md`
+- `docs/build/receipt-runnable-roadmap-v1.md`
+- `docs/build/receipt-validation-workflow-v1.md`
 
 ### Security and compliance
 - `docs/security/security-foundation.md`
+- `docs/security/ocr-provider-secrets-v1.md`
 
 ### API contract
 - `contracts/openapi/money_to_memories_openapi_v1_1.yaml`
@@ -141,6 +149,8 @@ using mocked data and persona switching before full backend integration.
 ### Design references
 - `design-references/hero-screens/README.md`
 - `design-references/hero-screens/`
+- `design-references/figma/README.md`
+- `design-references/figma/route-node-registry.json`
 
 ## Hero screen usage rule
 

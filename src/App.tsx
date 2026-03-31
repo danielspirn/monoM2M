@@ -1,9 +1,18 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 
 import { LogoMark } from '@/src/brand';
 import { MockControlPanel } from '@/components/dev/MockControlPanel';
 import { getSelectedPersona, getStateOverrides, setSelectedPersona, setStateOverride } from '@/mocks/mockSessionStore';
+import {
+  applyReceiptFilesToDraft,
+  applyReceiptFixtureScenarioToDraft,
+  findReceiptFixtureScenarioByLabel,
+  noReceiptFixtureScenarioLabel,
+  receiptFixtureScenarioOptions,
+  resolveReceiptFixtureFilesFromDraft,
+} from '@/mocks/receiptFixtureScenarios';
+import { createLiveReceiptBatch, submitLiveReceiptReview } from '@/mocks/receiptWorkflowStore';
 import {
   getDefaultState,
   getPersonaDefinitions,
@@ -13,6 +22,7 @@ import {
   type PersonaId,
   type RouteKey,
 } from '@/mocks/mockProvider';
+import type { FabMenuPayload } from '@/mocks/sharedUniverse';
 
 import { Icon } from './icons';
 import {
@@ -22,10 +32,14 @@ import {
   HomeView,
   LoadingState,
   MemoriesView,
+  MemoryDetailView,
   PeopleView,
+  ReceiptStudioView,
+  PersonDetailView,
   PlansView,
   RouteError,
   SettingsView,
+  ThingDetailView,
   ThingsView,
 } from './routeViews';
 
@@ -41,13 +55,7 @@ type DrawerItem = {
   action: string;
 };
 
-type FabItem = {
-  id: string;
-  label: string;
-  icon: string;
-  action: string;
-  suggestedPrompt?: string;
-};
+type ComposerKind = 'receipt' | 'thing' | 'person' | 'memory' | 'note';
 
 const PRIMARY_NAV: NavItem[] = [
   { label: 'Home', route: '/home', icon: 'home' },
@@ -67,19 +75,19 @@ const DRAWER_ITEMS: DrawerItem[] = [
 ];
 
 const ACTION_STRIPS: Record<RouteKey, string[]> = {
-  '/home': ['Recent', 'Review', 'Insights'],
-  '/things': ['Returns', 'Warranty', 'Insurance'],
-  '/people': ['Household', 'Gifts', 'Shared'],
-  '/memories': ['Timeline', 'Map', 'People'],
+  '/home': ['Recent', 'Follow up', 'Connected'],
+  '/things': ['Returns', 'Warranty', 'Linked'],
+  '/people': ['Household', 'Gifts', 'Linked'],
+  '/memories': ['Timeline', 'People', 'Linked'],
   '/settings': ['General', 'Notifications', 'Privacy'],
   '/account': ['Profile', 'Sessions', 'Household'],
   '/plans': ['Compare', 'Upgrade', 'Family Trust'],
-  '/agent/chat': ['Chat', 'Sources', 'Follow-ups'],
-  '/agent/voice': ['Listen', 'Answer', 'Sources'],
-  '/things/:thingId': ['Returns', 'Warranty', 'Insurance'],
-  '/people/:personId': ['Household', 'Gifts', 'Shared'],
-  '/memories/:memoryId': ['Timeline', 'Map', 'People'],
-  '/fab-menu': ['Add', 'Capture', 'Ask'],
+  '/agent/chat': ['Prompts', 'Results', 'Linked'],
+  '/agent/voice': ['Voice', 'Examples', 'Linked'],
+  '/things/:thingId': ['Summary', 'Related', 'Activity'],
+  '/people/:personId': ['Summary', 'Related', 'Activity'],
+  '/memories/:memoryId': ['Story', 'Related', 'Timeline'],
+  '/fab-menu': ['Create', 'Capture', 'Ask'],
   '/ingest/:receiptId': ['Review', 'Line Items', 'Evidence'],
   '/upgrade-modal': ['Plans', 'Value', 'Compare'],
 };
@@ -93,12 +101,19 @@ const APP_TITLES: Partial<Record<RouteKey, string>> = {
   '/plans': 'Plans',
   '/agent/chat': 'Ask Agent',
   '/agent/voice': 'Ask Agent by Voice',
+  '/ingest/:receiptId': 'Receipt Review',
+  '/things/:thingId': 'Thing detail',
+  '/people/:personId': 'Person detail',
+  '/memories/:memoryId': 'Memory detail',
 };
 
 const BRANDED_TOPBAR_META: Partial<Record<RouteKey, string>> = {
-  '/things': 'Returns, warranty, insurance',
-  '/people': 'Household, gifts, shared',
-  '/memories': 'Timeline, map, people',
+  '/things': 'Inventory, coverage, linked stories',
+  '/things/:thingId': 'Inventory, coverage, linked stories',
+  '/people': 'Relationships, gifts, context',
+  '/people/:personId': 'Relationships, gifts, context',
+  '/memories': 'Timeline, people, receipts',
+  '/memories/:memoryId': 'Timeline, people, receipts',
 };
 
 export function App() {
@@ -112,13 +127,16 @@ export function App() {
 function Shell() {
   const location = useLocation();
   const navigate = useNavigate();
-  const routeKey = getRouteKey(location.pathname);
+  const routeContext = useMemo(() => getRouteContext(location.pathname), [location.pathname]);
+  const { params, routeKey } = routeContext;
 
   const [selectedPersona, setPersona] = useState<PersonaId>('single_adult_female');
   const [stateOverrides, setOverrides] = useState<Record<string, string>>({});
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [fabOpen, setFabOpen] = useState(false);
+  const [composer, setComposer] = useState<ComposerKind | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [receiptRefreshToken, setReceiptRefreshToken] = useState(0);
 
   useEffect(() => {
     const storedPersona = getSelectedPersona();
@@ -139,12 +157,16 @@ function Shell() {
 
   const activeState = stateOverrides[routeKey] ?? getDefaultState(selectedPersona, routeKey) ?? undefined;
   const payload = useMemo(
-    () =>
-      resolveMockPayload(routeKey, {
+    () => {
+      void receiptRefreshToken;
+
+      return resolveMockPayload(routeKey, {
         personaId: selectedPersona,
         state: activeState,
-      }),
-    [activeState, routeKey, selectedPersona]
+        params,
+      });
+    },
+    [activeState, params, receiptRefreshToken, routeKey, selectedPersona]
   );
 
   const pageTitle = routeKey === '/home' ? undefined : APP_TITLES[routeKey] ?? 'Money to Memories';
@@ -152,9 +174,32 @@ function Shell() {
   const fabPayload = resolveMockPayload('/fab-menu', {
     personaId: selectedPersona,
     state: getDefaultState(selectedPersona, '/fab-menu') ?? 'default',
-  }) as { title: string; items: FabItem[] };
+  }) as FabMenuPayload;
   const personaMeta = getPersonaDefinitions().find((persona) => persona.id === selectedPersona);
   const searchPlaceholder = routeKey === '/home' ? getHomeSearchPlaceholder(payload) : undefined;
+  const receiptStatus =
+    routeKey === '/ingest/:receiptId' &&
+    payload &&
+    typeof payload === 'object' &&
+    'receipt' in payload &&
+    payload.receipt &&
+    typeof payload.receipt === 'object' &&
+    'status' in payload.receipt &&
+    typeof payload.receipt.status === 'string'
+      ? payload.receipt.status
+      : null;
+
+  useEffect(() => {
+    if (routeKey !== '/ingest/:receiptId' || receiptStatus !== 'processing') {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      setReceiptRefreshToken((current) => current + 1);
+    }, 900);
+
+    return () => window.clearTimeout(timer);
+  }, [receiptStatus, routeKey, params?.receiptId]);
 
   function handlePersonaChange(personaId: PersonaId) {
     setPersona(personaId);
@@ -185,17 +230,20 @@ function Shell() {
       return;
     }
 
+    if (action === 'capture:receipt' || action === 'route:/ingest/new') {
+      setFabOpen(false);
+      setComposer('receipt');
+      return;
+    }
+
+    if (action.startsWith('compose:')) {
+      setFabOpen(false);
+      setComposer(action.replace('compose:add_', '').replace('compose:', '') as ComposerKind);
+      return;
+    }
+
     if (action.startsWith('route:')) {
       const target = action.replace('route:', '');
-      if (target === '/memories/new') {
-        navigate('/memories');
-        setNotice('Record Experience is mocked in Milestone 1. Memories stays the landing surface.');
-        return;
-      }
-      if (target === '/ingest/new') {
-        setNotice('Receipt capture flows are deferred. The FAB structure is implemented and ready for the next slice.');
-        return;
-      }
       navigate(target);
       setDrawerOpen(false);
       setFabOpen(false);
@@ -203,34 +251,37 @@ function Shell() {
     }
 
     switch (action) {
-      case 'fab:add_purchase':
-      case 'fab:scan_receipt':
-      case 'capture:receipt':
-      case 'upload:document':
-        setNotice('Capture flows are mocked only. No document upload or receipt extraction is wired in this milestone.');
-        setFabOpen(false);
-        return;
-      case 'fab:record_experience':
-        navigate('/memories');
-        setFabOpen(false);
-        setNotice('Record Experience stays mocked. Memories is the review surface in Milestone 1.');
-        return;
-      case 'fab:ask_agent_chat':
       case 'agent:chat':
+      case 'fab:ask_agent_chat':
         navigate('/agent/chat');
         setFabOpen(false);
         return;
-      case 'fab:ask_agent_voice':
       case 'agent:voice':
+      case 'fab:ask_agent_voice':
         navigate('/agent/voice');
         setFabOpen(false);
         return;
-      case 'plans:personal_pro':
       case 'plans:cta':
+      case 'plans:personal_pro':
       case 'plans:trust':
         navigate('/plans');
         return;
       default:
+        if (action.startsWith('receipt:submit:')) {
+          const receiptId = action.replace('receipt:submit:', '');
+          const nextPayload = submitLiveReceiptReview(receiptId);
+          setReceiptRefreshToken((current) => current + 1);
+          setNotice(
+            nextPayload
+              ? `${nextPayload.header.merchantName} is now trusted and ready to feed Things, People, and Memories.`
+              : 'Receipt review is only live for newly captured receipts in this slice.'
+          );
+          return;
+        }
+        if (action.startsWith('receipt:convert:')) {
+          setNotice('Convert to Thing is the next receipt-core slice. Durable item candidates are now being surfaced here first.');
+          return;
+        }
         if (action.startsWith('notice:')) {
           setNotice(mockNoticeForAction(action));
           setDrawerOpen(false);
@@ -242,6 +293,46 @@ function Shell() {
           return;
         }
         setNotice(`Mock action: ${action}`);
+    }
+  }
+
+  function handleComposerSubmit(kind: ComposerKind, draft: Record<string, string>) {
+    setComposer(null);
+    switch (kind) {
+      case 'receipt':
+        {
+          const captureResult = createLiveReceiptBatch({
+            merchant: draft.merchant,
+            purchaseDate: draft.date,
+            source: draft.source,
+            summary: draft.summary,
+            fixtureFiles: resolveReceiptFixtureFilesFromDraft(draft),
+          });
+
+          setNotice(
+            captureResult.issueCount
+              ? `${captureResult.detectedReceiptCount} receipts detected. We only surfaced ${captureResult.issueCount} issue${captureResult.issueCount === 1 ? '' : 's'} that may need review.`
+              : `${captureResult.detectedReceiptCount} receipt${captureResult.detectedReceiptCount === 1 ? '' : 's'} detected and processing quietly.`
+          );
+          setReceiptRefreshToken((current) => current + 1);
+          navigate(`/ingest/${captureResult.primaryReceiptId}`);
+        }
+        return;
+      case 'thing':
+        setNotice('Mock Thing created. The overview and detail patterns are ready for backend data later.');
+        navigate('/things');
+        return;
+      case 'person':
+        setNotice('Mock person created. People can now act as a real relationship layer.');
+        navigate('/people');
+        return;
+      case 'memory':
+        setNotice('Mock memory created. The memory detail pattern is now part of the core experience.');
+        navigate('/memories');
+        return;
+      case 'note':
+        setNotice('Quick capture saved as a mocked note.');
+        navigate('/home');
     }
   }
 
@@ -262,13 +353,17 @@ function Shell() {
               <Route path="/" element={<Navigate to="/home" replace />} />
               <Route path="/home" element={<RouteOutlet routeKey="/home" state={activeState} payload={payload} onAction={handleAction} />} />
               <Route path="/things" element={<RouteOutlet routeKey="/things" state={activeState} payload={payload} onAction={handleAction} />} />
+              <Route path="/things/:thingId" element={<RouteOutlet routeKey="/things/:thingId" state={activeState} payload={payload} onAction={handleAction} />} />
               <Route path="/people" element={<RouteOutlet routeKey="/people" state={activeState} payload={payload} onAction={handleAction} />} />
+              <Route path="/people/:personId" element={<RouteOutlet routeKey="/people/:personId" state={activeState} payload={payload} onAction={handleAction} />} />
               <Route path="/memories" element={<RouteOutlet routeKey="/memories" state={activeState} payload={payload} onAction={handleAction} />} />
+              <Route path="/memories/:memoryId" element={<RouteOutlet routeKey="/memories/:memoryId" state={activeState} payload={payload} onAction={handleAction} />} />
               <Route path="/settings" element={<RouteOutlet routeKey="/settings" state={activeState} payload={payload} onAction={handleAction} />} />
               <Route path="/account" element={<RouteOutlet routeKey="/account" state={activeState} payload={payload} onAction={handleAction} />} />
               <Route path="/plans" element={<RouteOutlet routeKey="/plans" state={activeState} payload={payload} onAction={handleAction} />} />
               <Route path="/agent/chat" element={<RouteOutlet routeKey="/agent/chat" state={activeState} payload={payload} onAction={handleAction} />} />
               <Route path="/agent/voice" element={<RouteOutlet routeKey="/agent/voice" state={activeState} payload={payload} onAction={handleAction} />} />
+              <Route path="/ingest/:receiptId" element={<RouteOutlet routeKey="/ingest/:receiptId" state={activeState} payload={payload} onAction={handleAction} />} />
               <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
           </main>
@@ -284,7 +379,7 @@ function Shell() {
 
             <nav className="bottom-nav" aria-label="Primary navigation">
               {PRIMARY_NAV.slice(0, 2).map((item) => (
-                <NavButton key={item.route} active={routeKey === item.route} item={item} onClick={() => navigate(item.route)} />
+                <NavButton key={item.route} active={isPrimaryRouteActive(item.route, routeKey)} item={item} onClick={() => navigate(item.route)} />
               ))}
               <button
                 aria-label="Open add or ask menu"
@@ -295,7 +390,7 @@ function Shell() {
                 <Icon name="plus" className="icon-lg" />
               </button>
               {PRIMARY_NAV.slice(2).map((item) => (
-                <NavButton key={item.route} active={routeKey === item.route} item={item} onClick={() => navigate(item.route)} />
+                <NavButton key={item.route} active={isPrimaryRouteActive(item.route, routeKey)} item={item} onClick={() => navigate(item.route)} />
               ))}
             </nav>
           </div>
@@ -347,23 +442,41 @@ function Shell() {
 
       {fabOpen ? (
         <Overlay onClose={() => setFabOpen(false)}>
-          <aside className="fab-sheet">
-            <div className="fab-sheet__header">
-              <p className="eyebrow">Global action hub</p>
+          <aside className="fab-sheet fab-sheet--expanded">
+            <div className="fab-sheet__header fab-sheet__header--stacked">
+              <p className="eyebrow">Add Actions</p>
               <h2>{fabPayload.title}</h2>
             </div>
-            <div className="fab-sheet__list">
-              {fabPayload.items.map((item) => (
-                <button className="fab-sheet__item" key={item.id} type="button" onClick={() => handleAction(item.action)}>
-                  <span className="fab-sheet__icon">{iconForFabItem(item.icon)}</span>
-                  <span>
-                    <strong>{item.label}</strong>
-                    {item.suggestedPrompt ? <small>{item.suggestedPrompt}</small> : null}
-                  </span>
-                </button>
+            <div className="fab-sheet__groups">
+              {fabPayload.groups.map((group) => (
+                <section className="fab-sheet__group" key={group.title}>
+                  <h3>{group.title}</h3>
+                  <div className="fab-sheet__list">
+                    {group.items.map((item) => (
+                      <button className="fab-sheet__item" key={item.label} type="button" onClick={() => handleAction(item.action)}>
+                        <span className="fab-sheet__icon">{iconForFabItem(item.icon ?? 'spark')}</span>
+                        <span>
+                          <strong>{item.label}</strong>
+                          {item.suggestedPrompt ? <small>{item.suggestedPrompt}</small> : null}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
               ))}
             </div>
           </aside>
+        </Overlay>
+      ) : null}
+
+      {composer ? (
+        <Overlay onClose={() => setComposer(null)}>
+          <CreationSheet
+            key={composer}
+            kind={composer}
+            onClose={() => setComposer(null)}
+            onSubmit={(draft) => handleComposerSubmit(composer, draft)}
+          />
         </Overlay>
       ) : null}
 
@@ -474,10 +587,16 @@ function RouteOutlet(props: {
       return <HomeView state={props.state ?? 'default'} payload={props.payload as never} onAction={props.onAction} />;
     case '/things':
       return <ThingsView state={props.state ?? 'default'} payload={props.payload as never} onAction={props.onAction} />;
+    case '/things/:thingId':
+      return <ThingDetailView state={props.state ?? 'default'} payload={props.payload as never} onAction={props.onAction} />;
     case '/people':
       return <PeopleView state={props.state ?? 'default'} payload={props.payload as never} onAction={props.onAction} />;
+    case '/people/:personId':
+      return <PersonDetailView state={props.state ?? 'default'} payload={props.payload as never} onAction={props.onAction} />;
     case '/memories':
       return <MemoriesView state={props.state ?? 'default'} payload={props.payload as never} onAction={props.onAction} />;
+    case '/memories/:memoryId':
+      return <MemoryDetailView state={props.state ?? 'default'} payload={props.payload as never} onAction={props.onAction} />;
     case '/settings':
       return <SettingsView state={props.state ?? 'default'} payload={props.payload as never} onAction={props.onAction} />;
     case '/account':
@@ -488,6 +607,8 @@ function RouteOutlet(props: {
       return <AgentChatView state={props.state ?? 'default'} payload={props.payload as never} onAction={props.onAction} />;
     case '/agent/voice':
       return <AgentVoiceView state={props.state ?? 'default'} payload={props.payload as never} onAction={props.onAction} />;
+    case '/ingest/:receiptId':
+      return <ReceiptStudioView state={props.state ?? 'default'} payload={props.payload as never} onAction={props.onAction} />;
     default:
       return <RouteError title="Route out of scope" body="This milestone only includes the primary mocked shell routes." />;
   }
@@ -516,39 +637,174 @@ function Overlay(props: { children: ReactNode; onClose: () => void }) {
   );
 }
 
-function getRouteKey(pathname: string): RouteKey {
+function CreationSheet(props: { kind: ComposerKind; onClose: () => void; onSubmit: (draft: Record<string, string>) => void }) {
+  const [draft, setDraft] = useState<Record<string, string>>(() => getInitialDraft(props.kind));
+  const config = getComposerConfig(props.kind);
+
+  function updateDraft(fieldId: string, value: string) {
+    if (props.kind === 'receipt' && fieldId === 'fixtureScenario') {
+      setDraft((current) => applyReceiptFixtureScenarioToDraft(current, value));
+      return;
+    }
+
+    setDraft((current) => ({ ...current, [fieldId]: value }));
+  }
+
+  function updateReceiptFiles(fileList: FileList | null) {
+    const fileNames = Array.from(fileList ?? []).map((file) => file.name);
+    setDraft((current) => applyReceiptFilesToDraft(current, fileNames));
+  }
+
+  function submitDraft(event?: { preventDefault: () => void }) {
+    event?.preventDefault();
+    props.onSubmit(draft);
+  }
+
+  function handleFormKeyDown(event: KeyboardEvent<HTMLFormElement>) {
+    if (event.key !== 'Enter' || event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) {
+      return;
+    }
+
+    const target = event.target as HTMLElement | null;
+
+    if (!target || target.tagName === 'BUTTON') {
+      return;
+    }
+
+    event.preventDefault();
+    props.onSubmit(draft);
+  }
+
+  return (
+    <aside className="composer-sheet">
+      <form className="composer-sheet__layout" onKeyDown={handleFormKeyDown} onSubmit={submitDraft}>
+        <div className="composer-sheet__scroller">
+          <div className="fab-sheet__header fab-sheet__header--stacked">
+            <p className="eyebrow">Mocked create flow</p>
+            <h2>{config.title}</h2>
+            <p>{config.intro}</p>
+          </div>
+          <div className="composer-sheet__form">
+            {config.fields.map((field) => (
+              <label className="composer-field" key={field.id}>
+                <span>{field.label}</span>
+                {field.type === 'textarea' ? (
+                  <textarea
+                    rows={4}
+                    value={draft[field.id] ?? ''}
+                    onChange={(event) => updateDraft(field.id, event.target.value)}
+                  />
+                ) : field.type === 'file' ? (
+                  <div className="mini-stack">
+                    <input
+                      accept="image/*,.pdf,video/*"
+                      aria-label={field.label}
+                      multiple
+                      type="file"
+                      onChange={(event) => updateReceiptFiles(event.target.files)}
+                    />
+                    <small>{draft.selectedFileNames || 'Choose one or more uploaded receipt images, PDFs, or videos.'}</small>
+                  </div>
+                ) : field.options ? (
+                  <select
+                    value={draft[field.id] ?? field.options[0]}
+                    onChange={(event) => updateDraft(field.id, event.target.value)}
+                  >
+                    {field.options.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={draft[field.id] ?? ''}
+                    onChange={(event) => updateDraft(field.id, event.target.value)}
+                  />
+                )}
+              </label>
+            ))}
+          </div>
+          <div className="composer-sheet__preview">
+            <p className="eyebrow">Preview</p>
+            <h3>{draft[config.previewTitleField] || config.previewFallback}</h3>
+            <p>{config.previewBody(draft)}</p>
+          </div>
+        </div>
+        <div className="composer-sheet__actions composer-sheet__actions--sticky">
+          <button className="action-button" type="button" onClick={props.onClose}>
+            Cancel
+          </button>
+          <button className="action-button action-button--primary" type="submit">
+            {config.submitLabel}
+          </button>
+        </div>
+      </form>
+    </aside>
+  );
+}
+
+function getRouteContext(pathname: string): { routeKey: RouteKey; params?: Record<string, string> } {
+  const thingMatch = pathname.match(/^\/things\/([^/]+)$/);
+  if (thingMatch) {
+    return { routeKey: '/things/:thingId', params: { thingId: thingMatch[1] } };
+  }
+
+  const personMatch = pathname.match(/^\/people\/([^/]+)$/);
+  if (personMatch) {
+    return { routeKey: '/people/:personId', params: { personId: personMatch[1] } };
+  }
+
+  const memoryMatch = pathname.match(/^\/memories\/([^/]+)$/);
+  if (memoryMatch) {
+    return { routeKey: '/memories/:memoryId', params: { memoryId: memoryMatch[1] } };
+  }
+
+  const receiptMatch = pathname.match(/^\/ingest\/([^/]+)$/);
+  if (receiptMatch) {
+    return { routeKey: '/ingest/:receiptId', params: { receiptId: receiptMatch[1] } };
+  }
+
   switch (pathname) {
     case '/home':
-      return '/home';
+      return { routeKey: '/home' };
     case '/things':
-      return '/things';
+      return { routeKey: '/things' };
     case '/people':
-      return '/people';
+      return { routeKey: '/people' };
     case '/memories':
-      return '/memories';
+      return { routeKey: '/memories' };
     case '/settings':
-      return '/settings';
+      return { routeKey: '/settings' };
     case '/account':
-      return '/account';
+      return { routeKey: '/account' };
     case '/plans':
-      return '/plans';
+      return { routeKey: '/plans' };
     case '/agent/chat':
-      return '/agent/chat';
+      return { routeKey: '/agent/chat' };
     case '/agent/voice':
-      return '/agent/voice';
+      return { routeKey: '/agent/voice' };
     default:
-      return '/home';
+      return { routeKey: '/home' };
   }
+}
+
+function isPrimaryRouteActive(navRoute: RouteKey, routeKey: RouteKey) {
+  if (navRoute === '/things') return routeKey === '/things' || routeKey === '/things/:thingId';
+  if (navRoute === '/people') return routeKey === '/people' || routeKey === '/people/:personId';
+  if (navRoute === '/memories') return routeKey === '/memories' || routeKey === '/memories/:memoryId';
+  return navRoute === routeKey;
 }
 
 function mockNoticeForAction(action: string) {
   switch (action) {
     case 'notice:privacy':
-      return 'Privacy & Security is represented in Settings for this milestone. Dedicated flows are deferred.';
+      return 'Privacy & Security remains represented in Settings for this milestone.';
     case 'notice:help':
-      return 'Help is deferred. The drawer slot is present so the shell stays honest to spec.';
+      return 'Help is still mocked, but the drawer slot remains stable for future work.';
     case 'notice:signout':
-      return 'Production auth is out of scope. Sign out is a mocked drawer action only.';
+      return 'Production auth remains out of scope. Sign out stays mocked only.';
     default:
       return 'Mock-only action.';
   }
@@ -598,7 +854,150 @@ function iconForFabItem(icon: string) {
       return <Icon name="chat" className="icon-sm" />;
     case 'mic':
       return <Icon name="mic" className="icon-sm" />;
+    case 'things':
+      return <Icon name="things" className="icon-sm" />;
+    case 'people':
+      return <Icon name="people" className="icon-sm" />;
     default:
       return <Icon name="spark" className="icon-sm" />;
+  }
+}
+
+function getComposerConfig(kind: ComposerKind) {
+  switch (kind) {
+    case 'receipt':
+      return {
+        title: 'Add Receipt',
+        intro: 'Keep capture simple. One upload can contain one receipt or many, and the system should split, enrich, and process quietly unless something needs attention.',
+        submitLabel: 'Process receipt capture',
+        previewTitleField: 'merchant',
+        previewFallback: 'New receipt',
+        fields: [
+          { id: 'receiptFiles', label: 'Choose receipt image or video', type: 'file' as const },
+          { id: 'fixtureScenario', label: 'Uploaded fixture', options: receiptFixtureScenarioOptions },
+          { id: 'merchant', label: 'Merchant' },
+          { id: 'date', label: 'Date' },
+          { id: 'source', label: 'Capture source', options: ['Upload photo', 'Multi-receipt photo', 'Take quick snap', 'Upload PDF', 'Email receipts', 'Capture video'] },
+          { id: 'summary', label: 'Extracted summary', type: 'textarea' as const },
+        ],
+        previewBody: (draft: Record<string, string>) => {
+          const fixtureScenario = findReceiptFixtureScenarioByLabel(draft.fixtureScenario);
+
+          if (fixtureScenario) {
+            return `${fixtureScenario.notes} Using ${fixtureScenario.input.fixtureFiles.length} uploaded file${fixtureScenario.input.fixtureFiles.length === 1 ? '' : 's'} from the repo-backed receipt library.`;
+          }
+
+          if (draft.selectedFileNames) {
+            return `Selected file${draft.selectedFileNames.includes(',') ? 's' : ''}: ${draft.selectedFileNames}. The mocked receipt parser will preserve these files as the raw source document and use the same review flow.`;
+          }
+
+          return draft.summary || 'The system will split grouped receipts, check for duplicates, extract line items, and only interrupt the user if review is needed.';
+        },
+      };
+    case 'thing':
+      return {
+        title: 'Add Thing',
+        intro: 'Create a believable item record connected back to a receipt or person.',
+        submitLabel: 'Create mocked thing',
+        previewTitleField: 'name',
+        previewFallback: 'New Thing',
+        fields: [
+          { id: 'name', label: 'Thing name' },
+          { id: 'category', label: 'Category', options: ['Home', 'Kitchen', 'Kids', 'Tech'] },
+          { id: 'receipt', label: 'Linked receipt', options: ['Sports Basement', 'IKEA', 'Williams Sonoma'] },
+          { id: 'person', label: 'Linked person', options: ['Coco', 'Shanshan', 'You'] },
+        ],
+        previewBody: (draft: Record<string, string>) =>
+          `${draft.category || 'Item'} linked to ${draft.receipt || 'a receipt'} and ${draft.person || 'a person'}.`,
+      };
+    case 'person':
+      return {
+        title: 'Add Person',
+        intro: 'Create a relationship node that can collect purchases, Things, and memories.',
+        submitLabel: 'Create mocked person',
+        previewTitleField: 'name',
+        previewFallback: 'New person',
+        fields: [
+          { id: 'name', label: 'Name' },
+          { id: 'role', label: 'Relationship', options: ['Family', 'Friend', 'Gift recipient', 'Household'] },
+          { id: 'link', label: 'Primary linked area', options: ['Purchases', 'Things', 'Memories'] },
+          { id: 'notes', label: 'Notes', type: 'textarea' as const },
+        ],
+        previewBody: (draft: Record<string, string>) => draft.notes || `${draft.role || 'Relationship'} profile ready for linked purchases and memories.`,
+      };
+    case 'memory':
+      return {
+        title: 'Add Memory',
+        intro: 'Create a lightweight experiential record tied back to people, things, and receipts.',
+        submitLabel: 'Create mocked memory',
+        previewTitleField: 'title',
+        previewFallback: 'New memory',
+        fields: [
+          { id: 'title', label: 'Title' },
+          { id: 'date', label: 'Date' },
+          { id: 'people', label: 'Linked people', options: ['Coco', 'Joe', 'Shanshan'] },
+          { id: 'items', label: 'Linked items', options: ['Adidas Predator Cleats', 'KitchenAid Artisan Mixer', 'Entryway Storage Bench'] },
+          { id: 'notes', label: 'Notes', type: 'textarea' as const },
+        ],
+        previewBody: (draft: Record<string, string>) => draft.notes || 'A new memory connected to the receipts and things that support it.',
+      };
+    case 'note':
+    default:
+      return {
+        title: 'Quick Capture / Note',
+        intro: 'Capture a thought that can later be attached to a receipt, person, thing, or memory.',
+        submitLabel: 'Save mocked note',
+        previewTitleField: 'title',
+        previewFallback: 'Quick capture',
+        fields: [
+          { id: 'title', label: 'Title' },
+          { id: 'context', label: 'Attach to', options: ['Home', 'Thing', 'Person', 'Memory'] },
+          { id: 'note', label: 'Note', type: 'textarea' as const },
+        ],
+        previewBody: (draft: Record<string, string>) => draft.note || 'Short capture that can become a stronger record later.',
+      };
+  }
+}
+
+function getInitialDraft(kind: ComposerKind): Record<string, string> {
+  switch (kind) {
+    case 'receipt':
+      return {
+        fixtureScenario: noReceiptFixtureScenarioLabel,
+        selectedFileNames: '',
+        merchant: 'Whole Foods',
+        date: '2026-03-08',
+        source: 'Multi-receipt photo',
+        summary: 'Trader Joe\'s: organic whole milk, greek yogurt, produce bag\nTarget: air fryer, parchment liners\nCVS: pain reliever, toothpaste',
+      };
+    case 'thing':
+      return {
+        name: 'Soccer duffel bag',
+        category: 'Kids',
+        receipt: 'Sports Basement',
+        person: 'Coco',
+      };
+    case 'person':
+      return {
+        name: 'Coach Mia',
+        role: 'Friend',
+        link: 'Memories',
+        notes: 'Shows up around soccer weekends and shared team events.',
+      };
+    case 'memory':
+      return {
+        title: 'Sunday kitchen reset',
+        date: '2026-03-09',
+        people: 'Shanshan',
+        items: 'KitchenAid Artisan Mixer',
+        notes: 'A home ritual tied to one clear kitchen purchase.',
+      };
+    case 'note':
+    default:
+      return {
+        title: 'Need to check the IKEA bench measurements',
+        context: 'Thing',
+        note: 'Potential follow-up before the return window closes.',
+      };
   }
 }

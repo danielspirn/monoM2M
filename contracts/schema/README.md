@@ -71,6 +71,8 @@ contracts/schema/
 ├─ subscriptions/
 │  ├─ subscription.schema.json
 │  └─ entitlement.schema.json
+├─ integrations/
+│  └─ receipt-ocr-adapter.contract.ts
 └─ agent/
    ├─ agent-session.schema.json
    └─ agent-message.schema.json

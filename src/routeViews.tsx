@@ -3,162 +3,88 @@ import type { ReactNode } from 'react';
 import { LogoLockup, LogoMark } from './brand';
 import { ChartSurface, type AppChartOption } from './charts';
 import { Icon } from './icons';
+import type { ReceiptStudioLivePayload } from '@/mocks/receiptWorkflowStore';
+import type {
+  ActivityItem,
+  AgentChatPayload,
+  AgentStructuredResult,
+  AgentVoicePayload,
+  HomePayload,
+  MemoriesPayload,
+  MemoryCardData,
+  MemoryDetailPayload,
+  PeoplePayload,
+  PersonCardData,
+  PersonDetailPayload,
+  ReceiptCardData,
+  SummaryMetric,
+  ThingCardData,
+  ThingDetailPayload,
+  ThingsPayload,
+  UpgradeCardData,
+} from '@/mocks/sharedUniverse';
 
-type ButtonAction = {
-  label: string;
-  action?: string;
-};
-
-type HomePayload = {
-  header: { title: string; searchPlaceholder: string };
-  hero: {
-    headline: string;
-    primaryCta: ButtonAction;
-    secondaryCta: ButtonAction;
+type ReceiptStudioPayload = {
+  receipt: {
+    id: string;
+    status: string;
+    sourceType: string;
+    capturedAt?: string | null;
   };
-  summary: {
-    periodLabel: string;
-    purchaseCount: number;
-    totalSpend: number;
-    currency: string;
-  } | null;
-  reviewQueue: ReceiptCard[];
-  recentReceipts: ReceiptCard[];
-  thingsSummary: {
-    ownedThingsCount: number;
-    recentThingLabel?: string;
-    warrantyExpiringCount?: number;
-    insuranceReadyCount?: number;
-  } | null;
-  memorySuggestions: MemorySummary[];
-  insightCards: InsightCard[];
-  upgradeCard: UpgradeCardData | null;
-};
-
-type ThingsPayload = {
   header: {
     title: string;
-    viewOptions: string[];
-    selectedView: string;
+    merchantName?: string | null;
+    purchasedAt?: string | null;
+    grandTotal?: number | null;
+    currency: string;
   };
-  actionStrip: string[];
-  summary:
-    | {
-        headline: string;
-        body: string;
-      }
-    | {
-        dateRangeLabel?: string;
-        thingCount?: number;
-        ownedThingCount?: number;
-        consumableCount?: number;
-        warrantyExpiringCount?: number;
-      };
-  visualization: {
-    type: string;
-    series: Array<{ id: string; label: string; value: number }>;
+  progress?: {
+    stage: string;
+    label: string;
   } | null;
-  groups: Array<{
+  lineItems: ReceiptStudioLivePayload['lineItems'];
+  selectedLineItemId?: string | null;
+  evidence?: {
+    targetObjectType: string;
+    targetObjectId: string;
+    evidenceType: string;
+    pageNumber?: number | null;
+    x?: number | null;
+    y?: number | null;
+    width?: number | null;
+    height?: number | null;
+    snippet?: string | null;
+  } | null;
+  evidenceTrail?: Array<{
     id: string;
     label: string;
-    thingCount: number;
-    totalSpend: number;
-    topItems: string[];
+    snippet: string;
+    targetObjectId: string;
   }>;
-  ownedThings: Array<{
-    id: string;
-    displayName: string;
-    category?: string;
-    status?: string;
-    purchasePrice: number;
-    purchaseDate: string;
-    hasWarranty?: boolean;
-    hasManual?: boolean;
-    warrantyEndsAt?: string;
-    docCount?: number;
-    locked?: boolean;
-  }>;
-  upgradeCard: UpgradeCardData | null;
-};
-
-type PeoplePayload = {
-  header: {
-    title: string;
-    viewOptions: string[];
-    selectedView: string;
-  };
-  actionStrip: string[];
-  summary:
-    | { headline: string; body: string }
-    | { personCount: number; linkedMemoryCount: number; giftCount: number }
-    | { headline: string; subheadline: string };
-  network: {
-    rings: Array<{
-      label: string;
-      count: number;
-      nodes: Array<{ id: string; label: string; relationshipType: string }>;
-    }>;
-  } | null;
-  people: Array<{
+  peopleSuggestions?: Array<{
     id: string;
     displayName: string;
     relationshipType: string;
-    linkedPurchaseCount: number;
-    linkedMemoryCount: number;
-    giftCount: number;
   }>;
-  selectedPerson: {
-    id: string;
-    displayName: string;
-    relationshipType: string;
-    notes?: string;
-    linkedPurchases: Array<{
-      purchaseEventId: string;
-      merchantName: string;
-      purchasedAt: string;
-      grandTotal: number;
-    }>;
-    linkedMemories: Array<{
-      memoryId: string;
-      title: string;
-      memoryState: string;
-      startsAt: string;
-    }>;
-    giftHistory: Array<{
-      purchaseEventId: string;
-      merchantName: string;
-      purchasedAt: string;
-      grandTotal: number;
-    }>;
-  } | null;
-  upgradeCard: UpgradeCardData | null;
-};
-
-type MemoriesPayload = {
-  header: {
-    title: string;
-    viewOptions: string[];
-    selectedView: string;
-  };
-  actionStrip: string[];
-  summary:
-    | { headline: string; body: string }
-    | { candidateCount: number; confirmedCount: number }
-    | null;
-  timeline: Array<MemoryTimelineEntry>;
-  selectedMemory: {
+  memorySuggestions?: Array<{
     id: string;
     memoryState: string;
-    title: string;
-    memoryType: string;
-    startsAt: string;
-    endsAt: string | null;
-    placeLabel: string;
-    people: Array<{ id: string; displayName: string; relationshipType: string }>;
-    linkedPurchases: Array<{ purchaseEventId: string; merchantName: string; grandTotal: number }>;
-    linkedThings: Array<{ id: string; displayName: string }>;
-    notes: string | null;
-  } | null;
+    suggestedTitle: string;
+  }>;
+  actions: {
+    canSave: boolean;
+    canConvertToThing: boolean;
+    canTagPeople: boolean;
+    canAddToMemory: boolean;
+  };
+  captureSession?: ReceiptStudioLivePayload['captureSession'];
+  sourceDocument?: ReceiptStudioLivePayload['sourceDocument'];
+  extractionRun?: ReceiptStudioLivePayload['extractionRun'];
+  parsedData?: ReceiptStudioLivePayload['parsedData'];
+  structuredData?: ReceiptStudioLivePayload['structuredData'];
+  searchDocument?: ReceiptStudioLivePayload['searchDocument'];
+  alerts?: ReceiptStudioLivePayload['alerts'];
+  upgradeCard?: UpgradeCardData;
 };
 
 type SettingsPayload = {
@@ -170,7 +96,6 @@ type SettingsPayload = {
       key: string;
       label: string;
       value?: string | boolean;
-      options?: string[];
       route?: string;
     }>;
   }>;
@@ -199,7 +124,6 @@ type AccountPayload = {
     householdName: string;
     role: string;
   }>;
-  actions: Array<{ label: string; route: string }>;
 };
 
 type PlansPayload = {
@@ -218,95 +142,10 @@ type PlansPayload = {
   };
 };
 
-type AgentChatPayload = {
-  mode: string;
-  title: string;
-  conversation: Array<{
-    id: string;
-    role: 'user' | 'assistant';
-    content: string;
-    citations?: Array<{ type: string; id?: string; label: string }>;
-    suggestedFollowUps?: string[];
-    upgradeCard?: UpgradeCardData;
-  }>;
-  suggestedPrompts?: string[];
-};
-
-type AgentVoicePayload = {
-  mode: string;
-  title: string;
-  state: string;
-  prompt?: string;
-  transcript?: string;
-  response?: {
-    content: string;
-    citations: Array<{ type: string; id?: string; label: string }>;
-    suggestedFollowUps: string[];
-  };
-};
-
-type ReceiptCard = {
-  id: string;
-  merchantName: string;
-  purchasedAt: string;
-  status: string;
-  lineItemCount: number;
-  grandTotal: number;
-  currency: string;
-};
-
-type MemorySummary = {
-  id: string;
-  memoryState: string;
-  suggestedTitle: string;
-  startsAt: string;
-  placeLabel: string;
-  relatedPurchaseEventIds: string[];
-};
-
-type MemoryTimelineEntry = {
-  id: string;
-  memoryState: string;
-  autoCreatedFlag?: boolean;
-  candidateConfidence?: number;
-  suggestedTitle: string;
-  title: string | null;
-  startsAt: string;
-  endsAt: string | null;
-  placeLabel: string;
-  relatedPurchaseEventIds: string[];
-  peoplePreview: string[];
-  notes: string | null;
-};
-
-type InsightCard = {
-  id: string;
-  type: string;
-  title: string;
-  body: string;
-  metrics?: Record<string, number | string>;
-};
-
-type UpgradeCardData = {
-  id?: string;
-  tier: string;
-  title: string;
-  body: string;
-  ctaLabel: string;
-};
-
 type PageProps<T> = {
   state: string;
   payload: T | null;
   onAction: (action: string) => void;
-};
-
-type SummaryMetric = {
-  label: string;
-  value: string;
-  note?: string;
-  trend?: number[];
-  tone?: 'blue' | 'green' | 'amber';
 };
 
 const money = new Intl.NumberFormat('en-US', {
@@ -340,128 +179,106 @@ export function HomeView({ state, payload, onAction }: PageProps<HomePayload>) {
     );
   }
   if (!payload) return <RouteError title="Missing Home mock" body="No payload was found for the selected state." />;
-
-  const summaryMetrics = payload.summary
-    ? [
-        {
-          label: payload.summary.periodLabel,
-          value: `${payload.summary.purchaseCount} purchases`,
-          note: 'Recent capture volume',
-          trend: buildSparklineSeed(payload.summary.purchaseCount, 7),
-          tone: 'blue',
-        },
-        {
-          label: 'Spend',
-          value: money.format(payload.summary.totalSpend),
-          note: 'Across reviewed receipts',
-          trend: buildSparklineSeed(Math.round(payload.summary.totalSpend / 22), 7),
-          tone: 'amber',
-        },
-        {
-          label: 'Things',
-          value: `${payload.thingsSummary?.ownedThingsCount ?? 0} tracked`,
-          note: payload.thingsSummary?.recentThingLabel ?? 'Ownership grows from reviewed purchases',
-          trend: buildSparklineSeed(payload.thingsSummary?.ownedThingsCount ?? 1, 7),
-          tone: 'green',
-        },
-      ] satisfies SummaryMetric[]
-    : null;
+  const continueCard = payload.continueCard;
 
   return (
     <div className="route-stack">
       <section className="hero-card hero-card--home">
         <LogoLockup className="hero-card__brand" decorative />
-        <p className="eyebrow">Household clarity, one receipt at a time</p>
+        <p className="eyebrow">Receipt to life graph</p>
         <h1>{payload.hero.headline}</h1>
-        <p className="hero-copy">
-          Search, capture, and organize what matters without drifting into generic finance-app clutter.
-        </p>
+        <p className="hero-copy">{payload.hero.body}</p>
         <div className="hero-actions">
-          <ActionButton label={payload.hero.primaryCta.label} onClick={() => onAction(payload.hero.primaryCta.action ?? '')} tone="primary" />
-          <ActionButton label={payload.hero.secondaryCta.label} onClick={() => onAction(payload.hero.secondaryCta.action ?? '')} />
+          <ActionButton label={payload.hero.primaryCta.label} onClick={() => onAction(payload.hero.primaryCta.action)} tone="primary" />
+          <ActionButton label={payload.hero.secondaryCta.label} onClick={() => onAction(payload.hero.secondaryCta.action)} />
         </div>
       </section>
 
-      {summaryMetrics ? (
-        <SummaryBand items={summaryMetrics} />
+      {payload.summaryMetrics.length ? <SummaryBand items={payload.summaryMetrics} /> : null}
+
+      {continueCard ? (
+        <FeaturePanel
+          eyebrow="Continue"
+          title={continueCard.title}
+          body={continueCard.body}
+          actionLabel={continueCard.actionLabel}
+          onAction={() => onAction(continueCard.action)}
+        />
       ) : (
         <EmptyPanel
           title="Start with one receipt"
-          body="Add a purchase or scan a receipt to begin turning spend into Things, people context, and memory candidates."
-          actionLabel="Open FAB menu"
+          body="Add a purchase, thing, person, or memory to begin building a believable life inventory."
+          actionLabel="Open Add Actions"
           onAction={() => onAction('open:fabsheet')}
         />
       )}
 
-      {payload.reviewQueue.length > 0 && (
-        <SectionCard title="Review queue" action="Review" onAction={() => onAction('open:fabsheet')}>
+      {payload.reminders.length ? (
+        <SectionCard title="Needs attention">
           <div className="card-list">
-            {payload.reviewQueue.map((receipt) => (
-              <ReceiptRow key={receipt.id} receipt={receipt} />
-            ))}
-          </div>
-        </SectionCard>
-      )}
-
-      <SectionCard title="Recent receipts">
-        {payload.recentReceipts.length > 0 ? (
-          <div className="card-list">
-            {payload.recentReceipts.map((receipt) => (
-              <ReceiptRow key={receipt.id} receipt={receipt} />
-            ))}
-          </div>
-        ) : (
-          <BlankCard title="No recent receipts" body="When receipts arrive, they’ll show up here with line-item review status." />
-        )}
-      </SectionCard>
-
-      <SectionCard title="Things snapshot">
-        {payload.thingsSummary ? (
-          <div className="mini-stack">
-            <MetricLine label="Tracked Things" value={String(payload.thingsSummary.ownedThingsCount)} />
-            {payload.thingsSummary.recentThingLabel ? (
-              <MetricLine label="Most recent" value={payload.thingsSummary.recentThingLabel} />
-            ) : null}
-            {payload.thingsSummary.warrantyExpiringCount ? (
-              <MetricLine label="Expiring soon" value={String(payload.thingsSummary.warrantyExpiringCount)} />
-            ) : null}
-            {payload.thingsSummary.insuranceReadyCount ? (
-              <MetricLine label="Insurance ready" value={String(payload.thingsSummary.insuranceReadyCount)} />
-            ) : null}
-          </div>
-        ) : (
-          <BlankCard title="No Things yet" body="Durable items become easier to manage as purchases are reviewed." />
-        )}
-      </SectionCard>
-
-      <SectionCard title="Memory suggestions">
-        {payload.memorySuggestions.length > 0 ? (
-          <div className="card-list">
-            {payload.memorySuggestions.map((memory) => (
-              <MemoryCandidateRow key={memory.id} memory={memory} />
-            ))}
-          </div>
-        ) : (
-          <BlankCard title="No memory candidates yet" body="Dining, events, and clustered purchases become suggestions here." />
-        )}
-      </SectionCard>
-
-      <SectionCard title="Insights">
-        {payload.insightCards.length > 0 ? (
-          <div className="card-list">
-            {payload.insightCards.map((card) => (
-              <article className="insight-card" key={card.id}>
+            {payload.reminders.map((reminder) => (
+              <article className={`feature-panel feature-panel--${reminder.tone}`} key={reminder.id}>
                 <div>
-                  <p className="eyebrow">{card.type.replace(/_/g, ' ')}</p>
-                  <h3>{card.title}</h3>
+                  <p className="eyebrow">Next best action</p>
+                  <h3>{reminder.title}</h3>
                 </div>
-                <p>{card.body}</p>
-                {card.metrics ? <CompactMetricBars metrics={card.metrics} /> : null}
+                <p>{reminder.body}</p>
+                <ActionButton label={reminder.actionLabel} onClick={() => onAction(reminder.action)} />
               </article>
             ))}
           </div>
+        </SectionCard>
+      ) : null}
+
+      <SectionCard title="Recent activity">
+        {payload.recentActivity.length ? <ActivityFeed items={payload.recentActivity} onAction={onAction} /> : <BlankCard title="No recent activity" body="The dashboard fills in as receipts and linked entities appear." />}
+      </SectionCard>
+
+      <SectionCard title="Recent receipts" action="Add Receipt" onAction={() => onAction('compose:add_receipt')}>
+        {payload.recentReceipts.length ? (
+          <div className="card-list">
+            {payload.recentReceipts.map((receipt) => (
+              <ReceiptRow key={receipt.id} receipt={receipt} onAction={onAction} />
+            ))}
+          </div>
         ) : (
-          <BlankCard title="Insights arrive with more history" body="As mocked purchases build up, this section highlights drift, habits, and value." />
+          <BlankCard title="No recent receipts" body="Receipt capture is the start of the model." />
+        )}
+      </SectionCard>
+
+      <SectionCard title="Things that matter">
+        {payload.topThings.length ? (
+          <div className="card-list">
+            {payload.topThings.map((thing) => (
+              <ThingRow key={thing.id} thing={thing} onAction={onAction} />
+            ))}
+          </div>
+        ) : (
+          <BlankCard title="No Things yet" body="Meaningful items show up here once the receipt graph deepens." />
+        )}
+      </SectionCard>
+
+      <SectionCard title="People connected to purchases">
+        {payload.topPeople.length ? (
+          <div className="card-list">
+            {payload.topPeople.map((person) => (
+              <PersonRow key={person.id} person={person} onAction={onAction} />
+            ))}
+          </div>
+        ) : (
+          <BlankCard title="No linked people yet" body="People help the product feel contextual instead of transactional." />
+        )}
+      </SectionCard>
+
+      <SectionCard title="Recent memories">
+        {payload.recentMemories.length ? (
+          <div className="card-list">
+            {payload.recentMemories.map((memory) => (
+              <MemoryRow key={memory.id} memory={memory} onAction={onAction} />
+            ))}
+          </div>
+        ) : (
+          <BlankCard title="No memories yet" body="Memory candidates appear when purchases, places, and people connect into a story." />
         )}
       </SectionCard>
 
@@ -476,7 +293,7 @@ export function ThingsView({ state, payload, onAction }: PageProps<ThingsPayload
     return (
       <RouteError
         title="Things couldn’t load"
-        body="Returns, warranty, and insurance entry points stay visible while the mocked data fails."
+        body="The inventory surface is mocked independently so the product graph can still be reviewed."
         actionLabel="Retry Things"
         onAction={() => onAction('retry:/things')}
       />
@@ -484,147 +301,139 @@ export function ThingsView({ state, payload, onAction }: PageProps<ThingsPayload
   }
   if (!payload) return <RouteError title="Missing Things mock" body="No payload was found for the selected state." />;
 
-  const thingIntroSummary = isThingsIntroSummary(payload.summary) ? payload.summary : null;
-  const thingSummaryMetrics = thingIntroSummary
-    ? null
-    : (payload.summary as Exclude<ThingsPayload['summary'], { headline: string; body: string }>);
-
-  const metrics: SummaryMetric[] = thingSummaryMetrics
-    ? [
-        thingSummaryMetrics.dateRangeLabel
-          ? {
-              label: 'Window',
-              value: thingSummaryMetrics.dateRangeLabel,
-              note: 'Current grouped view',
-              trend: buildSparklineSeed(14, 7),
-              tone: 'blue',
-            }
-          : null,
-        thingSummaryMetrics.thingCount
-          ? {
-              label: 'Things',
-              value: String(thingSummaryMetrics.thingCount),
-              note: 'Grouped from reviewed purchases',
-              trend: buildSparklineSeed(thingSummaryMetrics.thingCount, 7),
-              tone: 'blue',
-            }
-          : null,
-        thingSummaryMetrics.ownedThingCount
-          ? {
-              label: 'Owned',
-              value: String(thingSummaryMetrics.ownedThingCount),
-              note: 'Durable purchases',
-              trend: buildSparklineSeed(thingSummaryMetrics.ownedThingCount, 7),
-              tone: 'green',
-            }
-          : null,
-        thingSummaryMetrics.consumableCount
-          ? {
-              label: 'Consumables',
-              value: String(thingSummaryMetrics.consumableCount),
-              note: 'Repeat-buy categories',
-              trend: buildSparklineSeed(thingSummaryMetrics.consumableCount, 7),
-              tone: 'amber',
-            }
-          : null,
-        thingSummaryMetrics.warrantyExpiringCount
-          ? {
-              label: 'Expiring',
-              value: String(thingSummaryMetrics.warrantyExpiringCount),
-              note: 'Warranty follow-up',
-              trend: buildSparklineSeed(thingSummaryMetrics.warrantyExpiringCount + 2, 7),
-              tone: 'amber',
-            }
-          : null,
-      ].filter(Boolean) as SummaryMetric[]
-    : [];
-
   return (
     <div className="route-stack">
       <ScreenToolbar
         eyebrow="Consumer-friendly ownership"
         title="Things"
         selectedView={payload.header.selectedView}
-        support="Organize what you own without exposing internal asset jargon."
+        support="Items stay grounded in the receipts, people, and memories around them."
       />
-
-      {thingIntroSummary ? (
-        <SectionCard title="Overview">
-          <div className="empty-copy">
-            <h2>{thingIntroSummary.headline}</h2>
-            <p>{thingIntroSummary.body}</p>
-          </div>
-        </SectionCard>
-      ) : (
-        <SummaryBand items={metrics} />
-      )}
+      <SurfaceControls
+        searchLabel={payload.header.searchPlaceholder}
+        controls={[payload.header.filterLabel, payload.header.sortLabel]}
+      />
+      {payload.summaryMetrics.length ? <SummaryBand items={payload.summaryMetrics} /> : <BlankCard title="No Things yet" body="Add a receipt or thing to start the inventory layer." />}
 
       {payload.visualization ? (
-        <SectionCard title="Spending map">
+        <SectionCard title="Things by category">
           <ChartSurface className="chart-surface" height={250} label="Things treemap" option={buildThingsTreemapOption(payload.visualization.series)} />
           <div className="visual-summary-row">
-            {payload.visualization.series.map((item) => (
-              <div className="compact-count" key={item.id}>
-                <span>{item.label}</span>
-                <strong>{money.format(item.value)}</strong>
+            {payload.categories.map((category) => (
+              <div className="compact-count" key={category.id}>
+                <span>{category.label}</span>
+                <strong>{category.thingCount} items</strong>
+                <small>{money.format(category.spend)}</small>
               </div>
             ))}
           </div>
         </SectionCard>
       ) : null}
 
-      <SectionCard title="Groups">
-        {payload.groups.length > 0 ? (
+      <SectionCard title="All Things">
+        {payload.things.length ? (
           <div className="card-list">
-            {payload.groups.map((group) => (
-              <article className="list-card" key={group.id}>
-                <div className="list-card__header">
-                  <div>
-                    <h3>{group.label}</h3>
-                    <p>{group.thingCount} items</p>
-                  </div>
-                  <strong>{money.format(group.totalSpend)}</strong>
-                </div>
-                <div className="chip-row">
-                  {group.topItems.map((item) => (
-                    <span className="chip" key={item}>
-                      {item}
-                    </span>
-                  ))}
-                </div>
-              </article>
+            {payload.things.map((thing) => (
+              <ThingRow key={thing.id} thing={thing} onAction={onAction} featured={payload.highlightedThingIds.includes(thing.id)} />
             ))}
           </div>
         ) : (
-          <BlankCard title="Grouped views grow with history" body="Once purchases accumulate, grouped views help the user see what they own and rebuy." />
+          <BlankCard title="No Things yet" body="Durable items and meaningful purchases will gather here." />
         )}
       </SectionCard>
 
-      <SectionCard title="Owned Things">
-        {payload.ownedThings.length > 0 ? (
+      {payload.upgradeCard ? <UpgradeCard data={payload.upgradeCard} onAction={onAction} /> : null}
+    </div>
+  );
+}
+
+export function ThingDetailView({ state, payload, onAction }: PageProps<ThingDetailPayload>) {
+  if (state === 'loading') return <LoadingState label="Loading Thing detail" blocks={4} />;
+  if (!payload) return <RouteError title="Missing Thing detail mock" body="No payload was found for this state." />;
+
+  const summaryItems: SummaryMetric[] = [
+    {
+      label: 'Price',
+      value: money.format(payload.detail.purchasePrice),
+      note: payload.detail.category,
+      tone: 'blue',
+      trend: [2, 2, 3, 3, 4, 4, 5],
+    },
+    {
+      label: 'People',
+      value: String(payload.linkedPeople.length),
+      note: 'Linked profiles',
+      tone: 'green',
+      trend: [1, 1, 1, 2, 2, 2, 3],
+    },
+    {
+      label: 'Memories',
+      value: String(payload.linkedMemories.length),
+      note: 'Story connections',
+      tone: 'amber',
+      trend: [1, 1, 1, 1, 2, 2, 2],
+    },
+  ];
+
+  return (
+    <div className="route-stack">
+      <DetailHeader
+        eyebrow={payload.detail.category}
+        title={payload.detail.title}
+        summary={payload.detail.headerSummary}
+        backLabel="Back to Things"
+        onBack={() => onAction('route:/things')}
+        chips={payload.detail.badges}
+      />
+
+      <SummaryBand items={summaryItems} />
+
+      <SectionCard title="Key details">
+        <MetadataList items={payload.metadata} />
+      </SectionCard>
+
+      {payload.purchaseSource ? (
+        <SectionCard title="Purchase source">
+          <ReceiptRow receipt={payload.purchaseSource} onAction={onAction} />
+        </SectionCard>
+      ) : null}
+
+      <SectionCard title="Linked people">
+        {payload.linkedPeople.length ? (
           <div className="card-list">
-            {payload.ownedThings.map((thing) => (
-              <article className="list-card" key={thing.id}>
-                <div className="list-card__header">
-                  <div>
-                    <h3>{thing.displayName}</h3>
-                    <p>{thing.category ?? thing.status ?? 'Tracked Thing'}</p>
-                  </div>
-                  <strong>{money.format(thing.purchasePrice)}</strong>
-                </div>
-                <div className="chip-row">
-                  {thing.hasWarranty ? <span className="chip chip--accent">Warranty</span> : null}
-                  {thing.hasManual ? <span className="chip">Manual</span> : null}
-                  {thing.docCount ? <span className="chip">{thing.docCount} docs</span> : null}
-                  {thing.locked ? <span className="chip chip--locked">Locked</span> : null}
-                </div>
-                <p>{formatDateOnly(thing.purchaseDate)}</p>
-              </article>
+            {payload.linkedPeople.map((person) => (
+              <PersonRow key={person.id} person={person} onAction={onAction} />
             ))}
           </div>
         ) : (
-          <BlankCard title="No owned Things yet" body="Important items and durable purchases will appear here once they are confirmed." />
+          <BlankCard title="No linked people yet" body="People links will show who this item matters to." />
         )}
+      </SectionCard>
+
+      <SectionCard title="Linked memories">
+        {payload.linkedMemories.length ? (
+          <div className="card-list">
+            {payload.linkedMemories.map((memory) => (
+              <MemoryRow key={memory.id} memory={memory} onAction={onAction} />
+            ))}
+          </div>
+        ) : (
+          <BlankCard title="No linked memories yet" body="This item is ready to attach to household moments when they matter." />
+        )}
+      </SectionCard>
+
+      {payload.relatedThings.length ? (
+        <SectionCard title="Related Things">
+          <div className="card-list">
+            {payload.relatedThings.map((thing) => (
+              <ThingRow key={thing.id} thing={thing} onAction={onAction} />
+            ))}
+          </div>
+        </SectionCard>
+      ) : null}
+
+      <SectionCard title="Activity">
+        <ActivityFeed items={payload.activity} onAction={onAction} />
       </SectionCard>
 
       {payload.upgradeCard ? <UpgradeCard data={payload.upgradeCard} onAction={onAction} /> : null}
@@ -638,17 +447,14 @@ export function PeopleView({ state, payload, onAction }: PageProps<PeoplePayload
     return (
       <RouteError
         title="People couldn’t load"
-        body="The relationship layer is mocked separately, so household and gifts context can be reviewed even when data fails."
+        body="The relationship layer is mocked separately so the emotional context survives data gaps."
         actionLabel="Retry People"
         onAction={() => onAction('retry:/people')}
       />
     );
   }
   if (!payload) return <RouteError title="Missing People mock" body="No payload was found for the selected state." />;
-
-  const peopleIntroSummary = isPeopleIntroSummary(payload.summary) ? payload.summary : null;
-  const peopleMetricsSummary = isPeopleMetricsSummary(payload.summary) ? payload.summary : null;
-  const peopleFocusSummary = isPeopleFocusSummary(payload.summary) ? payload.summary : null;
+  const spotlight = payload.spotlight;
 
   return (
     <div className="route-stack">
@@ -656,50 +462,12 @@ export function PeopleView({ state, payload, onAction }: PageProps<PeoplePayload
         eyebrow="Grounded relationship context"
         title="People"
         selectedView={payload.header.selectedView}
-        support="Keep purchases, memories, and gifts anchored to real relationships."
+        support="People help explain who matters behind a receipt, item, or memory."
       />
+      <SurfaceControls searchLabel={payload.header.searchPlaceholder} controls={[payload.header.filterLabel]} />
+      {payload.summaryMetrics.length ? <SummaryBand items={payload.summaryMetrics} /> : <BlankCard title="No people yet" body="Add a person to turn spending into context." />}
 
-      {peopleIntroSummary ? (
-        <EmptyPanel
-          title={peopleIntroSummary.headline}
-          body={peopleIntroSummary.body}
-          actionLabel="Ask Agent"
-          onAction={() => onAction('agent:chat')}
-        />
-      ) : peopleMetricsSummary ? (
-        <SummaryBand
-          items={[
-            {
-              label: 'People',
-              value: String(peopleMetricsSummary.personCount),
-              note: 'Tracked relationships',
-              trend: buildSparklineSeed(peopleMetricsSummary.personCount, 7),
-              tone: 'blue',
-            },
-            {
-              label: 'Linked memories',
-              value: String(peopleMetricsSummary.linkedMemoryCount),
-              note: 'Shared moments with purchase context',
-              trend: buildSparklineSeed(peopleMetricsSummary.linkedMemoryCount, 7),
-              tone: 'green',
-            },
-            {
-              label: 'Gifts',
-              value: String(peopleMetricsSummary.giftCount),
-              note: 'Gift-related purchases',
-              trend: buildSparklineSeed(peopleMetricsSummary.giftCount + 2, 7),
-              tone: 'amber',
-            },
-          ]}
-        />
-      ) : peopleFocusSummary ? (
-        <section className="section-card person-focus">
-          <p className="eyebrow">{peopleFocusSummary.subheadline}</p>
-          <h2>{peopleFocusSummary.headline}</h2>
-        </section>
-      ) : null}
-
-      {payload.network?.rings.length ? (
+      {payload.network ? (
         <SectionCard title="Relationship map">
           <ChartSurface className="chart-surface" height={278} label="People bubble chart" option={buildPeopleBubbleOption(payload.network.rings)} />
           <div className="visual-summary-row">
@@ -713,63 +481,88 @@ export function PeopleView({ state, payload, onAction }: PageProps<PeoplePayload
         </SectionCard>
       ) : null}
 
-      <SectionCard title="People list">
-        {payload.people.length > 0 ? (
+      {spotlight ? (
+        <FeaturePanel
+          eyebrow="Spotlight"
+          title={spotlight.title}
+          body={spotlight.body}
+          actionLabel={spotlight.actionLabel}
+          onAction={() => onAction(spotlight.action)}
+        />
+      ) : null}
+
+      <SectionCard title="All people">
+        {payload.people.length ? (
           <div className="card-list">
             {payload.people.map((person) => (
-              <article className="list-card" key={person.id}>
-                <div className="list-card__header">
-                  <div>
-                    <h3>{person.displayName}</h3>
-                    <p>{person.relationshipType}</p>
-                  </div>
-                  <span className="chip chip--accent">{person.linkedPurchaseCount} purchases</span>
-                </div>
-                <div className="chip-row">
-                  <span className="chip">{person.linkedMemoryCount} memories</span>
-                  <span className="chip">{person.giftCount} gifts</span>
-                </div>
-              </article>
+              <PersonRow key={person.id} person={person} onAction={onAction} />
             ))}
           </div>
         ) : (
-          <BlankCard title="No linked people yet" body="People context begins when purchases or memories are tagged to someone who matters." />
-        )}
-      </SectionCard>
-
-      <SectionCard title={payload.selectedPerson ? payload.selectedPerson.displayName : 'Selected person'}>
-        {payload.selectedPerson ? (
-          <div className="mini-stack">
-            <p>{payload.selectedPerson.notes}</p>
-            <MetricLine label="Purchases" value={String(payload.selectedPerson.linkedPurchases.length)} />
-            <MetricLine label="Memories" value={String(payload.selectedPerson.linkedMemories.length)} />
-            <div className="card-list">
-              {payload.selectedPerson.linkedPurchases.map((purchase) => (
-                <article className="list-card list-card--compact" key={purchase.purchaseEventId}>
-                  <div className="list-card__header">
-                    <h3>{purchase.merchantName}</h3>
-                    <strong>{money.format(purchase.grandTotal)}</strong>
-                  </div>
-                  <p>{fullDateTime.format(new Date(purchase.purchasedAt))}</p>
-                </article>
-              ))}
-              {payload.selectedPerson.linkedMemories.map((memory) => (
-                <article className="list-card list-card--compact" key={memory.memoryId}>
-                  <div className="list-card__header">
-                    <h3>{memory.title}</h3>
-                    <span className={`state-pill state-pill--${memory.memoryState}`}>{memory.memoryState}</span>
-                  </div>
-                  <p>{fullDateTime.format(new Date(memory.startsAt))}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <BlankCard title="Choose a person" body="Person details surface linked purchases, gifts, and memories when a relationship is selected." />
+          <BlankCard title="No people yet" body="People profiles will appear here as purchases and memories connect." />
         )}
       </SectionCard>
 
       {payload.upgradeCard ? <UpgradeCard data={payload.upgradeCard} onAction={onAction} /> : null}
+    </div>
+  );
+}
+
+export function PersonDetailView({ state, payload, onAction }: PageProps<PersonDetailPayload>) {
+  if (state === 'loading') return <LoadingState label="Loading Person detail" blocks={4} />;
+  if (!payload) return <RouteError title="Missing Person detail mock" body="No payload was found for this state." />;
+
+  return (
+    <div className="route-stack">
+      <DetailHeader
+        eyebrow={payload.detail.relationshipType}
+        title={payload.detail.title}
+        summary={payload.detail.headerSummary}
+        backLabel="Back to People"
+        onBack={() => onAction('route:/people')}
+        chips={payload.detail.tags}
+      />
+      <SummaryBand items={payload.summaryMetrics} />
+
+      <SectionCard title="Associated Things">
+        {payload.associatedThings.length ? (
+          <div className="card-list">
+            {payload.associatedThings.map((thing) => (
+              <ThingRow key={thing.id} thing={thing} onAction={onAction} />
+            ))}
+          </div>
+        ) : (
+          <BlankCard title="No associated Things" body="This person can gain item context as purchases are linked." />
+        )}
+      </SectionCard>
+
+      <SectionCard title="Associated memories">
+        {payload.associatedMemories.length ? (
+          <div className="card-list">
+            {payload.associatedMemories.map((memory) => (
+              <MemoryRow key={memory.id} memory={memory} onAction={onAction} />
+            ))}
+          </div>
+        ) : (
+          <BlankCard title="No associated memories" body="Memories will help the person graph feel more human." />
+        )}
+      </SectionCard>
+
+      <SectionCard title="Related purchases">
+        {payload.relatedReceipts.length ? (
+          <div className="card-list">
+            {payload.relatedReceipts.map((receipt) => (
+              <ReceiptRow key={receipt.id} receipt={receipt} onAction={onAction} />
+            ))}
+          </div>
+        ) : (
+          <BlankCard title="No related purchases" body="Receipts anchor the relationship graph to real evidence." />
+        )}
+      </SectionCard>
+
+      <SectionCard title="Recent interaction">
+        <ActivityFeed items={payload.activity} onAction={onAction} />
+      </SectionCard>
     </div>
   );
 }
@@ -780,13 +573,14 @@ export function MemoriesView({ state, payload, onAction }: PageProps<MemoriesPay
     return (
       <RouteError
         title="Memories couldn’t load"
-        body="Memory candidates are system-assisted, so the screen preserves the timeline structure even when the feed fails."
+        body="Memories are mocked as a first-class layer, so timeline structure remains stable even when data fails."
         actionLabel="Retry Memories"
         onAction={() => onAction('retry:/memories')}
       />
     );
   }
   if (!payload) return <RouteError title="Missing Memories mock" body="No payload was found for the selected state." />;
+  const featuredMemory = payload.featuredMemory;
 
   return (
     <div className="route-stack">
@@ -794,103 +588,435 @@ export function MemoriesView({ state, payload, onAction }: PageProps<MemoriesPay
         eyebrow="System-assisted memory creation"
         title="Memories"
         selectedView={payload.header.selectedView}
-        support="Timeline stays primary while candidates, places, and people remain easy to review."
+        support="Receipts become events, then stories, with people and things attached where useful."
       />
+      <SurfaceControls searchLabel={payload.header.searchPlaceholder} controls={[payload.header.filterLabel]} />
+      {payload.summaryMetrics.length ? <SummaryBand items={payload.summaryMetrics} /> : <BlankCard title="No memories yet" body="Memories appear when purchases cluster into meaning." />}
 
-      {payload.summary ? (
-        'headline' in payload.summary ? (
-          <EmptyPanel
-            title={payload.summary.headline}
-            body={payload.summary.body}
-            actionLabel="Record Experience"
-            onAction={() => onAction('fab:record_experience')}
-          />
-        ) : (
-          <SummaryBand
-            items={[
-              {
-                label: 'Candidates',
-                value: String(payload.summary.candidateCount),
-                note: 'System-assisted suggestions',
-                trend: buildSparklineSeed(payload.summary.candidateCount, 7),
-                tone: 'amber',
-              },
-              {
-                label: 'Confirmed',
-                value: String(payload.summary.confirmedCount),
-                note: 'Kept memories',
-                trend: buildSparklineSeed(payload.summary.confirmedCount, 7),
-                tone: 'green',
-              },
-              {
-                label: 'Lens',
-                value: 'Timeline',
-                note: 'Default view',
-                trend: buildSparklineSeed(9, 7),
-                tone: 'blue',
-              },
-            ]}
-          />
-        )
+      {featuredMemory ? (
+        <FeaturePanel
+          eyebrow="Featured memory"
+          title={featuredMemory.title}
+          body={featuredMemory.summary}
+          actionLabel="Open memory"
+          onAction={() => onAction(featuredMemory.action)}
+          chips={[featuredMemory.memoryState, featuredMemory.memoryType]}
+        />
       ) : null}
 
       <SectionCard title="Timeline">
-        {payload.timeline.length > 0 ? (
-          <div className="timeline-list">
+        {payload.timeline.length ? (
+          <div className="card-list">
             {payload.timeline.map((memory) => (
-              <article className="timeline-card" key={memory.id}>
-                <span className={`timeline-card__dot timeline-card__dot--${memory.memoryState}`} />
-                <div className="timeline-card__body">
-                  <div className="list-card__header">
-                    <div>
-                      <h3>{memory.title ?? memory.suggestedTitle}</h3>
-                      <p>{memory.placeLabel}</p>
-                    </div>
-                    <span className={`state-pill state-pill--${memory.memoryState}`}>{memory.memoryState}</span>
-                  </div>
-                  <p>{fullDateTime.format(new Date(memory.startsAt))}</p>
-                  <div className="chip-row">
-                    {memory.peoplePreview.map((person) => (
-                      <span className="chip" key={person}>
-                        {person}
-                      </span>
-                    ))}
-                    {memory.autoCreatedFlag ? <span className="chip chip--accent">Auto-created</span> : null}
-                  </div>
-                </div>
-              </article>
+              <MemoryRow key={memory.id} memory={memory} onAction={onAction} rich />
             ))}
           </div>
         ) : (
-          <BlankCard title="No timeline yet" body="Candidates will appear when receipts, places, and timing cluster into something meaningful." />
+          <BlankCard title="No timeline yet" body="The timeline becomes useful once receipts and people start clustering." />
         )}
       </SectionCard>
 
-      {payload.selectedMemory ? (
-        <SectionCard title="Selected memory">
-          <div className="mini-stack">
-            <div className="list-card__header">
-              <div>
-                <p className="eyebrow">{payload.selectedMemory.memoryType}</p>
-                <h3>{payload.selectedMemory.title}</h3>
-              </div>
-              <span className={`state-pill state-pill--${payload.selectedMemory.memoryState}`}>
-                {payload.selectedMemory.memoryState}
-              </span>
-            </div>
-            <p>{payload.selectedMemory.placeLabel}</p>
-            <p>{fullDateTime.format(new Date(payload.selectedMemory.startsAt))}</p>
-            {payload.selectedMemory.notes ? <p>{payload.selectedMemory.notes}</p> : null}
-            <div className="chip-row">
-              {payload.selectedMemory.people.map((person) => (
-                <span className="chip" key={person.id}>
-                  {person.displayName}
-                </span>
-              ))}
-            </div>
+      {payload.upgradeCard ? <UpgradeCard data={payload.upgradeCard} onAction={onAction} /> : null}
+    </div>
+  );
+}
+
+export function MemoryDetailView({ state, payload, onAction }: PageProps<MemoryDetailPayload>) {
+  if (state === 'loading') return <LoadingState label="Loading Memory detail" blocks={4} />;
+  if (!payload) return <RouteError title="Missing Memory detail mock" body="No payload was found for this state." />;
+
+  return (
+    <div className="route-stack">
+      <DetailHeader
+        eyebrow={payload.detail.memoryType}
+        title={payload.detail.title}
+        summary={payload.detail.headerSummary}
+        backLabel="Back to Memories"
+        onBack={() => onAction('route:/memories')}
+        chips={[payload.detail.memoryState, payload.detail.significance]}
+      />
+      <SummaryBand items={payload.summaryMetrics} />
+
+      <SectionCard title="Story">
+        <article className="story-card">
+          <p>{payload.detail.summary}</p>
+          <p>{payload.detail.notes}</p>
+          <div className="chip-row">
+            <span className="chip">{payload.detail.placeLabel}</span>
+            <span className="chip">{fullDateTime.format(new Date(payload.detail.startsAt))}</span>
+          </div>
+        </article>
+      </SectionCard>
+
+      <SectionCard title="People in this memory">
+        {payload.people.length ? (
+          <div className="card-list">
+            {payload.people.map((person) => (
+              <PersonRow key={person.id} person={person} onAction={onAction} />
+            ))}
+          </div>
+        ) : (
+          <BlankCard title="No people attached" body="People links help the memory layer feel alive." />
+        )}
+      </SectionCard>
+
+      <SectionCard title="Linked Things">
+        {payload.linkedThings.length ? (
+          <div className="card-list">
+            {payload.linkedThings.map((thing) => (
+              <ThingRow key={thing.id} thing={thing} onAction={onAction} />
+            ))}
+          </div>
+        ) : (
+          <BlankCard title="No linked Things" body="Not every memory needs a thing, but the pattern is ready when it matters." />
+        )}
+      </SectionCard>
+
+      <SectionCard title="Related receipts">
+        {payload.relatedReceipts.length ? (
+          <div className="card-list">
+            {payload.relatedReceipts.map((receipt) => (
+              <ReceiptRow key={receipt.id} receipt={receipt} onAction={onAction} />
+            ))}
+          </div>
+        ) : (
+          <BlankCard title="No related receipts" body="Receipts remain the evidence layer behind the story." />
+        )}
+      </SectionCard>
+
+      <SectionCard title="Sequence">
+        <ActivityFeed items={payload.sequence} onAction={onAction} />
+      </SectionCard>
+    </div>
+  );
+}
+
+export function ReceiptStudioView({ state, payload, onAction }: PageProps<ReceiptStudioPayload>) {
+  if (state === 'loading') return <LoadingState label="Loading receipt review" blocks={4} />;
+  if (!payload) return <RouteError title="Missing Receipt Studio payload" body="No receipt payload was found for this route." />;
+
+  const selectedLineItem = payload.lineItems.find((lineItem) => lineItem.id === payload.selectedLineItemId) ?? payload.lineItems[0] ?? null;
+  const issueAlerts = (payload.alerts ?? []).filter((alert) => alert.level === 'issue');
+  const infoAlerts = (payload.alerts ?? []).filter((alert) => alert.level === 'info');
+  const summaryMetrics: SummaryMetric[] = [
+    {
+      label: 'Raw document',
+      value: payload.sourceDocument ? 'Stored' : 'Present',
+      note: payload.sourceDocument?.sourceType.replace('_', ' ') ?? payload.receipt.sourceType.replace('_', ' '),
+      tone: 'blue',
+      trend: [1, 2, 3, 4],
+    },
+    {
+      label: 'Line items',
+      value: String(payload.lineItems.length),
+      note: selectedLineItem ? `${selectedLineItem.reviewState.replace('_', ' ')} focus` : 'Waiting on extraction',
+      tone: 'green',
+      trend: [1, 2, Math.max(2, payload.lineItems.length), Math.max(2, payload.lineItems.length)],
+    },
+    {
+      label: 'Receipts detected',
+      value: String(payload.captureSession?.detectedReceiptCount ?? 1),
+      note: issueAlerts.length ? `${issueAlerts.length} issue${issueAlerts.length === 1 ? '' : 's'} flagged` : 'Quiet processing',
+      tone: 'amber',
+      trend: [1, 1, Math.max(1, payload.captureSession?.detectedReceiptCount ?? 1), Math.max(1, payload.captureSession?.detectedReceiptCount ?? 1)],
+    },
+  ];
+
+  return (
+    <div className="route-stack">
+      <DetailHeader
+        eyebrow="Receipt core"
+        title={payload.header.merchantName ?? payload.header.title}
+        summary={
+          payload.receipt.status === 'processing'
+            ? 'The original receipt is already stored while parsed and structured layers are being prepared.'
+            : 'Use this review surface to move from raw receipt evidence to trustworthy purchase data.'
+        }
+        backLabel="Back to Home"
+        onBack={() => onAction('route:/home')}
+        chips={[payload.receipt.status.replace('_', ' '), payload.receipt.sourceType.replace('_', ' ')]}
+      />
+
+      <SummaryBand items={summaryMetrics} />
+
+      {payload.progress ? (
+        <FeaturePanel
+          eyebrow="Extraction running"
+          title={payload.progress.label}
+          body={
+            payload.captureSession && payload.captureSession.detectedReceiptCount > 1
+              ? 'One upload can quietly split into multiple receipts. Each one keeps its own parsed, structured, and search-ready layers.'
+              : 'The receipt core keeps the raw file first, then layers parsed output, structured purchase data, and search-ready text on top.'
+          }
+          actionLabel="Return Home"
+          onAction={() => onAction('route:/home')}
+          chips={[
+            payload.extractionRun?.providerLabel ?? payload.extractionRun?.parserVersion ?? 'receipt-core-v1',
+            payload.progress.stage.replace(/_/g, ' '),
+          ]}
+        />
+      ) : null}
+
+      {payload.receipt.status === 'trusted' ? (
+        <FeaturePanel
+          eyebrow="Review complete"
+          title="Receipt trusted"
+          body="This receipt is now ready to feed Things, People, Memories, and future search or agent retrieval."
+          actionLabel="Back to Home"
+          onAction={() => onAction('route:/home')}
+          chips={['structured', 'search-ready']}
+        />
+      ) : null}
+
+      {issueAlerts.length ? (
+        <SectionCard title="Needs attention">
+          <div className="card-list">
+            {issueAlerts.map((alert) => (
+              <article className="feature-panel feature-panel--amber" key={alert.id}>
+                <div>
+                  <p className="eyebrow">Issue alert</p>
+                  <h3>{alert.title}</h3>
+                </div>
+                <p>{alert.body}</p>
+              </article>
+            ))}
           </div>
         </SectionCard>
       ) : null}
+
+      {payload.captureSession && payload.captureSession.detectedReceiptCount > 1 ? (
+        <SectionCard title="Detected from this upload">
+          <div className="card-list">
+            {payload.captureSession.siblings.map((receipt) => (
+              <button className="entity-row entity-row--receipt" key={receipt.id} type="button" onClick={() => onAction(receipt.action)}>
+                <div className="entity-row__body">
+                  <div className="list-card__header">
+                    <div>
+                      <h3>{receipt.merchantName}</h3>
+                      <p>Processed independently from the same upload</p>
+                    </div>
+                    <span className={`chip chip--${receipt.status}`}>{receipt.status.replace('_', ' ')}</span>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </SectionCard>
+      ) : null}
+
+      <SectionCard title="Raw document">
+        <div className="receipt-grid">
+          <article className="list-card receipt-layer-card">
+            <p className="eyebrow">Source document</p>
+            <div className="mini-stack">
+              <MetricLine label="Receipt ID" value={payload.receipt.id} />
+              <MetricLine label="File" value={payload.sourceDocument?.fileName ?? 'Original receipt preserved'} />
+              <MetricLine label="Mime type" value={payload.sourceDocument?.mimeType ?? payload.receipt.sourceType.replace('_', '/')} />
+              <MetricLine label="Capture" value={payload.sourceDocument?.captureChannel.replace(/_/g, ' ') ?? 'Upload'} />
+              <MetricLine label="Uploaded files" value={String(payload.sourceDocument?.sourceFiles.length ?? 0)} />
+              <MetricLine label="Stored at" value={payload.sourceDocument?.capturedAt ?? payload.receipt.capturedAt ?? 'Pending'} />
+              <MetricLine label="Receipts found" value={String(payload.sourceDocument?.detectedReceiptCount ?? 1)} />
+              <MetricLine label="Checksum" value={payload.sourceDocument?.checksum ?? 'Traceability pending'} />
+            </div>
+          </article>
+          <article className="list-card receipt-layer-card">
+            <p className="eyebrow">Purchase header</p>
+            <div className="mini-stack">
+              <MetricLine label="Merchant" value={payload.header.merchantName ?? 'Detecting merchant'} />
+              <MetricLine label="Purchased at" value={payload.header.purchasedAt ?? 'Detecting purchase time'} />
+              <MetricLine
+                label="Grand total"
+                value={typeof payload.header.grandTotal === 'number' ? money.format(payload.header.grandTotal) : 'Detecting total'}
+              />
+              <MetricLine label="Currency" value={payload.header.currency} />
+            </div>
+          </article>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Parsed data">
+        {payload.parsedData ? (
+          <div className="card-list">
+            <article className="list-card receipt-layer-card">
+              <p className="eyebrow">Field candidates</p>
+              <div className="mini-stack">
+                {payload.parsedData.fieldCandidates.map((field) => (
+                  <MetricLine key={`${field.label}-${field.value}`} label={field.label} value={`${field.value} · ${Math.round(field.confidence * 100)}%`} />
+                ))}
+              </div>
+            </article>
+            <article className="list-card receipt-layer-card">
+              <p className="eyebrow">Raw text</p>
+              <pre className="receipt-raw-text">{payload.parsedData.rawText}</pre>
+              <div className="chip-row">
+                {payload.parsedData.returnPolicySnippet ? <span className="chip">{payload.parsedData.returnPolicySnippet}</span> : null}
+                {payload.parsedData.warrantySnippet ? <span className="chip chip--accent">{payload.parsedData.warrantySnippet}</span> : null}
+              </div>
+            </article>
+            {payload.evidenceTrail?.length ? (
+              <article className="list-card receipt-layer-card">
+                <p className="eyebrow">Evidence trail</p>
+                <div className="mini-stack">
+                  {payload.evidenceTrail.map((evidence) => (
+                    <MetricLine key={evidence.id} label={evidence.label} value={evidence.snippet} />
+                  ))}
+                </div>
+              </article>
+            ) : null}
+          </div>
+        ) : (
+          <BlankCard title="Parsed output pending" body="Extraction is still turning the raw receipt into reviewable text and field candidates." />
+        )}
+      </SectionCard>
+
+      <SectionCard title="Structured purchase">
+        {payload.lineItems.length ? (
+          <div className="card-list">
+            {payload.lineItems.map((lineItem) => (
+              <article className={`list-card receipt-line-item ${lineItem.id === payload.selectedLineItemId ? 'receipt-line-item--selected' : ''}`} key={lineItem.id}>
+                <div className="list-card__header">
+                  <div>
+                    <h3>{lineItem.descriptionNormalized}</h3>
+                    <p>{lineItem.descriptionRaw}</p>
+                  </div>
+                  <strong>{money.format(lineItem.lineTotal)}</strong>
+                </div>
+                <div className="chip-row">
+                  <span className={`chip chip--${lineItem.reviewState}`}>{lineItem.reviewState.replace('_', ' ')}</span>
+                  <span className="chip">{lineItem.quantity} qty</span>
+                  {lineItem.assetCandidateFlag ? <span className="chip chip--accent">Thing candidate</span> : null}
+                  <span className="chip">{lineItem.productMatchStatus}</span>
+                </div>
+              </article>
+            ))}
+            {selectedLineItem && payload.evidence?.snippet ? (
+              <article className="list-card receipt-layer-card">
+                <p className="eyebrow">Selected evidence</p>
+                <p>{payload.evidence.snippet}</p>
+                <div className="chip-row">
+                  <span className="chip">{selectedLineItem.descriptionNormalized}</span>
+                  <span className="chip">{payload.evidence.evidenceType.replace('_', ' ')}</span>
+                  {payload.evidence.pageNumber ? <span className="chip">Page {payload.evidence.pageNumber}</span> : null}
+                </div>
+              </article>
+            ) : null}
+          </div>
+        ) : (
+          <BlankCard title="Line items pending" body="The receipt is still being structured into purchase line items." />
+        )}
+      </SectionCard>
+
+      <SectionCard title="Retailer and category enrichment">
+        {payload.structuredData ? (
+          <div className="receipt-grid">
+            <article className="list-card receipt-layer-card">
+              <p className="eyebrow">Retailer knowledge</p>
+              <div className="mini-stack">
+                <MetricLine label="Merchant profile" value={payload.structuredData.retailerProfile} />
+                <MetricLine label="Returnability" value={payload.structuredData.returnWindowLabel} />
+                <MetricLine label="Warranty support" value={payload.structuredData.warrantySupportLabel} />
+              </div>
+            </article>
+            <article className="list-card receipt-layer-card">
+              <p className="eyebrow">Tags</p>
+              <div className="chip-row">
+                {payload.structuredData.taxTags.map((tag) => (
+                  <span className="chip" key={`tax-${tag}`}>
+                    Tax: {tag}
+                  </span>
+                ))}
+                {payload.structuredData.lifestyleTags.map((tag) => (
+                  <span className="chip chip--accent" key={`life-${tag}`}>
+                    {tag}
+                  </span>
+                ))}
+                {payload.structuredData.productCategories.map((tag) => (
+                  <span className="chip" key={`product-${tag}`}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </article>
+          </div>
+        ) : (
+          <BlankCard title="Enrichment pending" body="Retailer lookups and category tagging show up once parsed purchase data is ready." />
+        )}
+      </SectionCard>
+
+      <SectionCard title="Search and retrieval">
+        {payload.searchDocument ? (
+          <article className="list-card receipt-layer-card">
+            <p className="eyebrow">Embedded data preview</p>
+            <p>{payload.searchDocument.textPreview}</p>
+            <div className="chip-row">
+              <span className="chip chip--accent">{payload.searchDocument.status}</span>
+              {payload.searchDocument.keywords.map((keyword) => (
+                <span className="chip" key={keyword}>
+                  {keyword}
+                </span>
+              ))}
+            </div>
+            {infoAlerts.length ? (
+              <div className="mini-stack">
+                {infoAlerts.map((alert) => (
+                  <MetricLine key={alert.id} label={alert.title} value={alert.body} />
+                ))}
+              </div>
+            ) : null}
+          </article>
+        ) : (
+          <BlankCard title="Search layer pending" body="Semantic retrieval gets created after raw and parsed receipt data are available." />
+        )}
+      </SectionCard>
+
+      <SectionCard title="People and memory suggestions">
+        <div className="receipt-grid">
+          <article className="list-card receipt-layer-card">
+            <p className="eyebrow">People</p>
+            {payload.peopleSuggestions?.length ? (
+              <div className="chip-row">
+                {payload.peopleSuggestions.map((person) => (
+                  <span className="chip" key={person.id}>
+                    {person.displayName} · {person.relationshipType}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p>No people suggestions yet.</p>
+            )}
+          </article>
+          <article className="list-card receipt-layer-card">
+            <p className="eyebrow">Memories</p>
+            {payload.memorySuggestions?.length ? (
+              <div className="chip-row">
+                {payload.memorySuggestions.map((memory) => (
+                  <span className="chip chip--accent" key={memory.id}>
+                    {memory.suggestedTitle}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p>No memory suggestions yet.</p>
+            )}
+          </article>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Next actions">
+        <div className="receipt-action-row">
+          <ActionButton
+            label={payload.receipt.status === 'trusted' ? 'Receipt trusted' : 'Mark review complete'}
+            onClick={() => onAction(`receipt:submit:${payload.receipt.id}`)}
+            tone="primary"
+          />
+          <ActionButton
+            label={payload.actions.canConvertToThing ? 'Thing candidates ready' : 'Wait for Things'}
+            onClick={() => onAction(payload.actions.canConvertToThing ? `receipt:convert:${payload.receipt.id}` : 'route:/things')}
+          />
+        </div>
+      </SectionCard>
+
+      {payload.upgradeCard ? <UpgradeCard data={payload.upgradeCard} onAction={onAction} /> : null}
     </div>
   );
 }
@@ -1041,16 +1167,18 @@ export function AgentChatView({ payload, state, onAction }: PageProps<AgentChatP
     <div className="route-stack">
       <section className="route-header-card">
         <div>
-          <p className="eyebrow">Grounded, cited, mocked</p>
+          <p className="eyebrow">Queryable product graph</p>
           <h1>{payload.title}</h1>
+          <p>Believable mocked responses now point back into Things, People, Memories, and their shared receipts.</p>
         </div>
       </section>
+
       {payload.conversation.length === 0 ? (
         <EmptyPanel
           title="Ask about purchases, Things, people, or memories"
-          body="Agent answers stay mocked in Milestone 1, but the UX already shows citations and follow-up patterns."
+          body="Suggested prompts below are designed to demonstrate the shared relationship graph."
           actionLabel="Try a prompt"
-          onAction={() => onAction('agent:prompt')}
+          onAction={() => onAction('route:/agent/chat')}
         />
       ) : (
         <div className="conversation">
@@ -1060,9 +1188,16 @@ export function AgentChatView({ payload, state, onAction }: PageProps<AgentChatP
               {message.citations?.length ? (
                 <div className="chip-row">
                   {message.citations.map((citation) => (
-                    <span className="chip" key={`${citation.type}-${citation.label}`}>
+                    <button className="chip chip--button" key={`${citation.type}-${citation.label}`} type="button" onClick={() => citation.action ? onAction(citation.action) : undefined}>
                       {citation.label}
-                    </span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {message.structuredResults?.length ? (
+                <div className="card-list">
+                  {message.structuredResults.map((result) => (
+                    <StructuredResultCard key={result.id} result={result} onAction={onAction} />
                   ))}
                 </div>
               ) : null}
@@ -1080,22 +1215,31 @@ export function AgentChatView({ payload, state, onAction }: PageProps<AgentChatP
           ))}
         </div>
       )}
-      {payload.suggestedPrompts?.length ? (
-        <SectionCard title="Suggested prompts">
-          <div className="chip-row">
-            {payload.suggestedPrompts.map((prompt) => (
-              <button className="chip chip--button" key={prompt} type="button">
-                {prompt}
-              </button>
-            ))}
-          </div>
-        </SectionCard>
-      ) : null}
+
+      <SectionCard title="Suggested prompts">
+        <div className="chip-row">
+          {payload.suggestedPrompts.map((prompt) => (
+            <button className="chip chip--button" key={prompt} type="button">
+              {prompt}
+            </button>
+          ))}
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Recent queries">
+        <div className="chip-row">
+          {payload.recentQueries.map((prompt) => (
+            <span className="chip" key={prompt}>
+              {prompt}
+            </span>
+          ))}
+        </div>
+      </SectionCard>
     </div>
   );
 }
 
-export function AgentVoiceView({ payload, state }: PageProps<AgentVoicePayload>) {
+export function AgentVoiceView({ payload, state, onAction }: PageProps<AgentVoicePayload>) {
   if (state === 'loading') return <LoadingState label="Loading Agent voice" blocks={3} />;
   if (!payload) return <RouteError title="Missing Agent voice mock" body="No payload was found for this state." />;
 
@@ -1114,14 +1258,30 @@ export function AgentVoiceView({ payload, state }: PageProps<AgentVoicePayload>)
         <h2>{payload.prompt ?? prettifyState(payload.state)}</h2>
         {payload.transcript ? <p className="voice-transcript">"{payload.transcript}"</p> : null}
       </section>
+
+      <SectionCard title="Prompt examples">
+        <div className="chip-row">
+          {payload.examples.map((example) => (
+            <span className="chip" key={example}>
+              {example}
+            </span>
+          ))}
+        </div>
+      </SectionCard>
+
       {payload.response ? (
         <SectionCard title="Answer">
           <p>{payload.response.content}</p>
           <div className="chip-row">
             {payload.response.citations.map((citation) => (
-              <span className="chip" key={`${citation.type}-${citation.label}`}>
+              <button className="chip chip--button" key={`${citation.type}-${citation.label}`} type="button" onClick={() => citation.action ? onAction(citation.action) : undefined}>
                 {citation.label}
-              </span>
+              </button>
+            ))}
+          </div>
+          <div className="card-list">
+            {payload.response.structuredResults.map((result) => (
+              <StructuredResultCard key={result.id} result={result} onAction={onAction} />
             ))}
           </div>
           <div className="chip-row">
@@ -1196,6 +1356,54 @@ function ScreenToolbar(props: { eyebrow: string; title: string; selectedView: st
   );
 }
 
+function DetailHeader(props: {
+  eyebrow: string;
+  title: string;
+  summary: string;
+  backLabel: string;
+  onBack: () => void;
+  chips?: string[];
+}) {
+  return (
+    <section className="detail-header">
+      <button className="detail-header__back" type="button" onClick={props.onBack}>
+        <Icon name="chevron" className="icon-sm detail-header__back-icon" />
+        <span>{props.backLabel}</span>
+      </button>
+      <p className="eyebrow">{props.eyebrow}</p>
+      <h1>{props.title}</h1>
+      <p>{props.summary}</p>
+      {props.chips?.length ? (
+        <div className="chip-row">
+          {props.chips.map((chip) => (
+            <span className="chip" key={chip}>
+              {chip}
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function SurfaceControls(props: { searchLabel: string; controls: string[] }) {
+  return (
+    <section className="surface-controls">
+      <div className="surface-controls__search">
+        <Icon name="search" className="icon-sm" />
+        <span>{props.searchLabel}</span>
+      </div>
+      <div className="chip-row">
+        {props.controls.map((control) => (
+          <span className="chip" key={control}>
+            {control}
+          </span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function SummaryBand(props: { items: SummaryMetric[] }) {
   return (
     <section className="summary-band">
@@ -1208,13 +1416,13 @@ function SummaryBand(props: { items: SummaryMetric[] }) {
 
 function SummaryStatCard(props: { item: SummaryMetric }) {
   return (
-    <article className={`summary-stat summary-stat--${props.item.tone ?? 'blue'}`}>
+    <article className={`summary-stat summary-stat--${props.item.tone}`}>
       <div className="summary-stat__copy">
         <span>{props.item.label}</span>
         <strong>{props.item.value}</strong>
-        {props.item.note ? <small>{props.item.note}</small> : null}
+        <small>{props.item.note}</small>
       </div>
-      {props.item.trend?.length ? <MiniSparkline tone={props.item.tone ?? 'blue'} values={props.item.trend} /> : null}
+      <MiniSparkline tone={props.item.tone} values={props.item.trend} />
     </article>
   );
 }
@@ -1236,6 +1444,35 @@ function SectionCard(props: {
         ) : null}
       </div>
       {props.children}
+    </section>
+  );
+}
+
+function FeaturePanel(props: {
+  eyebrow: string;
+  title: string;
+  body: string;
+  actionLabel: string;
+  onAction: () => void;
+  chips?: string[];
+}) {
+  return (
+    <section className="feature-panel">
+      <div>
+        <p className="eyebrow">{props.eyebrow}</p>
+        <h2>{props.title}</h2>
+      </div>
+      <p>{props.body}</p>
+      {props.chips?.length ? (
+        <div className="chip-row">
+          {props.chips.map((chip) => (
+            <span className="chip" key={chip}>
+              {chip}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      <ActionButton label={props.actionLabel} onClick={props.onAction} tone="primary" />
     </section>
   );
 }
@@ -1262,74 +1499,175 @@ function BlankCard(props: { title: string; body: string }) {
   );
 }
 
+function StructuredResultCard(props: { result: AgentStructuredResult; onAction: (action: string) => void }) {
+  return (
+    <article className="structured-result">
+      <div>
+        <h3>{props.result.title}</h3>
+        <p>{props.result.body}</p>
+      </div>
+      {props.result.chips?.length ? (
+        <div className="chip-row">
+          {props.result.chips.map((chip) => (
+            <span className="chip" key={chip}>
+              {chip}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      <ActionButton label={props.result.actionLabel} onClick={() => props.onAction(props.result.action)} />
+    </article>
+  );
+}
+
+function MetadataList(props: { items: Array<{ label: string; value: string }> }) {
+  return (
+    <div className="metadata-list">
+      {props.items.map((item) => (
+        <div className="metadata-row" key={`${item.label}-${item.value}`}>
+          <span>{item.label}</span>
+          <strong>{renderValue(item.value)}</strong>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ActivityFeed(props: { items: ActivityItem[]; onAction: (action: string) => void }) {
+  return (
+    <div className="activity-feed">
+      {props.items.map((item) => (
+        <button className="activity-item" key={item.id} type="button" onClick={() => props.onAction(item.action)}>
+          <span className={`activity-item__dot activity-item__dot--${item.kind}`} />
+          <span className="activity-item__body">
+            <strong>{item.title}</strong>
+            <span>{item.body}</span>
+            <small>{fullDateTime.format(new Date(item.occurredAt))}</small>
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ReceiptRow(props: { receipt: ReceiptCardData; onAction: (action: string) => void }) {
+  const { receipt } = props;
+
+  return (
+    <button className="entity-row entity-row--receipt" type="button" onClick={() => props.onAction(receipt.action)}>
+      <div className="entity-row__body">
+        <div className="list-card__header">
+          <div>
+            <h3>{receipt.merchantName}</h3>
+            <p>{fullDateTime.format(new Date(receipt.purchasedAt))}</p>
+          </div>
+          <strong>{money.format(receipt.grandTotal)}</strong>
+        </div>
+        <p>{receipt.note}</p>
+        <div className="chip-row">
+          <span className={`chip chip--status chip--${receipt.status}`}>{receipt.status.replace('_', ' ')}</span>
+          <span className="chip">{receipt.lineItemCount} items</span>
+          {receipt.tags.map((tag) => (
+            <span className="chip" key={tag}>
+              {tag}
+            </span>
+          ))}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function ThingRow(props: { thing: ThingCardData; onAction: (action: string) => void; featured?: boolean }) {
+  const { thing } = props;
+  return (
+    <button className={`entity-row ${props.featured ? 'entity-row--featured' : ''}`} type="button" onClick={() => props.onAction(thing.action)}>
+      <div className="entity-row__body">
+        <div className="list-card__header">
+          <div>
+            <h3>{thing.displayName}</h3>
+            <p>{thing.category} · {thing.subcategory}</p>
+          </div>
+          <strong>{money.format(thing.purchasePrice)}</strong>
+        </div>
+        <p>{thing.note}</p>
+        <div className="chip-row">
+          {thing.badges.map((badge) => (
+            <span className="chip" key={badge}>
+              {badge}
+            </span>
+          ))}
+          {thing.linkedPeople.slice(0, 2).map((person) => (
+            <span className="chip chip--accent" key={person}>
+              {person}
+            </span>
+          ))}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function PersonRow(props: { person: PersonCardData; onAction: (action: string) => void }) {
+  const { person } = props;
+  return (
+    <button className="entity-row" type="button" onClick={() => props.onAction(person.action)}>
+      <div className="entity-row__body">
+        <div className="list-card__header">
+          <div>
+            <h3>{person.displayName}</h3>
+            <p>{person.relationshipType}</p>
+          </div>
+          <strong>{money.format(person.totalSpend)}</strong>
+        </div>
+        <p>{person.note}</p>
+        <div className="chip-row">
+          {person.tags.map((tag) => (
+            <span className="chip" key={tag}>
+              {tag}
+            </span>
+          ))}
+          <span className="chip chip--accent">{person.linkedThingCount} things</span>
+          <span className="chip">{person.linkedMemoryCount} memories</span>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function MemoryRow(props: { memory: MemoryCardData; onAction: (action: string) => void; rich?: boolean }) {
+  const { memory } = props;
+  return (
+    <button className={`entity-row ${props.rich ? 'entity-row--memory' : ''}`} type="button" onClick={() => props.onAction(memory.action)}>
+      <div className="entity-row__body">
+        <div className="list-card__header">
+          <div>
+            <h3>{memory.title}</h3>
+            <p>{memory.placeLabel}</p>
+          </div>
+          <span className={`state-pill state-pill--${memory.memoryState}`}>{memory.memoryState}</span>
+        </div>
+        <p>{memory.summary}</p>
+        <div className="chip-row">
+          <span className="chip">{memory.memoryType}</span>
+          <span className="chip">{memory.significance}</span>
+          {memory.peoplePreview.map((person) => (
+            <span className="chip chip--accent" key={person}>
+              {person}
+            </span>
+          ))}
+        </div>
+        {props.rich ? <p>{fullDateTime.format(new Date(memory.startsAt))}</p> : null}
+      </div>
+    </button>
+  );
+}
+
 function MetricLine(props: { label: string; value: string }) {
   return (
     <div className="metric-line">
       {props.label ? <span>{props.label}</span> : null}
       <strong>{props.value}</strong>
-    </div>
-  );
-}
-
-function ReceiptRow(props: { receipt: ReceiptCard }) {
-  const { receipt } = props;
-
-  return (
-    <article className="list-card list-card--receipt">
-      <div className="list-card__header">
-        <div>
-          <h3>{receipt.merchantName}</h3>
-          <p>{fullDateTime.format(new Date(receipt.purchasedAt))}</p>
-        </div>
-        <strong>{money.format(receipt.grandTotal)}</strong>
-      </div>
-      <div className="chip-row">
-        <span className={`chip chip--status chip--${receipt.status}`}>{receipt.status.replace('_', ' ')}</span>
-        <span className="chip">{receipt.lineItemCount} items</span>
-      </div>
-    </article>
-  );
-}
-
-function MemoryCandidateRow(props: { memory: MemorySummary }) {
-  const { memory } = props;
-
-  return (
-    <article className="list-card">
-      <div className="list-card__header">
-        <div>
-          <h3>{memory.suggestedTitle}</h3>
-          <p>{memory.placeLabel}</p>
-        </div>
-        <span className={`state-pill state-pill--${memory.memoryState}`}>{memory.memoryState}</span>
-      </div>
-      <p>{fullDateTime.format(new Date(memory.startsAt))}</p>
-    </article>
-  );
-}
-
-function CompactMetricBars(props: { metrics: Record<string, number | string> }) {
-  const values = Object.entries(props.metrics).filter(
-    ([key, value]) => key !== 'currency' && typeof value === 'number'
-  ) as Array<[string, number]>;
-
-  if (!values.length) {
-    return null;
-  }
-
-  const max = Math.max(...values.map(([, value]) => value), 1);
-
-  return (
-    <div className="mini-bars">
-      {values.map(([label, value]) => (
-        <div className="mini-bars__row" key={label}>
-          <span>{label}</span>
-          <div className="mini-bars__track">
-            <div className="mini-bars__fill" style={{ width: `${(value / max) * 100}%` }} />
-          </div>
-          <strong>{money.format(value)}</strong>
-        </div>
-      ))}
     </div>
   );
 }
@@ -1404,18 +1742,14 @@ function buildThingsTreemapOption(
         type: 'treemap',
         roam: false,
         nodeClick: false,
-        breadcrumb: {
-          show: false,
-        },
+        breadcrumb: { show: false },
         itemStyle: {
           borderColor: '#f7f8fc',
           borderWidth: 4,
           gapWidth: 4,
           borderRadius: 20,
         },
-        upperLabel: {
-          show: false,
-        },
+        upperLabel: { show: false },
         label: {
           show: true,
           formatter: '{b}',
@@ -1532,14 +1866,6 @@ function buildPeopleBubbleOption(
   };
 }
 
-function buildSparklineSeed(seed: number, length: number) {
-  const base = Math.max(seed, 1);
-  return Array.from({ length }, (_, index) => {
-    const wave = ((base + index * 7) % 9) + 3;
-    return Math.max(1, Math.round(base * (0.34 + wave / 16)));
-  });
-}
-
 function prettifyTier(value: string) {
   return value
     .split('_')
@@ -1551,30 +1877,10 @@ function prettifyState(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-function formatDateOnly(value: string) {
-  return fullDate.format(new Date(`${value}T12:00:00`));
-}
+function renderValue(value: string) {
+  if (/^\d{4}-\d{2}-\d{2}T/.test(value)) {
+    return fullDateTime.format(new Date(value));
+  }
 
-function isThingsIntroSummary(
-  summary: ThingsPayload['summary']
-): summary is Extract<ThingsPayload['summary'], { headline: string; body: string }> {
-  return 'headline' in summary;
-}
-
-function isPeopleIntroSummary(
-  summary: PeoplePayload['summary']
-): summary is Extract<PeoplePayload['summary'], { headline: string; body: string }> {
-  return 'headline' in summary && 'body' in summary;
-}
-
-function isPeopleMetricsSummary(
-  summary: PeoplePayload['summary']
-): summary is Extract<PeoplePayload['summary'], { personCount: number }> {
-  return 'personCount' in summary;
-}
-
-function isPeopleFocusSummary(
-  summary: PeoplePayload['summary']
-): summary is Extract<PeoplePayload['summary'], { headline: string; subheadline: string }> {
-  return 'headline' in summary && 'subheadline' in summary;
+  return value;
 }

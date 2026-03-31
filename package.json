@@ -8,6 +8,12 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
+    "ocr:eval:gemini": "node ./scripts/run-gemini-receipt-eval.mjs",
+    "ocr:snapshots:gemini": "node ./scripts/build-gemini-ocr-snapshots.mjs",
+    "figma:parse-url": "node ./scripts/parse-figma-url.mjs",
+    "ocr:smoke:gemini": "node ./scripts/run-gemini-receipt-smoke.mjs",
+    "receipts:index-fixtures": "node ./scripts/build-receipt-fixture-catalog.mjs",
+    "test:receipts": "vitest run test/receiptFixtureValidation.test.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

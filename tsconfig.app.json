@@ -22,5 +22,5 @@
     "types": ["vite/client", "vitest/globals"]
   },
   "include": ["**/*.ts", "**/*.tsx"],
-  "exclude": ["dist", "mocks/handlers/**/*"]
+  "exclude": ["dist", "mocks/handlers/**/*", "server/**/*"]
 }
