@@ -4,6 +4,7 @@ import {
   hasLiveReceipt,
   listLiveReceiptCards,
   listProjectedMemories,
+  listProjectedMerchants,
   listProjectedPurchaseEvents,
   listProjectedPurchaseLineItems,
   listProjectedProducts,
@@ -256,6 +257,15 @@ export type ThingDetailPayload = {
     documentRole: string;
     documentType: string;
   }>;
+  merchant: {
+    title: string;
+    retailerProfile: string;
+    kind: string;
+    purchaseCount: string;
+    spendLabel: string;
+    defaultCategories: string[];
+    note: string;
+  } | null;
   metadata: Array<{ label: string; value: string }>;
   purchaseSource: ReceiptCardData | null;
   linkedPeople: PersonCardData[];
@@ -1322,6 +1332,9 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
   const allThingRecords = allThings();
   const thing = getThing(options.params?.thingId ?? 'thing_mixer') ?? allThingRecords[0];
   const sourceReceipt = getReceipt(thing.receiptId) ?? null;
+  const merchant = listProjectedMerchants().find((candidate) => candidate.merchantId === `merchant_${thing.merchantName.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`)
+    ?? listProjectedMerchants().find((candidate) => candidate.displayName === thing.merchantName)
+    ?? null;
   const product = listProjectedProducts().find((candidate) => candidate.linkedThingId === thing.id)
     ?? listProjectedProducts().find((candidate) => candidate.receiptId === thing.receiptId && candidate.displayName === thing.displayName)
     ?? null;
@@ -1371,6 +1384,19 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
       documentRole: document.documentRole,
       documentType: document.documentType,
     })),
+    merchant: merchant
+      ? {
+          title: merchant.displayName,
+          retailerProfile: merchant.retailerProfile,
+          kind: merchant.kind,
+          purchaseCount: `${merchant.purchaseCount} trusted purchase${merchant.purchaseCount === 1 ? '' : 's'}`,
+          spendLabel: `$${merchant.trustedSpendTotal.toFixed(2)} trusted spend`,
+          defaultCategories: merchant.defaultProductCategories,
+          note: merchant.merchantDirectoryId
+            ? 'This merchant is linked to the shared vendor library and can reuse return and category defaults.'
+            : 'This merchant is currently only known from your reviewed receipts.',
+        }
+      : null,
     metadata: [
       { label: 'Category', value: `${thing.category} / ${thing.subcategory}` },
       { label: 'Purchase source', value: thing.merchantName },

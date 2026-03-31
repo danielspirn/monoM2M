@@ -7,6 +7,7 @@ import {
   listProjectedPurchaseEvents,
   listProjectedPurchaseLineItems,
   listProjectedMemories,
+  listProjectedMerchants,
   listProjectedPurchaseReceipts,
   listProjectedProducts,
   listProjectedThingDocuments,
@@ -43,6 +44,7 @@ describe('receiptWorkflowStore projections', () => {
     const projectedReceipts = listProjectedPurchaseReceipts();
     const projectedPurchaseEvents = listProjectedPurchaseEvents();
     const projectedPurchaseLineItems = listProjectedPurchaseLineItems();
+    const projectedMerchants = listProjectedMerchants();
     const projectedProducts = listProjectedProducts();
     const projectedThings = listProjectedThings();
     const projectedMemories = listProjectedMemories();
@@ -53,6 +55,10 @@ describe('receiptWorkflowStore projections', () => {
     expect(projectedPurchaseEvents[0]?.merchantId).toBe('merchant_target');
     expect(projectedPurchaseEvents[0]?.merchantDirectoryId).toBe('merchant_directory_target');
     expect(projectedPurchaseEvents[0]?.thingCandidateCount).toBe(1);
+    expect(projectedMerchants).toHaveLength(1);
+    expect(projectedMerchants[0]?.displayName).toBe('Target');
+    expect(projectedMerchants[0]?.purchaseCount).toBe(1);
+    expect(projectedMerchants[0]?.trustedSpendTotal).toBe(projectedPurchaseEvents[0]?.grandTotal);
 
     expect(projectedPurchaseLineItems).toHaveLength(2);
     expect(projectedPurchaseLineItems[0]?.purchaseEventId).toBe(`purchase_${capture.primaryReceiptId}`);

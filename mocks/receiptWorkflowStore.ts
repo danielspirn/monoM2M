@@ -336,6 +336,22 @@ export type ProjectedPurchaseEventRecord = {
   note: string;
 };
 
+export type ProjectedMerchantRecord = {
+  id: string;
+  merchantId: string;
+  merchantDirectoryId: string | null;
+  displayName: string;
+  kind: 'retailer' | 'service_provider' | 'restaurant' | 'marketplace' | 'unknown';
+  retailerProfile: string;
+  aliases: string[];
+  purchaseCount: number;
+  trustedSpendTotal: number;
+  latestPurchaseAt: string;
+  latestPurchaseEventId: string;
+  defaultReturnWindowDays?: number;
+  defaultProductCategories: string[];
+};
+
 export type ProjectedPurchaseLineItemRecord = {
   id: string;
   purchaseEventId: string;
@@ -493,6 +509,7 @@ export type GroundedReceiptAnswer = {
 
 type StoredPurchaseGraphRecords = {
   savedAt: string;
+  merchantRecord: ProjectedMerchantRecord;
   purchaseEvent: ProjectedPurchaseEventRecord;
   purchaseLineItems: ProjectedPurchaseLineItemRecord[];
   productRecords: ProjectedProductRecord[];
@@ -738,6 +755,38 @@ export function listProjectedPurchaseEvents(): ProjectedPurchaseEventRecord[] {
     .filter((record) => record.status === 'trusted')
     .map((record) => getStoredPurchaseGraph(record).purchaseEvent)
     .sort((left, right) => right.purchasedAt.localeCompare(left.purchasedAt));
+}
+
+export function listProjectedMerchants(): ProjectedMerchantRecord[] {
+  const merchantMap = new Map<string, ProjectedMerchantRecord>();
+
+  readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .forEach((record) => {
+      const graph = getStoredPurchaseGraph(record);
+      const merchant = graph.merchantRecord;
+      const existing = merchantMap.get(merchant.id);
+
+      if (!existing) {
+        merchantMap.set(merchant.id, merchant);
+        return;
+      }
+
+      const isNewer = merchant.latestPurchaseAt > existing.latestPurchaseAt;
+      merchantMap.set(merchant.id, {
+        ...existing,
+        aliases: Array.from(new Set([...existing.aliases, ...merchant.aliases])),
+        purchaseCount: existing.purchaseCount + merchant.purchaseCount,
+        trustedSpendTotal: roundCurrency(existing.trustedSpendTotal + merchant.trustedSpendTotal),
+        latestPurchaseAt: isNewer ? merchant.latestPurchaseAt : existing.latestPurchaseAt,
+        latestPurchaseEventId: isNewer ? merchant.latestPurchaseEventId : existing.latestPurchaseEventId,
+        defaultProductCategories: Array.from(new Set([...existing.defaultProductCategories, ...merchant.defaultProductCategories])),
+      });
+    });
+
+  return Array.from(merchantMap.values()).sort((left, right) =>
+    right.latestPurchaseAt.localeCompare(left.latestPurchaseAt) || right.trustedSpendTotal - left.trustedSpendTotal,
+  );
 }
 
 export function listProjectedPurchaseLineItems(): ProjectedPurchaseLineItemRecord[] {
@@ -1107,6 +1156,7 @@ function materializeRecord(record: StoredReceiptRecord): StoredReceiptRecord {
       && (
         !nextRecord.purchaseProjection
         || !nextRecord.purchaseGraph
+        || !nextRecord.purchaseGraph.merchantRecord
         || !nextRecord.purchaseGraph.productRecords
         || !nextRecord.purchaseGraph.memoryRecords
         || !nextRecord.purchaseGraph.warrantyRecords
@@ -1264,6 +1314,26 @@ function buildProjectedPurchaseEventRecord(record: StoredReceiptRecord): Project
     memorySuggestionIds: record.memorySuggestions.map((memory) => memory.id),
     searchKeywords: record.searchDocument.keywords,
     note: `${record.header.merchantName} receipt is trusted and now anchors structured purchase history.`,
+  };
+}
+
+function buildProjectedMerchantRecord(record: StoredReceiptRecord, purchaseEvent: ProjectedPurchaseEventRecord): ProjectedMerchantRecord {
+  const entry = resolveMerchantDirectoryEntry(record.header.merchantName);
+
+  return {
+    id: purchaseEvent.merchantId,
+    merchantId: purchaseEvent.merchantId,
+    merchantDirectoryId: entry ? entry.id : null,
+    displayName: entry?.displayName ?? purchaseEvent.merchantName,
+    kind: entry?.kind ?? 'unknown',
+    retailerProfile: purchaseEvent.retailerProfile,
+    aliases: entry?.aliases ?? [purchaseEvent.merchantName.toLowerCase()],
+    purchaseCount: 1,
+    trustedSpendTotal: purchaseEvent.grandTotal,
+    latestPurchaseAt: purchaseEvent.purchasedAt,
+    latestPurchaseEventId: purchaseEvent.id,
+    defaultReturnWindowDays: entry?.defaultReturnWindowDays,
+    defaultProductCategories: entry?.defaultProductCategories ?? purchaseEvent.productCategories,
   };
 }
 
@@ -1608,6 +1678,7 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
     purchaseProjection,
   };
   const purchaseEvent = buildProjectedPurchaseEventRecord(projectedRecord);
+  const merchantRecord = buildProjectedMerchantRecord(projectedRecord, purchaseEvent);
   const purchaseLineItems = buildProjectedPurchaseLineItemRecords(projectedRecord);
   const productRecords = buildProjectedProductRecords(projectedRecord, purchaseLineItems);
   const baseThingRecords = productRecords
@@ -1623,6 +1694,7 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
 
   return {
     savedAt,
+    merchantRecord,
     purchaseEvent,
     purchaseLineItems,
     productRecords,

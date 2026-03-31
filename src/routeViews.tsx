@@ -439,6 +439,30 @@ export function ThingDetailView({ state, payload, onAction }: PageProps<ThingDet
         </SectionCard>
       ) : null}
 
+      {payload.merchant ? (
+        <SectionCard title="Merchant record">
+          <div className="route-stack route-stack--compact">
+            <div>
+              <p className="eyebrow">{payload.merchant.kind}</p>
+              <h3>{payload.merchant.title}</h3>
+              <p>{payload.merchant.note}</p>
+            </div>
+            <div className="chip-row">
+              <span className="chip chip--accent">{payload.merchant.retailerProfile}</span>
+              <span className="chip">{payload.merchant.purchaseCount}</span>
+              <span className="chip">{payload.merchant.spendLabel}</span>
+            </div>
+            <div className="chip-row">
+              {payload.merchant.defaultCategories.map((category) => (
+                <span className="chip" key={category}>
+                  {category}
+                </span>
+              ))}
+            </div>
+          </div>
+        </SectionCard>
+      ) : null}
+
       {payload.detail.supportLabels.length ? (
         <SectionCard title="Ownership support">
           <div className="chip-row">
