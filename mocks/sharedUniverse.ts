@@ -3,6 +3,7 @@ import {
   getLiveReceiptStudioPayload,
   hasLiveReceipt,
   listLiveReceiptCards,
+  listProjectedMemories,
   listProjectedPurchaseEvents,
   listProjectedPurchaseLineItems,
   listProjectedThings,
@@ -738,6 +739,14 @@ function isFamilyPersona(personaId?: string) {
 function projectedReceipts(): ReceiptRecord[] {
   const purchaseEvents = listProjectedPurchaseEvents();
   const purchaseLineItems = listProjectedPurchaseLineItems();
+  const projectedMemoryIdsByReceipt = new Map<string, string[]>();
+
+  listProjectedMemories().forEach((memory) => {
+    memory.receiptIds.forEach((receiptId) => {
+      const current = projectedMemoryIdsByReceipt.get(receiptId) ?? [];
+      projectedMemoryIdsByReceipt.set(receiptId, [...current, memory.id]);
+    });
+  });
 
   return purchaseEvents.map((purchaseEvent) => {
     const eventLineItems = purchaseLineItems.filter((item) => item.purchaseEventId === purchaseEvent.id);
@@ -755,7 +764,7 @@ function projectedReceipts(): ReceiptRecord[] {
       lineHighlights: eventLineItems.slice(0, 3).map((item) => item.description),
       thingIds: durableLineItems.flatMap((item) => (item.thingId ? [item.thingId] : [])),
       personIds: purchaseEvent.personIds,
-      memoryIds: [],
+      memoryIds: projectedMemoryIdsByReceipt.get(purchaseEvent.receiptId) ?? [],
       category: durableLineItems[0]?.category ?? purchaseEvent.productCategories[0] ?? 'General merchandise',
       returnWindowEndsAt: purchaseEvent.returnWindowEndsAt,
     };
@@ -763,6 +772,15 @@ function projectedReceipts(): ReceiptRecord[] {
 }
 
 function projectedThingRecords(): ThingRecord[] {
+  const projectedMemoryIdsByThing = new Map<string, string[]>();
+
+  listProjectedMemories().forEach((memory) => {
+    memory.thingIds.forEach((thingId) => {
+      const current = projectedMemoryIdsByThing.get(thingId) ?? [];
+      projectedMemoryIdsByThing.set(thingId, [...current, memory.id]);
+    });
+  });
+
   return listProjectedThings().map((thing) => ({
     id: thing.id,
     displayName: thing.displayName,
@@ -782,7 +800,26 @@ function projectedThingRecords(): ThingRecord[] {
     supportLabels: thing.supportLabels,
     linkedDocumentCount: thing.linkedDocumentCount,
     personIds: thing.personIds,
-    memoryIds: thing.memoryIds,
+    memoryIds: projectedMemoryIdsByThing.get(thing.id) ?? thing.memoryIds,
+  }));
+}
+
+function projectedMemories(): MemoryRecord[] {
+  return listProjectedMemories().map((memory) => ({
+    id: memory.id,
+    title: memory.title,
+    suggestedTitle: memory.suggestedTitle,
+    memoryState: memory.memoryState,
+    memoryType: memory.memoryType,
+    significance: memory.significance,
+    startsAt: memory.startsAt,
+    endsAt: memory.endsAt,
+    placeLabel: memory.placeLabel,
+    summary: memory.summary,
+    notes: memory.notes,
+    receiptIds: memory.receiptIds,
+    personIds: memory.personIds,
+    thingIds: memory.thingIds,
   }));
 }
 
@@ -792,6 +829,10 @@ function allReceipts() {
 
 function allThings() {
   return [...projectedThingRecords(), ...things];
+}
+
+function allMemories() {
+  return [...projectedMemories(), ...memories];
 }
 
 function getReceipt(id: string) {
@@ -807,7 +848,7 @@ function getPerson(id: string) {
 }
 
 function getMemory(id: string) {
-  return memories.find((memory) => memory.id === id);
+  return allMemories().find((memory) => memory.id === id);
 }
 
 function receiptCard(receipt: ReceiptRecord): ReceiptCardData {
@@ -860,6 +901,7 @@ function thingCard(thing: ThingRecord): ThingCardData {
 function personCard(person: PersonRecord): PersonCardData {
   const linkedReceiptIds = getLinkedReceiptIdsForPerson(person.id);
   const linkedThingIds = getLinkedThingIdsForPerson(person.id);
+  const linkedMemoryIds = getLinkedMemoryIdsForPerson(person.id);
   const linkedReceipts = linkedReceiptIds.map((id) => getReceipt(id)).filter(Boolean) as ReceiptRecord[];
   return {
     id: person.id,
@@ -868,7 +910,7 @@ function personCard(person: PersonRecord): PersonCardData {
     tags: person.tags,
     linkedPurchaseCount: linkedReceipts.length,
     linkedThingCount: linkedThingIds.length,
-    linkedMemoryCount: person.linkedMemoryIds.length,
+    linkedMemoryCount: linkedMemoryIds.length,
     totalSpend: linkedReceipts.reduce((sum, receipt) => sum + receipt.grandTotal, 0),
     note: person.notes,
     action: `route:/people/${person.id}`,
@@ -981,6 +1023,26 @@ function getLinkedThingIdsForPerson(personId: string) {
   });
 
   return Array.from(ids);
+}
+
+function getLinkedMemoryIdsForPerson(personId: string) {
+  const ids = new Set<string>((getPerson(personId)?.linkedMemoryIds ?? []).filter(Boolean));
+
+  allMemories().forEach((memory) => {
+    if (memory.personIds.includes(personId)) {
+      ids.add(memory.id);
+    }
+  });
+
+  return Array.from(ids);
+}
+
+function recentMemoryCards(limit: number) {
+  return allMemories()
+    .slice()
+    .sort((left, right) => right.startsAt.localeCompare(left.startsAt))
+    .slice(0, limit)
+    .map(memoryCard);
 }
 
 function recentThingCards(limit: number) {
@@ -1098,7 +1160,7 @@ function buildHomePayload(options: RouteBuilderOptions): HomePayload {
       recentReceipts: combinedRecentReceipts(2),
       topThings: recentThingCards(2),
       topPeople: [personCard(getPerson('person_coco') ?? people[0])],
-      recentMemories: [memoryCard(getMemory('memory_soccer') ?? memories[0])],
+      recentMemories: recentMemoryCards(1),
       upgradeCard: null,
     };
   }
@@ -1119,10 +1181,10 @@ function buildHomePayload(options: RouteBuilderOptions): HomePayload {
       ...coreSummaryMetrics(options.personaId),
       {
         label: 'Memories',
-        value: String(memories.length),
+        value: String(allMemories().length),
         note: 'Moments with purchase evidence',
         tone: 'blue',
-        trend: trend(memories.length),
+        trend: trend(allMemories().length),
       },
     ],
     continueCard,
@@ -1148,7 +1210,7 @@ function buildHomePayload(options: RouteBuilderOptions): HomePayload {
     recentReceipts: combinedRecentReceipts(4),
     topThings: recentThingCards(3),
     topPeople: ['person_coco', 'person_shanshan', 'person_joe'].map((id) => personCard(getPerson(id) ?? people[0])),
-    recentMemories: ['memory_soccer', 'memory_refresh', 'memory_movie'].map((id) => memoryCard(getMemory(id) ?? memories[0])),
+    recentMemories: recentMemoryCards(3),
     upgradeCard: isPremiumState
       ? upgradeCard('personal_pro', 'Unlock warranty and richer ownership support', 'Keep manuals, warranty coverage, and stronger agent help tied to the Things you own.')
       : null,
@@ -1238,7 +1300,7 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
   const thing = getThing(options.params?.thingId ?? 'thing_mixer') ?? allThingRecords[0];
   const sourceReceipt = getReceipt(thing.receiptId) ?? null;
   const linkedPeople = thing.personIds.map((id) => personCard(getPerson(id) ?? people[0]));
-  const linkedMemories = thing.memoryIds.map((id) => memoryCard(getMemory(id) ?? memories[0]));
+  const linkedMemories = thing.memoryIds.map((id) => memoryCard(getMemory(id) ?? allMemories()[0]));
   const relatedThings = allThingRecords
     .filter((candidate) => candidate.category === thing.category && candidate.id !== thing.id)
     .slice(0, 2)
@@ -1341,7 +1403,7 @@ function buildPeoplePayload(options: RouteBuilderOptions): PeoplePayload {
       },
       {
         label: 'Linked Memories',
-        value: String(memories.filter((memory) => memory.personIds.length > 0).length),
+        value: String(allMemories().filter((memory) => memory.personIds.length > 0).length),
         note: 'Moments tied to relationships',
         tone: 'amber',
         trend: trend(3),
@@ -1384,8 +1446,9 @@ function buildPersonDetailPayload(options: RouteBuilderOptions): PersonDetailPay
   const person = getPerson(options.params?.personId ?? 'person_coco') ?? people[0];
   const linkedThingIds = getLinkedThingIdsForPerson(person.id);
   const linkedReceiptIds = getLinkedReceiptIdsForPerson(person.id);
+  const linkedMemoryIds = getLinkedMemoryIdsForPerson(person.id);
   const linkedThingCards = linkedThingIds.map((id) => thingCard(getThing(id) ?? allThings()[0]));
-  const linkedMemoryCards = person.linkedMemoryIds.map((id) => memoryCard(getMemory(id) ?? memories[0]));
+  const linkedMemoryCards = linkedMemoryIds.map((id) => memoryCard(getMemory(id) ?? allMemories()[0]));
   const linkedReceiptCards = linkedReceiptIds.map((id) => receiptCard(getReceipt(id) ?? allReceipts()[0]));
   const totalSpend = linkedReceiptIds
     .map((id) => getReceipt(id)?.grandTotal ?? 0)
@@ -1397,7 +1460,7 @@ function buildPersonDetailPayload(options: RouteBuilderOptions): PersonDetailPay
       relationshipType: person.relationshipType,
       notes: person.notes,
       tags: person.tags,
-      headerSummary: `${linkedThingIds.length} things, ${person.linkedMemoryIds.length} memories, and ${linkedReceiptIds.length} linked purchases.`,
+      headerSummary: `${linkedThingIds.length} things, ${linkedMemoryIds.length} memories, and ${linkedReceiptIds.length} linked purchases.`,
     },
     summaryMetrics: [
       {
@@ -1477,28 +1540,28 @@ function buildMemoriesPayload(options: RouteBuilderOptions): MemoriesPayload {
     summaryMetrics: [
       {
         label: 'Confirmed',
-        value: String(memories.filter((memory) => memory.memoryState === 'confirmed').length),
+        value: String(allMemories().filter((memory) => memory.memoryState === 'confirmed').length),
         note: 'Memories the user would keep',
         tone: 'green',
         trend: trend(3),
       },
       {
         label: 'Candidates',
-        value: String(memories.filter((memory) => memory.memoryState === 'candidate').length),
+        value: String(allMemories().filter((memory) => memory.memoryState === 'candidate').length),
         note: 'System-assisted moments waiting for review',
         tone: 'amber',
         trend: trend(2),
       },
       {
         label: 'Linked receipts',
-        value: String(memories.reduce((sum, memory) => sum + memory.receiptIds.length, 0)),
+        value: String(allMemories().reduce((sum, memory) => sum + memory.receiptIds.length, 0)),
         note: 'Purchase events behind the stories',
         tone: 'blue',
         trend: trend(5),
       },
     ],
-    featuredMemory: memoryCard(getMemory('memory_movie') ?? memories[0]),
-    timeline: memories
+    featuredMemory: memoryCard(getMemory('memory_movie') ?? allMemories()[0]),
+    timeline: allMemories()
       .slice()
       .sort((left, right) => right.startsAt.localeCompare(left.startsAt))
       .map(memoryCard),
@@ -1509,7 +1572,7 @@ function buildMemoriesPayload(options: RouteBuilderOptions): MemoriesPayload {
 }
 
 function buildMemoryDetailPayload(options: RouteBuilderOptions): MemoryDetailPayload {
-  const memory = getMemory(options.params?.memoryId ?? 'memory_movie') ?? memories[0];
+  const memory = getMemory(options.params?.memoryId ?? 'memory_movie') ?? allMemories()[0];
   return {
     detail: {
       id: memory.id,

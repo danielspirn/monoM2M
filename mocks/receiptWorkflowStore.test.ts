@@ -6,6 +6,7 @@ import {
   getLiveReceiptStudioPayload,
   listProjectedPurchaseEvents,
   listProjectedPurchaseLineItems,
+  listProjectedMemories,
   listProjectedPurchaseReceipts,
   listProjectedThings,
   resetLiveReceiptStore,
@@ -40,6 +41,7 @@ describe('receiptWorkflowStore projections', () => {
     const projectedPurchaseEvents = listProjectedPurchaseEvents();
     const projectedPurchaseLineItems = listProjectedPurchaseLineItems();
     const projectedThings = listProjectedThings();
+    const projectedMemories = listProjectedMemories();
 
     expect(projectedPurchaseEvents).toHaveLength(1);
     expect(projectedPurchaseEvents[0]?.merchantId).toBe('merchant_target');
@@ -63,6 +65,13 @@ describe('receiptWorkflowStore projections', () => {
     expect(projectedThings[0]?.sourceDocumentId).toBeTruthy();
     expect(projectedThings[0]?.linkedDocumentCount).toBe(1);
     expect(projectedThings[0]?.supportLabels).toContain('Receipt linked');
+    expect(projectedThings[0]?.memoryIds.length).toBe(1);
+
+    expect(projectedMemories).toHaveLength(1);
+    expect(projectedMemories[0]?.receiptIds).toEqual([capture.primaryReceiptId]);
+    expect(projectedMemories[0]?.thingIds).toContain(projectedThings[0]?.id ?? '');
+    expect(projectedMemories[0]?.memoryState).toBe('candidate');
+    expect(projectedReceipts[0]?.memoryIds).toContain(projectedMemories[0]?.id ?? '');
   });
 
   it('uses OCR snapshot item candidates for uncurated uploaded files', () => {

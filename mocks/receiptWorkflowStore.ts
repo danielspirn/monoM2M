@@ -390,6 +390,25 @@ export type ProjectedThingRecord = {
   memoryIds: string[];
 };
 
+export type ProjectedMemoryRecord = {
+  id: string;
+  purchaseEventId: string;
+  receiptId: string;
+  title: string;
+  suggestedTitle?: string;
+  memoryState: 'candidate';
+  memoryType: string;
+  significance: 'high' | 'medium' | 'light';
+  startsAt: string;
+  endsAt?: string;
+  placeLabel: string;
+  summary: string;
+  notes: string;
+  receiptIds: string[];
+  personIds: string[];
+  thingIds: string[];
+};
+
 export type SemanticReceiptSearchResult = {
   receiptId: string;
   purchaseEventId: string;
@@ -429,6 +448,7 @@ type StoredPurchaseGraphRecords = {
   purchaseEvent: ProjectedPurchaseEventRecord;
   purchaseLineItems: ProjectedPurchaseLineItemRecord[];
   thingRecords: ProjectedThingRecord[];
+  memoryRecords: ProjectedMemoryRecord[];
 };
 
 export function createLiveReceipt(input: CreateReceiptInput): string {
@@ -653,11 +673,12 @@ export function listLiveReceiptCards(): StoredReceiptCard[] {
 }
 
 export function listProjectedPurchaseReceipts(): ProjectedPurchaseReceiptRecord[] {
-  const purchaseEvents = listProjectedPurchaseEvents();
-  const purchaseLineItems = listProjectedPurchaseLineItems();
-
-  return purchaseEvents
-    .map((purchaseEvent) => buildProjectedPurchaseReceiptRecord(purchaseEvent, purchaseLineItems))
+  return readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .map((record) => {
+      const graph = getStoredPurchaseGraph(record);
+      return buildProjectedPurchaseReceiptRecord(graph.purchaseEvent, graph.purchaseLineItems, graph.memoryRecords);
+    })
     .sort((left, right) => right.purchasedAt.localeCompare(left.purchasedAt));
 }
 
@@ -686,6 +707,13 @@ export function listProjectedThings(): ProjectedThingRecord[] {
     .filter((record) => record.status === 'trusted')
     .flatMap((record) => getStoredPurchaseGraph(record).thingRecords)
     .sort((left, right) => right.acquiredAt.localeCompare(left.acquiredAt));
+}
+
+export function listProjectedMemories(): ProjectedMemoryRecord[] {
+  return readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .flatMap((record) => getStoredPurchaseGraph(record).memoryRecords)
+    .sort((left, right) => right.startsAt.localeCompare(left.startsAt));
 }
 
 export function searchSemanticReceipts(query: string): SemanticReceiptSearchResult[] {
@@ -1207,7 +1235,8 @@ function buildProjectedPurchaseLineItemRecords(record: StoredReceiptRecord): Pro
 
 function buildProjectedPurchaseReceiptRecord(
   purchaseEvent: ProjectedPurchaseEventRecord,
-  purchaseLineItems: ProjectedPurchaseLineItemRecord[]
+  purchaseLineItems: ProjectedPurchaseLineItemRecord[],
+  memoryRecords: ProjectedMemoryRecord[],
 ): ProjectedPurchaseReceiptRecord {
   const eventLineItems = purchaseLineItems.filter((item) => item.purchaseEventId === purchaseEvent.id);
   const durableLineItems = eventLineItems.filter((item) => item.assetCandidateFlag);
@@ -1227,7 +1256,7 @@ function buildProjectedPurchaseReceiptRecord(
     returnWindowEndsAt: purchaseEvent.returnWindowEndsAt,
     personIds: purchaseEvent.personIds,
     thingIds: durableLineItems.flatMap((item) => (item.thingId ? [item.thingId] : [])),
-    memoryIds: [],
+    memoryIds: memoryRecords.filter((memory) => memory.purchaseEventId === purchaseEvent.id).map((memory) => memory.id),
   };
 }
 
@@ -1265,6 +1294,137 @@ function buildProjectedThingRecord(item: ProjectedPurchaseLineItemRecord, record
   };
 }
 
+function buildProjectedMemoryRecords(
+  record: StoredReceiptRecord,
+  purchaseEvent: ProjectedPurchaseEventRecord,
+  purchaseLineItems: ProjectedPurchaseLineItemRecord[],
+  thingRecords: ProjectedThingRecord[],
+): ProjectedMemoryRecord[] {
+  const primarySuggestion = record.memorySuggestions[0];
+
+  if (!primarySuggestion || !shouldProjectMemoryCandidate(record, purchaseLineItems, thingRecords)) {
+    return [];
+  }
+
+  const profile = inferMemoryProfile(record, purchaseLineItems, thingRecords);
+
+  return [
+    {
+      id: primarySuggestion.id,
+      purchaseEventId: purchaseEvent.id,
+      receiptId: record.id,
+      title: profile.title,
+      suggestedTitle: primarySuggestion.suggestedTitle,
+      memoryState: 'candidate',
+      memoryType: profile.memoryType,
+      significance: profile.significance,
+      startsAt: record.header.purchasedAt,
+      endsAt: undefined,
+      placeLabel: profile.placeLabel,
+      summary: profile.summary,
+      notes: profile.notes,
+      receiptIds: [record.id],
+      personIds: record.peopleSuggestions.map((person) => person.id),
+      thingIds: thingRecords.map((thing) => thing.id),
+    },
+  ];
+}
+
+function shouldProjectMemoryCandidate(
+  record: StoredReceiptRecord,
+  purchaseLineItems: ProjectedPurchaseLineItemRecord[],
+  thingRecords: ProjectedThingRecord[],
+) {
+  const hasNonSelfPerson = record.peopleSuggestions.some((person) => person.id !== 'person_self');
+  const hasExperienceSignal = record.structuredData.lifestyleTags.some((tag) => ['sports', 'food at home', 'home setup'].includes(tag));
+  const hasMeaningfulThing = thingRecords.length > 0;
+  const hasContextCategory = purchaseLineItems.some((item) => ['Kids', 'Home', 'Kitchen'].includes(item.category));
+
+  return hasNonSelfPerson || hasExperienceSignal || hasMeaningfulThing || hasContextCategory;
+}
+
+function inferMemoryProfile(
+  record: StoredReceiptRecord,
+  purchaseLineItems: ProjectedPurchaseLineItemRecord[],
+  thingRecords: ProjectedThingRecord[],
+) {
+  const merchant = record.header.merchantName;
+  const hasNonSelfPerson = record.peopleSuggestions.some((person) => person.id !== 'person_self');
+  const personLabel = record.peopleSuggestions.find((person) => person.id !== 'person_self')?.displayName ?? 'your household';
+  const joinedItems = joinMemoryItems(purchaseLineItems);
+
+  if (record.structuredData.lifestyleTags.includes('sports') || purchaseLineItems.some((item) => item.category === 'Kids')) {
+    return {
+      title: `${merchant} game day prep`,
+      memoryType: 'family event',
+      significance: 'high' as const,
+      placeLabel: merchant,
+      summary: `Sports-related purchases and people context suggest a strong family-event candidate anchored by ${merchant}.`,
+      notes: `Candidate created from trusted receipt signals including ${joinedItems} and linked people like ${personLabel}.`,
+    };
+  }
+
+  if (record.structuredData.lifestyleTags.includes('home setup') || purchaseLineItems.some((item) => item.category === 'Home')) {
+    return {
+      title: `${merchant} home setup day`,
+      memoryType: 'home project',
+      significance: 'medium' as const,
+      placeLabel: merchant,
+      summary: `A trusted home-oriented purchase from ${merchant} looks like the start of a project or setup moment.`,
+      notes: `Candidate created from home setup signals around ${joinedItems}.`,
+    };
+  }
+
+  if (record.structuredData.lifestyleTags.includes('food at home') || purchaseLineItems.some((item) => item.category === 'Kitchen')) {
+    return {
+      title: `${merchant} meal prep moment`,
+      memoryType: 'family routine',
+      significance: hasNonSelfPerson ? 'medium' as const : 'light' as const,
+      placeLabel: 'Home',
+      summary: `${merchant} appears to support a household routine rather than staying only as a transaction.`,
+      notes: `Candidate created from kitchen and food-at-home signals like ${joinedItems}${hasNonSelfPerson ? ` with ${personLabel} in the graph` : ''}.`,
+    };
+  }
+
+  if (hasNonSelfPerson) {
+    return {
+      title: `${merchant} shared moment`,
+      memoryType: 'social',
+      significance: 'medium' as const,
+      placeLabel: merchant,
+      summary: `This receipt is already connected to ${personLabel}, which makes it a good candidate for memory review.`,
+      notes: `Candidate created from trusted receipt links to ${personLabel} and ${joinedItems}.`,
+    };
+  }
+
+  return {
+    title: thingRecords[0] ? `${thingRecords[0].displayName} setup moment` : `${merchant} purchase moment`,
+    memoryType: 'purchase moment',
+    significance: thingRecords[0] ? 'medium' as const : 'light' as const,
+    placeLabel: merchant,
+    summary: `A trusted purchase from ${merchant} now has enough structure to be reviewed as a lightweight memory candidate.`,
+    notes: `Candidate created from ${joinedItems}.`,
+  };
+}
+
+function joinMemoryItems(purchaseLineItems: ProjectedPurchaseLineItemRecord[]) {
+  const labels = purchaseLineItems.slice(0, 3).map((item) => item.description);
+
+  if (!labels.length) {
+    return 'the receipt details';
+  }
+
+  if (labels.length === 1) {
+    return labels[0];
+  }
+
+  if (labels.length === 2) {
+    return `${labels[0]} and ${labels[1]}`;
+  }
+
+  return `${labels.slice(0, -1).join(', ')}, and ${labels.at(-1)}`;
+}
+
 function buildPurchaseProjection(record: StoredReceiptRecord, projectedAt: string) {
   return {
     projectedAt,
@@ -1283,15 +1443,21 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
   };
   const purchaseEvent = buildProjectedPurchaseEventRecord(projectedRecord);
   const purchaseLineItems = buildProjectedPurchaseLineItemRecords(projectedRecord);
-  const thingRecords = purchaseLineItems
+  const baseThingRecords = purchaseLineItems
     .filter((item) => item.assetCandidateFlag && item.thingId)
     .map((item) => buildProjectedThingRecord(item, projectedRecord));
+  const memoryRecords = buildProjectedMemoryRecords(projectedRecord, purchaseEvent, purchaseLineItems, baseThingRecords);
+  const thingRecords = baseThingRecords.map((thing) => ({
+    ...thing,
+    memoryIds: memoryRecords.filter((memory) => memory.thingIds.includes(thing.id)).map((memory) => memory.id),
+  }));
 
   return {
     savedAt,
     purchaseEvent,
     purchaseLineItems,
     thingRecords,
+    memoryRecords,
   };
 }
 
