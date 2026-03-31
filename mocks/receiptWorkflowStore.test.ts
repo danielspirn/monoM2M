@@ -11,6 +11,7 @@ import {
   listProjectedMerchants,
   listProjectedObjects,
   listProjectedDocumentLinks,
+  listProjectedTags,
   listProjectedPurchaseReceipts,
   listProjectedProducts,
   listProjectedThingDocuments,
@@ -56,6 +57,7 @@ describe('receiptWorkflowStore projections', () => {
     const projectedWarranties = listProjectedWarranties();
     const projectedDocuments = listProjectedThingDocuments();
     const projectedDocumentLinks = listProjectedDocumentLinks();
+    const projectedTags = listProjectedTags();
 
     expect(projectedPurchaseEvents).toHaveLength(1);
     expect(projectedPurchaseEvents[0]?.merchantId).toBe('merchant_target');
@@ -108,6 +110,9 @@ describe('receiptWorkflowStore projections', () => {
     expect(projectedDocumentLinks.some((link) => link.targetObjectType === 'thing' && link.targetObjectId === projectedThings[0]?.id)).toBe(true);
     expect(projectedDocumentLinks.some((link) => link.targetObjectType === 'warranty')).toBe(true);
     expect(projectedDocumentLinks.some((link) => link.targetObjectType === 'memory')).toBe(true);
+    expect(projectedTags.some((tag) => tag.framework === 'product_category' && tag.label === 'Kitchen')).toBe(true);
+    expect(projectedTags.some((tag) => tag.framework === 'household' && tag.linkedThingIds.includes(projectedThings[0]?.id ?? ''))).toBe(true);
+    expect(projectedTags.some((tag) => tag.framework === 'vendor_context' && tag.label === 'known retailer')).toBe(true);
   });
 
   it('uses OCR snapshot item candidates for uncurated uploaded files', () => {

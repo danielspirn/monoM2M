@@ -328,3 +328,16 @@ Shipped:
 
 Success signal:
 - ownership and memory surfaces can explain how a raw uploaded document grounds downstream records
+
+#### Slice 19: Structured tag graph
+
+Status:
+- complete
+
+Shipped:
+- projected tag records now exist for tax, lifestyle, product category, household, LEM, and vendor context
+- Thing detail exposes those tags as a first-class graph instead of only inheriting scattered arrays
+- downstream slices now have a stable tag layer for search, grouping, and future agent grounding
+
+Success signal:
+- trusted purchase records can be grouped and queried through a real tag graph rather than only ad hoc field arrays

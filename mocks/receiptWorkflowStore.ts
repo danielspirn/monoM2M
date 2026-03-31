@@ -440,6 +440,20 @@ export type ProjectedObjectRecord = {
   linkedProductIds: string[];
 };
 
+export type ProjectedTagRecord = {
+  id: string;
+  framework: 'tax' | 'lifestyle' | 'product_category' | 'household' | 'lem' | 'vendor_context';
+  label: string;
+  normalizedLabel: string;
+  receiptIds: string[];
+  purchaseEventIds: string[];
+  linkedThingIds: string[];
+  linkedProductIds: string[];
+  linkedObjectIds: string[];
+  trustedSpendTotal: number;
+  note: string;
+};
+
 export type ProjectedThingRecord = {
   id: string;
   purchaseEventId: string;
@@ -560,6 +574,7 @@ type StoredPurchaseGraphRecords = {
   participantRecords: ProjectedPurchaseParticipantRecord[];
   productRecords: ProjectedProductRecord[];
   objectRecords: ProjectedObjectRecord[];
+  tagRecords: ProjectedTagRecord[];
   thingRecords: ProjectedThingRecord[];
   memoryRecords: ProjectedMemoryRecord[];
   warrantyRecords: ProjectedWarrantyRecord[];
@@ -897,6 +912,39 @@ export function listProjectedObjects(): ProjectedObjectRecord[] {
 
   return Array.from(objectMap.values()).sort((left, right) =>
     right.latestPurchaseAt.localeCompare(left.latestPurchaseAt) || right.trustedSpendTotal - left.trustedSpendTotal,
+  );
+}
+
+export function listProjectedTags(): ProjectedTagRecord[] {
+  const tagMap = new Map<string, ProjectedTagRecord>();
+
+  readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .forEach((record) => {
+      getStoredPurchaseGraph(record).tagRecords.forEach((tagRecord) => {
+        const existing = tagMap.get(tagRecord.id);
+
+        if (!existing) {
+          tagMap.set(tagRecord.id, tagRecord);
+          return;
+        }
+
+        tagMap.set(tagRecord.id, {
+          ...existing,
+          receiptIds: Array.from(new Set([...existing.receiptIds, ...tagRecord.receiptIds])),
+          purchaseEventIds: Array.from(new Set([...existing.purchaseEventIds, ...tagRecord.purchaseEventIds])),
+          linkedThingIds: Array.from(new Set([...existing.linkedThingIds, ...tagRecord.linkedThingIds])),
+          linkedProductIds: Array.from(new Set([...existing.linkedProductIds, ...tagRecord.linkedProductIds])),
+          linkedObjectIds: Array.from(new Set([...existing.linkedObjectIds, ...tagRecord.linkedObjectIds])),
+          trustedSpendTotal: roundCurrency(existing.trustedSpendTotal + tagRecord.trustedSpendTotal),
+        });
+      });
+    });
+
+  return Array.from(tagMap.values()).sort((left, right) =>
+    right.trustedSpendTotal - left.trustedSpendTotal
+    || left.framework.localeCompare(right.framework)
+    || left.label.localeCompare(right.label),
   );
 }
 
@@ -1262,6 +1310,7 @@ function materializeRecord(record: StoredReceiptRecord): StoredReceiptRecord {
         || !nextRecord.purchaseGraph.participantRecords
         || !nextRecord.purchaseGraph.productRecords
         || !nextRecord.purchaseGraph.objectRecords
+        || !nextRecord.purchaseGraph.tagRecords
         || !nextRecord.purchaseGraph.memoryRecords
         || !nextRecord.purchaseGraph.warrantyRecords
         || !nextRecord.purchaseGraph.documentRecords
@@ -1272,7 +1321,7 @@ function materializeRecord(record: StoredReceiptRecord): StoredReceiptRecord {
       return {
         ...nextRecord,
         purchaseProjection,
-        purchaseGraph: nextRecord.purchaseGraph ?? buildStoredPurchaseGraph(
+        purchaseGraph: buildStoredPurchaseGraph(
           {
             ...nextRecord,
             purchaseProjection,
@@ -1577,6 +1626,119 @@ function buildProjectedObjectRecords(productRecords: ProjectedProductRecord[]): 
       linkedProductIds: [product.id],
     };
   });
+}
+
+function buildProjectedTagRecords(
+  record: StoredReceiptRecord,
+  purchaseEvent: ProjectedPurchaseEventRecord,
+  productRecords: ProjectedProductRecord[],
+  objectRecords: ProjectedObjectRecord[],
+): ProjectedTagRecord[] {
+  const tagMap = new Map<string, ProjectedTagRecord>();
+
+  const upsertTag = (params: {
+    framework: ProjectedTagRecord['framework'];
+    label: string;
+    spend: number;
+    linkedThingIds?: string[];
+    linkedProductIds?: string[];
+    linkedObjectIds?: string[];
+    note: string;
+  }) => {
+    const normalizedLabel = slugify(params.label);
+    const id = `tag_${params.framework}_${normalizedLabel}`;
+    const existing = tagMap.get(id);
+    const nextRecord: ProjectedTagRecord = {
+      id,
+      framework: params.framework,
+      label: params.label,
+      normalizedLabel,
+      receiptIds: [record.id],
+      purchaseEventIds: [purchaseEvent.id],
+      linkedThingIds: params.linkedThingIds ?? [],
+      linkedProductIds: params.linkedProductIds ?? [],
+      linkedObjectIds: params.linkedObjectIds ?? [],
+      trustedSpendTotal: roundCurrency(params.spend),
+      note: params.note,
+    };
+
+    if (!existing) {
+      tagMap.set(id, nextRecord);
+      return;
+    }
+
+    tagMap.set(id, {
+      ...existing,
+      linkedThingIds: Array.from(new Set([...existing.linkedThingIds, ...nextRecord.linkedThingIds])),
+      linkedProductIds: Array.from(new Set([...existing.linkedProductIds, ...nextRecord.linkedProductIds])),
+      linkedObjectIds: Array.from(new Set([...existing.linkedObjectIds, ...nextRecord.linkedObjectIds])),
+      trustedSpendTotal: roundCurrency(existing.trustedSpendTotal + nextRecord.trustedSpendTotal),
+    });
+  };
+
+  purchaseEvent.taxTags.forEach((tag) => {
+    upsertTag({
+      framework: 'tax',
+      label: tag,
+      spend: purchaseEvent.grandTotal,
+      note: 'Tax tags summarize how this trusted purchase may matter for future reporting and household understanding.',
+    });
+  });
+
+  purchaseEvent.lifestyleTags.forEach((tag) => {
+    upsertTag({
+      framework: 'lifestyle',
+      label: tag,
+      spend: purchaseEvent.grandTotal,
+      note: 'Lifestyle tags capture the consumer context behind this purchase event.',
+    });
+  });
+
+  purchaseEvent.productCategories.forEach((tag) => {
+    upsertTag({
+      framework: 'product_category',
+      label: tag,
+      spend: purchaseEvent.grandTotal,
+      note: 'Product category tags organize trusted purchases into consumer-facing ownership groupings.',
+    });
+  });
+
+  upsertTag({
+    framework: 'vendor_context',
+    label: purchaseEvent.retailerProfile,
+    spend: purchaseEvent.grandTotal,
+    note: 'Vendor-context tags capture the retailer profile and shared-library enrichment behind this purchase.',
+  });
+
+  productRecords.forEach((product) => {
+    const linkedObjectIds = objectRecords.filter((objectRecord) => objectRecord.linkedProductIds.includes(product.id)).map((objectRecord) => objectRecord.id);
+
+    product.householdTags.forEach((tag) => {
+      upsertTag({
+        framework: 'household',
+        label: tag,
+        spend: product.lineTotal,
+        linkedThingIds: product.linkedThingId ? [product.linkedThingId] : [],
+        linkedProductIds: [product.id],
+        linkedObjectIds,
+        note: 'Household tags connect line-item and product facts to real household needs and routines.',
+      });
+    });
+
+    product.lemTags.forEach((tag) => {
+      upsertTag({
+        framework: 'lem',
+        label: tag,
+        spend: product.lineTotal,
+        linkedThingIds: product.linkedThingId ? [product.linkedThingId] : [],
+        linkedProductIds: [product.id],
+        linkedObjectIds,
+        note: 'LEM tags stay as a meaning layer over trusted records instead of becoming the system of record.',
+      });
+    });
+  });
+
+  return Array.from(tagMap.values());
 }
 
 function buildProjectedPurchaseReceiptRecord(
@@ -1904,6 +2066,7 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
   const purchaseLineItems = buildProjectedPurchaseLineItemRecords(projectedRecord);
   const productRecords = buildProjectedProductRecords(projectedRecord, purchaseLineItems);
   const objectRecords = buildProjectedObjectRecords(productRecords);
+  const tagRecords = buildProjectedTagRecords(projectedRecord, purchaseEvent, productRecords, objectRecords);
   const baseThingRecords = productRecords
     .filter((product) => product.thingCandidate && product.linkedThingId)
     .map((product) => buildProjectedThingRecord(product, projectedRecord));
@@ -1937,6 +2100,7 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
     participantRecords,
     productRecords,
     objectRecords,
+    tagRecords,
     thingRecords,
     memoryRecords,
     warrantyRecords,

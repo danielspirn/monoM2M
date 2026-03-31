@@ -3,6 +3,7 @@ import {
   getLiveReceiptStudioPayload,
   hasLiveReceipt,
   listLiveReceiptCards,
+  listProjectedTags,
   listProjectedMemories,
   listProjectedMerchants,
   listProjectedObjects,
@@ -265,6 +266,14 @@ export type ThingDetailPayload = {
     targetObjectType: string;
     targetLabel: string;
     documentRole: string;
+    note: string;
+  }>;
+  tagGraph: Array<{
+    id: string;
+    framework: string;
+    label: string;
+    linkageCount: string;
+    spendLabel: string;
     note: string;
   }>;
   merchant: {
@@ -1377,6 +1386,7 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
   const object = listProjectedObjects().find((candidate) => candidate.linkedThingIds.includes(thing.id))
     ?? listProjectedObjects().find((candidate) => candidate.displayName === thing.displayName)
     ?? null;
+  const thingTags = listProjectedTags().filter((candidate) => candidate.linkedThingIds.includes(thing.id));
   const product = listProjectedProducts().find((candidate) => candidate.linkedThingId === thing.id)
     ?? listProjectedProducts().find((candidate) => candidate.receiptId === thing.receiptId && candidate.displayName === thing.displayName)
     ?? null;
@@ -1435,6 +1445,14 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
       targetLabel: link.targetLabel,
       documentRole: link.documentRole,
       note: link.note,
+    })),
+    tagGraph: thingTags.map((tag) => ({
+      id: tag.id,
+      framework: tag.framework.replace(/_/g, ' '),
+      label: tag.label,
+      linkageCount: `${tag.linkedProductIds.length} product${tag.linkedProductIds.length === 1 ? '' : 's'} · ${tag.linkedThingIds.length} Thing${tag.linkedThingIds.length === 1 ? '' : 's'}`,
+      spendLabel: `$${tag.trustedSpendTotal.toFixed(2)} tagged spend`,
+      note: tag.note,
     })),
     merchant: merchant
       ? {

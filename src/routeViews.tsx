@@ -458,6 +458,26 @@ export function ThingDetailView({ state, payload, onAction }: PageProps<ThingDet
         </SectionCard>
       ) : null}
 
+      {payload.tagGraph.length ? (
+        <SectionCard title="Tag graph">
+          <div className="card-list">
+            {payload.tagGraph.map((tag) => (
+              <article className="data-card" key={tag.id}>
+                <div>
+                  <p className="eyebrow">{tag.framework}</p>
+                  <h3>{tag.label}</h3>
+                  <p>{tag.note}</p>
+                </div>
+                <div className="chip-row">
+                  <span className="chip chip--accent">{tag.linkageCount}</span>
+                  <span className="chip">{tag.spendLabel}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </SectionCard>
+      ) : null}
+
       {payload.merchant ? (
         <SectionCard title="Merchant record">
           <div className="route-stack route-stack--compact">
