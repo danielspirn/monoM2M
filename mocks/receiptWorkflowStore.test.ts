@@ -4,7 +4,9 @@ import {
   answerSemanticReceiptQuestion,
   createLiveReceiptBatch,
   getLiveReceiptStudioPayload,
+  listProjectedExtractionRuns,
   listProjectedSemanticRecords,
+  listProjectedSourceDocuments,
   listProjectedPurchaseEvents,
   listProjectedPurchaseLineItems,
   listProjectedPurchaseParticipants,
@@ -60,6 +62,8 @@ describe('receiptWorkflowStore projections', () => {
     const projectedDocumentLinks = listProjectedDocumentLinks();
     const projectedTags = listProjectedTags();
     const projectedSemanticRecords = listProjectedSemanticRecords();
+    const projectedSourceDocuments = listProjectedSourceDocuments();
+    const projectedExtractionRuns = listProjectedExtractionRuns();
 
     expect(projectedPurchaseEvents).toHaveLength(1);
     expect(projectedPurchaseEvents[0]?.merchantId).toBe('merchant_target');
@@ -119,6 +123,11 @@ describe('receiptWorkflowStore projections', () => {
     expect(projectedSemanticRecords[0]?.retrievalScope).toBe('trusted_receipt');
     expect(projectedSemanticRecords[0]?.embeddingVersion).toBe('receipt-embedding-v1');
     expect(projectedSemanticRecords[0]?.thingIds).toContain(projectedThings[0]?.id ?? '');
+    expect(projectedSourceDocuments).toHaveLength(1);
+    expect(projectedSourceDocuments[0]?.captureChannel).toBe('upload_photo');
+    expect(projectedExtractionRuns).toHaveLength(1);
+    expect(projectedExtractionRuns[0]?.providerLabel).toBeTruthy();
+    expect(projectedExtractionRuns[0]?.sourceDocumentId).toBe(projectedSourceDocuments[0]?.id);
   });
 
   it('uses OCR snapshot item candidates for uncurated uploaded files', () => {

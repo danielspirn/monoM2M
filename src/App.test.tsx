@@ -153,6 +153,7 @@ describe('Milestone 1 shell', () => {
     expect(screen.getByText('Document links')).toBeTruthy();
     expect(screen.getByText('Tag graph')).toBeTruthy();
     expect(screen.getByText('Retrieval profile')).toBeTruthy();
+    expect(screen.getByText('Capture provenance')).toBeTruthy();
     expect(screen.getByText('Merchant record')).toBeTruthy();
     expect(screen.getAllByText('known retailer').length).toBeGreaterThan(0);
     expect(screen.getAllByText('1 trusted purchase').length).toBeGreaterThan(0);
@@ -165,6 +166,7 @@ describe('Milestone 1 shell', () => {
     expect(screen.getAllByText('source_document').length).toBeGreaterThan(0);
     expect(screen.getAllByText('household').length).toBeGreaterThan(0);
     expect(screen.getByText('receipt-embedding-v1')).toBeTruthy();
+    expect(screen.getAllByText('upload photo').length).toBeGreaterThan(0);
   });
 
   it('can preload a real uploaded fixture into the receipt capture flow', () => {

@@ -354,3 +354,16 @@ Shipped:
 
 Success signal:
 - the embedded/search layer is a first-class record type that future retrieval and agent slices can reuse directly
+
+#### Slice 21: Structured provenance records
+
+Status:
+- complete
+
+Shipped:
+- projected source-document records now expose raw capture provenance for trusted purchases
+- projected extraction-run records now expose OCR/provider/parser lineage as first-class records
+- Thing detail now shows capture provenance alongside retrieval, tags, and document links
+
+Success signal:
+- ownership surfaces can explain both what was bought and how the trusted record was captured and extracted

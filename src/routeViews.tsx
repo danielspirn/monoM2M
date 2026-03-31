@@ -492,6 +492,22 @@ export function ThingDetailView({ state, payload, onAction }: PageProps<ThingDet
         </SectionCard>
       ) : null}
 
+      {payload.provenance ? (
+        <SectionCard title="Capture provenance">
+          <article className="list-card receipt-layer-card">
+            <p className="eyebrow">{payload.provenance.sourceLabel}</p>
+            <p>{payload.provenance.note}</p>
+            <div className="chip-row">
+              <span className="chip chip--accent">{payload.provenance.providerLabel}</span>
+              <span className="chip">{payload.provenance.captureLabel}</span>
+              <span className="chip">{payload.provenance.fileCountLabel}</span>
+              <span className="chip">{payload.provenance.parserLabel}</span>
+              <span className="chip">{payload.provenance.statusLabel}</span>
+            </div>
+          </article>
+        </SectionCard>
+      ) : null}
+
       {payload.merchant ? (
         <SectionCard title="Merchant record">
           <div className="route-stack route-stack--compact">

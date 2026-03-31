@@ -310,6 +310,41 @@ export type ProjectedPurchaseReceiptRecord = {
   memoryIds: string[];
 };
 
+export type ProjectedSourceDocumentRecord = {
+  id: string;
+  receiptId: string;
+  purchaseEventId: string;
+  sourceType: SourceDocumentType;
+  captureChannel: CaptureChannel;
+  fileName: string;
+  fileCount: number;
+  mimeType: string;
+  capturedAt: string;
+  checksum: string;
+  storageStatus: 'stored';
+  detectedReceiptCount: number;
+  note: string;
+};
+
+export type ProjectedExtractionRunRecord = {
+  id: string;
+  receiptId: string;
+  purchaseEventId: string;
+  sourceDocumentId: string;
+  status: 'queued' | 'processing' | 'completed';
+  parserVersion: string;
+  providerId: ReceiptOcrProviderId;
+  providerLabel: string;
+  routingMode: ReceiptOcrRoutingMode;
+  evaluationStage: ReceiptOcrEvaluationStage;
+  fallbackProviderLabel: string | null;
+  startedAt: string;
+  completedAt: string | null;
+  stage: string;
+  stageLabel: string;
+  note: string;
+};
+
 export type ProjectedPurchaseEventRecord = {
   id: string;
   receiptId: string;
@@ -587,6 +622,8 @@ export type GroundedReceiptAnswer = {
 
 type StoredPurchaseGraphRecords = {
   savedAt: string;
+  sourceDocumentRecord: ProjectedSourceDocumentRecord;
+  extractionRunRecord: ProjectedExtractionRunRecord;
   merchantRecord: ProjectedMerchantRecord;
   purchaseEvent: ProjectedPurchaseEventRecord;
   purchaseLineItems: ProjectedPurchaseLineItemRecord[];
@@ -831,6 +868,20 @@ export function listProjectedPurchaseReceipts(): ProjectedPurchaseReceiptRecord[
       return buildProjectedPurchaseReceiptRecord(graph.purchaseEvent, graph.purchaseLineItems, graph.memoryRecords);
     })
     .sort((left, right) => right.purchasedAt.localeCompare(left.purchasedAt));
+}
+
+export function listProjectedSourceDocuments(): ProjectedSourceDocumentRecord[] {
+  return readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .map((record) => getStoredPurchaseGraph(record).sourceDocumentRecord)
+    .sort((left, right) => right.capturedAt.localeCompare(left.capturedAt));
+}
+
+export function listProjectedExtractionRuns(): ProjectedExtractionRunRecord[] {
+  return readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .map((record) => getStoredPurchaseGraph(record).extractionRunRecord)
+    .sort((left, right) => right.startedAt.localeCompare(left.startedAt));
 }
 
 export function listProjectedPurchaseEvents(): ProjectedPurchaseEventRecord[] {
@@ -1331,6 +1382,8 @@ function materializeRecord(record: StoredReceiptRecord): StoredReceiptRecord {
       && (
         !nextRecord.purchaseProjection
         || !nextRecord.purchaseGraph
+        || !nextRecord.purchaseGraph.sourceDocumentRecord
+        || !nextRecord.purchaseGraph.extractionRunRecord
         || !nextRecord.purchaseGraph.merchantRecord
         || !nextRecord.purchaseGraph.participantRecords
         || !nextRecord.purchaseGraph.productRecords
@@ -1462,6 +1515,51 @@ function materializeSearchDocument(record: StoredReceiptRecord) {
     ...record.searchDocument,
     embeddingTerms: buildEmbeddingTerms(record.header.merchantName, record.lineItems),
     embeddingVersion: 'receipt-embedding-v1',
+  };
+}
+
+function buildProjectedSourceDocumentRecord(
+  record: StoredReceiptRecord,
+  purchaseEventId: string,
+): ProjectedSourceDocumentRecord {
+  return {
+    id: record.sourceDocument.id,
+    receiptId: record.id,
+    purchaseEventId,
+    sourceType: record.sourceDocument.sourceType,
+    captureChannel: record.sourceDocument.captureChannel,
+    fileName: record.sourceDocument.fileName,
+    fileCount: record.sourceDocument.sourceFiles.length || 1,
+    mimeType: record.sourceDocument.mimeType,
+    capturedAt: record.sourceDocument.capturedAt,
+    checksum: record.sourceDocument.checksum,
+    storageStatus: record.sourceDocument.storageStatus,
+    detectedReceiptCount: record.sourceDocument.detectedReceiptCount,
+    note: 'The original receipt capture is preserved as the raw source document for this trusted purchase.',
+  };
+}
+
+function buildProjectedExtractionRunRecord(
+  record: StoredReceiptRecord,
+  purchaseEventId: string,
+): ProjectedExtractionRunRecord {
+  return {
+    id: record.extractionRun.id,
+    receiptId: record.id,
+    purchaseEventId,
+    sourceDocumentId: record.sourceDocument.id,
+    status: record.extractionRun.status,
+    parserVersion: record.extractionRun.parserVersion,
+    providerId: record.extractionRun.providerId,
+    providerLabel: record.extractionRun.providerLabel,
+    routingMode: record.extractionRun.routingMode,
+    evaluationStage: record.extractionRun.evaluationStage,
+    fallbackProviderLabel: record.extractionRun.fallbackProviderLabel,
+    startedAt: record.extractionRun.startedAt,
+    completedAt: record.extractionRun.completedAt,
+    stage: record.extractionRun.stage,
+    stageLabel: record.extractionRun.stageLabel,
+    note: `This trusted receipt came from ${record.extractionRun.providerLabel} using ${record.extractionRun.parserVersion}.`,
   };
 }
 
@@ -2115,6 +2213,8 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
     purchaseProjection,
   };
   const purchaseEvent = buildProjectedPurchaseEventRecord(projectedRecord);
+  const sourceDocumentRecord = buildProjectedSourceDocumentRecord(projectedRecord, purchaseEvent.id);
+  const extractionRunRecord = buildProjectedExtractionRunRecord(projectedRecord, purchaseEvent.id);
   const merchantRecord = buildProjectedMerchantRecord(projectedRecord, purchaseEvent);
   const purchaseLineItems = buildProjectedPurchaseLineItemRecords(projectedRecord);
   const productRecords = buildProjectedProductRecords(projectedRecord, purchaseLineItems);
@@ -2148,6 +2248,8 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
 
   return {
     savedAt,
+    sourceDocumentRecord,
+    extractionRunRecord,
     merchantRecord,
     purchaseEvent,
     purchaseLineItems,

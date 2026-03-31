@@ -2,7 +2,9 @@ import {
   answerSemanticReceiptQuestion,
   getLiveReceiptStudioPayload,
   hasLiveReceipt,
+  listProjectedExtractionRuns,
   listLiveReceiptCards,
+  listProjectedSourceDocuments,
   listProjectedSemanticRecords,
   listProjectedTags,
   listProjectedMemories,
@@ -283,6 +285,15 @@ export type ThingDetailPayload = {
     keywordCount: string;
     termCount: string;
     preview: string;
+  } | null;
+  provenance: {
+    sourceLabel: string;
+    captureLabel: string;
+    fileCountLabel: string;
+    providerLabel: string;
+    parserLabel: string;
+    statusLabel: string;
+    note: string;
   } | null;
   merchant: {
     title: string;
@@ -1396,6 +1407,8 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
     ?? null;
   const thingTags = listProjectedTags().filter((candidate) => candidate.linkedThingIds.includes(thing.id));
   const semanticRecord = listProjectedSemanticRecords().find((candidate) => candidate.receiptId === thing.receiptId) ?? null;
+  const sourceDocumentRecord = listProjectedSourceDocuments().find((candidate) => candidate.receiptId === thing.receiptId) ?? null;
+  const extractionRunRecord = listProjectedExtractionRuns().find((candidate) => candidate.receiptId === thing.receiptId) ?? null;
   const product = listProjectedProducts().find((candidate) => candidate.linkedThingId === thing.id)
     ?? listProjectedProducts().find((candidate) => candidate.receiptId === thing.receiptId && candidate.displayName === thing.displayName)
     ?? null;
@@ -1470,6 +1483,17 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
           keywordCount: `${semanticRecord.keywords.length} keywords`,
           termCount: `${semanticRecord.embeddingTerms.length} embedding terms`,
           preview: semanticRecord.textPreview,
+        }
+      : null,
+    provenance: sourceDocumentRecord && extractionRunRecord
+      ? {
+          sourceLabel: sourceDocumentRecord.sourceType.replace(/_/g, ' '),
+          captureLabel: sourceDocumentRecord.captureChannel.replace(/_/g, ' '),
+          fileCountLabel: `${sourceDocumentRecord.fileCount} file${sourceDocumentRecord.fileCount === 1 ? '' : 's'}`,
+          providerLabel: extractionRunRecord.providerLabel,
+          parserLabel: extractionRunRecord.parserVersion,
+          statusLabel: extractionRunRecord.status,
+          note: extractionRunRecord.note,
         }
       : null,
     merchant: merchant
