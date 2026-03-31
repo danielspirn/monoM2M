@@ -11,6 +11,7 @@ import {
   rerunLiveReceiptExtraction,
   saveLiveReceiptHeaderField,
   saveLiveReceiptLineItemField,
+  searchSemanticReceipts,
   submitLiveReceiptReview,
 } from './receiptWorkflowStore';
 
@@ -167,5 +168,22 @@ describe('receiptWorkflowStore projections', () => {
     expect(purchaseEvents[0]?.merchantResolutionSource).toBe('reviewed_receipt');
     expect(purchaseLineItems.find((item) => item.lineIndex === 1)?.description).toBe('Air Fryer Xl');
     expect(purchaseLineItems.find((item) => item.lineIndex === 1)?.productCandidateLabel).toBe('Air Fryer Xl');
+  });
+
+  it('finds receipts through semantic retrieval without exact wording matches', () => {
+    const capture = createLiveReceiptBatch({
+      merchant: 'Target',
+      purchaseDate: '2026-03-08',
+      source: 'Upload photo',
+      summary: 'Air fryer, parchment liners',
+    });
+
+    vi.advanceTimersByTime(2200);
+    submitLiveReceiptReview(capture.primaryReceiptId);
+
+    const results = searchSemanticReceipts('fried food machine');
+
+    expect(results[0]?.receiptId).toBe(capture.primaryReceiptId);
+    expect(results[0]?.matchedTerms).toContain('air fryer');
   });
 });

@@ -217,13 +217,13 @@ Success signal:
 
 #### Slice 15: Semantic retrieval
 
-Goal:
-- make receipt history meaningfully searchable
+Status:
+- complete
 
-Deliver:
-- embedding pipeline
-- hybrid search
-- receipt retrieval hooks
+Shipped:
+- receipt search documents now carry deterministic embedding terms
+- hybrid search hook added over trusted receipts
+- synonym expansion now finds receipts without exact wording matches
 
 Success signal:
 - users can find purchases without exact wording matches

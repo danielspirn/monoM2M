@@ -53,3 +53,7 @@ export function resolveObjectDirectoryEntry(value: string) {
     entry.keywords.some((keyword) => normalized.includes(keyword)),
   ) ?? null;
 }
+
+export function listObjectDirectoryEntries() {
+  return objectDirectory;
+}

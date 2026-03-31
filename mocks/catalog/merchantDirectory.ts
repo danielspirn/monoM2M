@@ -52,3 +52,7 @@ export function resolveMerchantDirectoryEntry(merchant: string) {
     entry.aliases.some((alias) => normalized.includes(alias)),
   ) ?? null;
 }
+
+export function listMerchantDirectoryEntries() {
+  return merchantDirectory;
+}

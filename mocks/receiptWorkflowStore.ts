@@ -1,6 +1,6 @@
 import { parseReceiptCaptureInput } from './receiptParser';
-import { resolveMerchantDirectoryEntry } from './catalog/merchantDirectory';
-import { resolveObjectDirectoryEntry } from './catalog/objectDirectory';
+import { listMerchantDirectoryEntries, resolveMerchantDirectoryEntry } from './catalog/merchantDirectory';
+import { listObjectDirectoryEntries, resolveObjectDirectoryEntry } from './catalog/objectDirectory';
 import type {
   ReceiptOcrEvaluationStage,
   ReceiptOcrProviderId,
@@ -190,6 +190,8 @@ type StoredReceiptRecord = {
     status: 'indexed';
     keywords: string[];
     textPreview: string;
+    embeddingTerms: string[];
+    embeddingVersion: string;
   };
   alerts: Array<{
     id: string;
@@ -388,6 +390,16 @@ export type ProjectedThingRecord = {
   memoryIds: string[];
 };
 
+export type SemanticReceiptSearchResult = {
+  receiptId: string;
+  purchaseEventId: string;
+  merchantName: string;
+  purchasedAt: string;
+  matchedTerms: string[];
+  score: number;
+  lineHighlights: string[];
+};
+
 type StoredPurchaseGraphRecords = {
   savedAt: string;
   purchaseEvent: ProjectedPurchaseEventRecord;
@@ -579,6 +591,8 @@ function buildStoredReceiptRecord(params: {
       status: 'indexed',
       keywords: buildSearchKeywords(merchant, lineItems),
       textPreview: buildSearchPreview(merchant, lineItems),
+      embeddingTerms: buildEmbeddingTerms(merchant, lineItems),
+      embeddingVersion: 'receipt-embedding-v1',
     },
     alerts: buildAlerts({
       duplicateDetected,
@@ -648,6 +662,40 @@ export function listProjectedThings(): ProjectedThingRecord[] {
     .filter((record) => record.status === 'trusted')
     .flatMap((record) => getStoredPurchaseGraph(record).thingRecords)
     .sort((left, right) => right.acquiredAt.localeCompare(left.acquiredAt));
+}
+
+export function searchSemanticReceipts(query: string): SemanticReceiptSearchResult[] {
+  const normalizedQueryTerms = buildSearchQueryTerms(query);
+
+  if (!normalizedQueryTerms.length) {
+    return [];
+  }
+
+  return readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .map((record) => {
+      const purchaseGraph = getStoredPurchaseGraph(record);
+      const matches = normalizedQueryTerms.filter((term) => record.searchDocument.embeddingTerms.includes(term));
+      const lexicalMatches = normalizedQueryTerms.filter((term) =>
+        record.searchDocument.textPreview.toLowerCase().includes(term)
+        || record.searchDocument.keywords.some((keyword) => keyword.toLowerCase().includes(term)),
+      );
+      const score = matches.length * 2 + lexicalMatches.length;
+
+      return score > 0
+        ? {
+            receiptId: record.id,
+            purchaseEventId: purchaseGraph.purchaseEvent.id,
+            merchantName: record.header.merchantName,
+            purchasedAt: record.header.purchasedAt,
+            matchedTerms: Array.from(new Set([...matches, ...lexicalMatches])),
+            score,
+            lineHighlights: purchaseGraph.purchaseLineItems.slice(0, 3).map((item) => item.description),
+          }
+        : null;
+    })
+    .filter(Boolean)
+    .sort((left, right) => (right?.score ?? 0) - (left?.score ?? 0) || (right?.purchasedAt ?? '').localeCompare(left?.purchasedAt ?? '')) as SemanticReceiptSearchResult[];
 }
 
 export function hasLiveReceipt(receiptId: string): boolean {
@@ -869,12 +917,14 @@ function safeParseRecords(raw: string | null): StoredReceiptRecord[] {
 
 function materializeRecord(record: StoredReceiptRecord): StoredReceiptRecord {
   const materializedParsedData = materializeParsedData(record);
+  const materializedSearchDocument = materializeSearchDocument(record);
   const nextRecord =
-    materializedParsedData === record.parsedData
+    materializedParsedData === record.parsedData && materializedSearchDocument === record.searchDocument
       ? record
       : {
           ...record,
           parsedData: materializedParsedData,
+          searchDocument: materializedSearchDocument,
         };
 
   if (nextRecord.status !== 'processing') {
@@ -986,6 +1036,18 @@ function materializeParsedData(record: StoredReceiptRecord): StoredParsedData {
       },
     returnPolicySnippet: parsedData.returnPolicySnippet ?? null,
     warrantySnippet: parsedData.warrantySnippet ?? null,
+  };
+}
+
+function materializeSearchDocument(record: StoredReceiptRecord) {
+  if (record.searchDocument.embeddingTerms?.length && record.searchDocument.embeddingVersion) {
+    return record.searchDocument;
+  }
+
+  return {
+    ...record.searchDocument,
+    embeddingTerms: buildEmbeddingTerms(record.header.merchantName, record.lineItems),
+    embeddingVersion: 'receipt-embedding-v1',
   };
 }
 
@@ -1306,6 +1368,8 @@ function refreshRecordAfterReviewEdit(
       status: 'indexed',
       keywords: buildSearchKeywords(merchant, lineItems),
       textPreview: buildSearchPreview(merchant, lineItems),
+      embeddingTerms: buildEmbeddingTerms(merchant, lineItems),
+      embeddingVersion: record.searchDocument.embeddingVersion || 'receipt-embedding-v1',
     },
     alerts: buildAlerts({
       duplicateDetected,
@@ -1633,6 +1697,103 @@ function buildSearchKeywords(merchant: string, lineItems: ReceiptLineItemRecord[
 
 function buildSearchPreview(merchant: string, lineItems: ReceiptLineItemRecord[]) {
   return `${merchant} receipt with ${lineItems.map((item) => item.descriptionNormalized).join(', ')}.`;
+}
+
+function buildEmbeddingTerms(merchant: string, lineItems: ReceiptLineItemRecord[]) {
+  const terms = new Set<string>();
+  const merchantEntry = resolveMerchantDirectoryEntry(merchant);
+
+  tokenizeInto(merchant, terms);
+  merchantEntry?.aliases.forEach((alias) => tokenizeInto(alias, terms));
+  merchantEntry?.defaultProductCategories.forEach((category) => tokenizeInto(category, terms));
+
+  lineItems.forEach((item) => {
+    tokenizeInto(item.descriptionNormalized, terms);
+    item.householdTags.forEach((tag) => tokenizeInto(tag.replace(/_/g, ' '), terms));
+    item.lemTags.forEach((tag) => tokenizeInto(tag.replace(/_/g, ' '), terms));
+
+    const objectEntry = resolveObjectDirectoryEntry(item.descriptionNormalized);
+    objectEntry?.keywords.forEach((keyword) => tokenizeInto(keyword, terms));
+    objectEntry?.householdTags.forEach((tag) => tokenizeInto(tag.replace(/_/g, ' '), terms));
+    objectEntry?.lemTags.forEach((tag) => tokenizeInto(tag.replace(/_/g, ' '), terms));
+  });
+
+  expandSemanticAliases(Array.from(terms)).forEach((term) => terms.add(term));
+
+  return Array.from(terms).sort();
+}
+
+function buildSearchQueryTerms(query: string) {
+  const terms = new Set<string>();
+  tokenizeInto(query, terms);
+  expandSemanticAliases(Array.from(terms)).forEach((term) => terms.add(term));
+  return Array.from(terms);
+}
+
+function tokenizeInto(value: string, target: Set<string>) {
+  const normalized = value.toLowerCase().replace(/[^a-z0-9\s]+/g, ' ');
+  const phrase = normalized.replace(/\s+/g, ' ').trim();
+
+  if (!phrase) {
+    return;
+  }
+
+  target.add(phrase);
+  phrase.split(' ').filter(Boolean).forEach((part) => target.add(part));
+}
+
+function expandSemanticAliases(terms: string[]) {
+  const expansions = new Set<string>();
+  const aliasMap = buildSemanticAliasMap();
+
+  terms.forEach((term) => {
+    aliasMap.get(term)?.forEach((alias) => expansions.add(alias));
+  });
+
+  return Array.from(expansions);
+}
+
+let semanticAliasMapCache: Map<string, string[]> | null = null;
+
+function buildSemanticAliasMap() {
+  if (semanticAliasMapCache) {
+    return semanticAliasMapCache;
+  }
+
+  const map = new Map<string, string[]>();
+  const register = (key: string, aliases: string[]) => {
+    map.set(key, Array.from(new Set(aliases)));
+  };
+
+  register('air fryer', ['fried food machine', 'kitchen appliance', 'appliance']);
+  register('fried food machine', ['air fryer', 'kitchen appliance']);
+  register('storage bench', ['entryway furniture', 'bench', 'home organization']);
+  register('wall hooks', ['entryway hardware', 'home organization']);
+  register('banana', ['produce', 'groceries']);
+  register('groceries', ['banana', 'produce', 'food at home']);
+  register('target', ['general merchandise', 'home']);
+  register('safeway', ['groceries', 'produce', 'market']);
+
+  listObjectDirectoryEntries().forEach((entry) => {
+    entry.keywords.forEach((keyword) => {
+      const aliases = [
+        entry.category.toLowerCase(),
+        entry.subcategory.toLowerCase(),
+        ...entry.householdTags.map((tag) => tag.replace(/_/g, ' ')),
+        ...entry.lemTags.map((tag) => tag.replace(/_/g, ' ')),
+      ];
+      register(keyword.toLowerCase(), [...(map.get(keyword.toLowerCase()) ?? []), ...aliases]);
+    });
+  });
+
+  listMerchantDirectoryEntries().forEach((entry) => {
+    entry.aliases.forEach((alias) => {
+      register(alias.toLowerCase(), [...(map.get(alias.toLowerCase()) ?? []), ...entry.defaultProductCategories.map((value) => value.toLowerCase())]);
+    });
+  });
+
+  semanticAliasMapCache = map;
+  return map;
 }
 
 function buildReceiptDrafts(input: CreateReceiptInput, parserDrafts: Array<{
