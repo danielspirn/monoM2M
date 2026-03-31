@@ -3,6 +3,7 @@ import {
   answerSemanticReceiptQuestion,
   getLiveReceiptStudioPayload,
   hasLiveReceipt,
+  listProjectedPolicies,
   listProjectedExtractionRuns,
   listLiveReceiptCards,
   listProjectedReturnSupports,
@@ -266,6 +267,16 @@ export type ThingDetailPayload = {
     status: string;
     note: string;
   } | null;
+  policies: Array<{
+    id: string;
+    policyKind: string;
+    title: string;
+    providerName: string;
+    status: string;
+    effectiveLabel: string;
+    linkedSupportLabel: string;
+    note: string;
+  }>;
   evidenceLinks: Array<{
     id: string;
     label: string;
@@ -1429,6 +1440,7 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
     ?? null;
   const warranty = listProjectedWarranties().find((candidate) => candidate.thingId === thing.id) ?? null;
   const returnSupport = listProjectedReturnSupports().find((candidate) => candidate.thingId === thing.id) ?? null;
+  const policies = listProjectedPolicies().filter((candidate) => candidate.thingId === thing.id);
   const evidenceLinks = listProjectedEvidenceRecords().filter((candidate) => candidate.linkedThingIds.includes(thing.id));
   const documents = listProjectedThingDocuments().filter((candidate) => candidate.thingId === thing.id);
   const documentLinks = listProjectedDocumentLinks().filter((candidate) =>
@@ -1480,6 +1492,16 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
           note: returnSupport.note,
         }
       : null,
+    policies: policies.map((policy) => ({
+      id: policy.id,
+      policyKind: policy.policyKind.replace(/_/g, ' '),
+      title: policy.title,
+      providerName: policy.providerName,
+      status: policy.status,
+      effectiveLabel: `${policy.effectiveAt} to ${policy.endsAt}`,
+      linkedSupportLabel: policy.linkedSupportRecordId.replace(/_/g, ' '),
+      note: policy.note,
+    })),
     evidenceLinks: evidenceLinks.map((evidence) => ({
       id: evidence.id,
       label: evidence.label,

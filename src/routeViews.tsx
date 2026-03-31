@@ -440,6 +440,28 @@ export function ThingDetailView({ state, payload, onAction }: PageProps<ThingDet
         </SectionCard>
       ) : null}
 
+      {payload.policies.length ? (
+        <SectionCard title="Policy records">
+          <div className="card-list">
+            {payload.policies.map((policy) => (
+              <article className="data-card" key={policy.id}>
+                <div>
+                  <p className="eyebrow">{policy.policyKind}</p>
+                  <h3>{policy.title}</h3>
+                  <p>{policy.note}</p>
+                </div>
+                <div className="chip-row">
+                  <span className="chip chip--accent">{policy.status}</span>
+                  <span className="chip">{policy.providerName}</span>
+                  <span className="chip">{policy.linkedSupportLabel}</span>
+                  <span className="chip">{policy.effectiveLabel}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </SectionCard>
+      ) : null}
+
       {payload.evidenceLinks.length ? (
         <SectionCard title="Evidence links">
           <div className="card-list">

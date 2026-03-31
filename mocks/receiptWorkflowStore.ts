@@ -551,10 +551,27 @@ export type ProjectedReturnSupportRecord = {
   purchaseEventId: string;
   receiptId: string;
   merchantName: string;
+  startsAt: string;
   windowEndsAt: string;
   status: 'open' | 'closed';
   policyLabel: string;
   source: 'receipt_candidate';
+  note: string;
+};
+
+export type ProjectedPolicyRecord = {
+  id: string;
+  thingId: string;
+  purchaseEventId: string;
+  receiptId: string;
+  policyKind: 'return' | 'warranty';
+  title: string;
+  providerName: string;
+  status: 'candidate' | 'active' | 'open' | 'closed';
+  effectiveAt: string;
+  endsAt: string;
+  source: 'receipt_candidate';
+  linkedSupportRecordId: string;
   note: string;
 };
 
@@ -662,6 +679,7 @@ type StoredPurchaseGraphRecords = {
   memoryRecords: ProjectedMemoryRecord[];
   warrantyRecords: ProjectedWarrantyRecord[];
   returnSupportRecords: ProjectedReturnSupportRecord[];
+  policyRecords: ProjectedPolicyRecord[];
   evidenceRecords: ProjectedEvidenceRecord[];
   documentRecords: ProjectedThingDocumentRecord[];
   documentLinkRecords: ProjectedDocumentLinkRecord[];
@@ -1062,6 +1080,16 @@ export function listProjectedReturnSupports(): ProjectedReturnSupportRecord[] {
     .sort((left, right) => right.windowEndsAt.localeCompare(left.windowEndsAt));
 }
 
+export function listProjectedPolicies(): ProjectedPolicyRecord[] {
+  return readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .flatMap((record) => getStoredPurchaseGraph(record).policyRecords)
+    .sort((left, right) =>
+      right.endsAt.localeCompare(left.endsAt)
+      || left.policyKind.localeCompare(right.policyKind),
+    );
+}
+
 export function listProjectedEvidenceRecords(): ProjectedEvidenceRecord[] {
   return readStoredReceipts()
     .filter((record) => record.status === 'trusted')
@@ -1438,6 +1466,7 @@ function materializeRecord(record: StoredReceiptRecord): StoredReceiptRecord {
         || !nextRecord.purchaseGraph.memoryRecords
         || !nextRecord.purchaseGraph.warrantyRecords
         || !nextRecord.purchaseGraph.returnSupportRecords
+        || !nextRecord.purchaseGraph.policyRecords
         || !nextRecord.purchaseGraph.evidenceRecords
         || !nextRecord.purchaseGraph.documentRecords
         || !nextRecord.purchaseGraph.documentLinkRecords
@@ -2159,12 +2188,51 @@ function buildProjectedReturnSupportRecords(thingRecords: ProjectedThingRecord[]
       purchaseEventId: thing.purchaseEventId,
       receiptId: thing.receiptId,
       merchantName: thing.merchantName,
+      startsAt: thing.acquiredAt,
       windowEndsAt: thing.returnWindowEndsAt ?? thing.acquiredAt,
       status: thing.returnWindowEndsAt && Date.parse(thing.returnWindowEndsAt) > Date.now() ? 'open' : 'closed',
       policyLabel: `${thing.merchantName} return window`,
       source: 'receipt_candidate',
       note: 'Return support is inferred from the trusted receipt date and merchant return-window heuristics. Review before relying on the exact deadline.',
     }));
+}
+
+function buildProjectedPolicyRecords(
+  warrantyRecords: ProjectedWarrantyRecord[],
+  returnSupportRecords: ProjectedReturnSupportRecord[],
+): ProjectedPolicyRecord[] {
+  const warrantyPolicies = warrantyRecords.map((warranty) => ({
+    id: `policy_${warranty.id}`,
+    thingId: warranty.thingId,
+    purchaseEventId: warranty.purchaseEventId,
+    receiptId: warranty.receiptId,
+    policyKind: 'warranty' as const,
+    title: `${warranty.providerName} warranty policy`,
+    providerName: warranty.providerName,
+    status: warranty.status,
+    effectiveAt: warranty.startsAt,
+    endsAt: warranty.endsAt,
+    source: warranty.source,
+    linkedSupportRecordId: warranty.id,
+    note: warranty.note,
+  }));
+  const returnPolicies = returnSupportRecords.map((returnSupport) => ({
+    id: `policy_${returnSupport.id}`,
+    thingId: returnSupport.thingId,
+    purchaseEventId: returnSupport.purchaseEventId,
+    receiptId: returnSupport.receiptId,
+    policyKind: 'return' as const,
+    title: `${returnSupport.merchantName} return policy`,
+    providerName: returnSupport.merchantName,
+    status: returnSupport.status,
+    effectiveAt: returnSupport.startsAt,
+    endsAt: returnSupport.windowEndsAt,
+    source: returnSupport.source,
+    linkedSupportRecordId: returnSupport.id,
+    note: returnSupport.note,
+  }));
+
+  return [...warrantyPolicies, ...returnPolicies];
 }
 
 function buildProjectedEvidenceRecords(
@@ -2326,6 +2394,7 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
   const semanticRecord = buildProjectedSemanticRecord(projectedRecord, purchaseEvent, purchaseLineItems, thingRecords, memoryRecords);
   const warrantyRecords = buildProjectedWarrantyRecords(thingRecords);
   const returnSupportRecords = buildProjectedReturnSupportRecords(thingRecords);
+  const policyRecords = buildProjectedPolicyRecords(warrantyRecords, returnSupportRecords);
   const evidenceRecords = buildProjectedEvidenceRecords(projectedRecord, purchaseEvent, purchaseLineItems);
   const documentRecords = buildProjectedThingDocumentRecords(projectedRecord, thingRecords, warrantyRecords);
   const documentLinkRecords = buildProjectedDocumentLinkRecords(
@@ -2358,6 +2427,7 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
     memoryRecords,
     warrantyRecords,
     returnSupportRecords,
+    policyRecords,
     evidenceRecords,
     documentRecords,
     documentLinkRecords,

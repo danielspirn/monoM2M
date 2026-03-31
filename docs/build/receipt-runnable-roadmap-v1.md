@@ -393,3 +393,16 @@ Shipped:
 
 Success signal:
 - ownership surfaces can point back to concrete evidence records that grounded the promoted Thing
+
+#### Slice 24: Structured policy records
+
+Status:
+- complete
+
+Shipped:
+- projected policy records now connect return and warranty support into a first-class policy layer
+- Thing detail now shows unified policy records alongside the narrower return and warranty cards
+- future property, insurance, and family-trust flows can attach to explicit policy records instead of only support stubs
+
+Success signal:
+- return and warranty support are available through a single structured policy layer tied to the promoted Thing
