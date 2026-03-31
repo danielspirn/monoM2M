@@ -433,6 +433,30 @@ export type ProjectedMemoryRecord = {
   thingIds: string[];
 };
 
+export type ProjectedWarrantyRecord = {
+  id: string;
+  thingId: string;
+  purchaseEventId: string;
+  receiptId: string;
+  providerName: string;
+  coverageType: 'manufacturer' | 'merchant_stub';
+  startsAt: string;
+  endsAt: string;
+  status: 'active' | 'candidate';
+  source: 'receipt_candidate';
+  note: string;
+};
+
+export type ProjectedThingDocumentRecord = {
+  id: string;
+  thingId: string;
+  receiptId: string;
+  sourceDocumentId: string;
+  title: string;
+  documentRole: 'receipt' | 'warranty_stub';
+  documentType: SourceDocumentType;
+};
+
 export type SemanticReceiptSearchResult = {
   receiptId: string;
   purchaseEventId: string;
@@ -474,6 +498,8 @@ type StoredPurchaseGraphRecords = {
   productRecords: ProjectedProductRecord[];
   thingRecords: ProjectedThingRecord[];
   memoryRecords: ProjectedMemoryRecord[];
+  warrantyRecords: ProjectedWarrantyRecord[];
+  documentRecords: ProjectedThingDocumentRecord[];
 };
 
 export function createLiveReceipt(input: CreateReceiptInput): string {
@@ -732,6 +758,20 @@ export function listProjectedProducts(): ProjectedProductRecord[] {
     .filter((record) => record.status === 'trusted')
     .flatMap((record) => getStoredPurchaseGraph(record).productRecords)
     .sort((left, right) => right.purchasedAt.localeCompare(left.purchasedAt) || left.displayName.localeCompare(right.displayName));
+}
+
+export function listProjectedWarranties(): ProjectedWarrantyRecord[] {
+  return readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .flatMap((record) => getStoredPurchaseGraph(record).warrantyRecords)
+    .sort((left, right) => right.endsAt.localeCompare(left.endsAt));
+}
+
+export function listProjectedThingDocuments(): ProjectedThingDocumentRecord[] {
+  return readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .flatMap((record) => getStoredPurchaseGraph(record).documentRecords)
+    .sort((left, right) => left.title.localeCompare(right.title));
 }
 
 export function listProjectedThings(): ProjectedThingRecord[] {
@@ -1069,6 +1109,8 @@ function materializeRecord(record: StoredReceiptRecord): StoredReceiptRecord {
         || !nextRecord.purchaseGraph
         || !nextRecord.purchaseGraph.productRecords
         || !nextRecord.purchaseGraph.memoryRecords
+        || !nextRecord.purchaseGraph.warrantyRecords
+        || !nextRecord.purchaseGraph.documentRecords
       )
     ) {
       const purchaseProjection = nextRecord.purchaseProjection ?? buildPurchaseProjection(nextRecord, nextRecord.updatedAt);
@@ -1497,6 +1539,58 @@ function joinMemoryItems(purchaseLineItems: ProjectedPurchaseLineItemRecord[]) {
   return `${labels.slice(0, -1).join(', ')}, and ${labels.at(-1)}`;
 }
 
+function buildProjectedWarrantyRecords(thingRecords: ProjectedThingRecord[]): ProjectedWarrantyRecord[] {
+  return thingRecords
+    .filter((thing) => Boolean(thing.warrantyEndsAt))
+    .map((thing) => ({
+      id: `warranty_${thing.id}`,
+      thingId: thing.id,
+      purchaseEventId: thing.purchaseEventId,
+      receiptId: thing.receiptId,
+      providerName: `${thing.merchantName} / Manufacturer`,
+      coverageType: 'manufacturer',
+      startsAt: thing.acquiredAt,
+      endsAt: thing.warrantyEndsAt ?? thing.acquiredAt,
+      status: 'candidate',
+      source: 'receipt_candidate',
+      note: 'Warranty stub created from a trusted receipt and durable-goods heuristics. Review before relying on exact coverage.',
+    }));
+}
+
+function buildProjectedThingDocumentRecords(
+  record: StoredReceiptRecord,
+  thingRecords: ProjectedThingRecord[],
+  warrantyRecords: ProjectedWarrantyRecord[],
+): ProjectedThingDocumentRecord[] {
+  return thingRecords.flatMap((thing) => {
+    const receiptDocument: ProjectedThingDocumentRecord = {
+      id: `doc_receipt_${thing.id}`,
+      thingId: thing.id,
+      receiptId: thing.receiptId,
+      sourceDocumentId: record.sourceDocument.id,
+      title: `${record.header.merchantName} receipt`,
+      documentRole: 'receipt',
+      documentType: record.sourceDocument.sourceType,
+    };
+    const warrantyRecord = warrantyRecords.find((candidate) => candidate.thingId === thing.id);
+
+    return warrantyRecord
+      ? [
+          receiptDocument,
+          {
+            id: `doc_warranty_${thing.id}`,
+            thingId: thing.id,
+            receiptId: thing.receiptId,
+            sourceDocumentId: record.sourceDocument.id,
+            title: `${thing.displayName} warranty stub`,
+            documentRole: 'warranty_stub',
+            documentType: record.sourceDocument.sourceType,
+          },
+        ]
+      : [receiptDocument];
+  });
+}
+
 function buildPurchaseProjection(record: StoredReceiptRecord, projectedAt: string) {
   return {
     projectedAt,
@@ -1524,6 +1618,8 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
     ...thing,
     memoryIds: memoryRecords.filter((memory) => memory.thingIds.includes(thing.id)).map((memory) => memory.id),
   }));
+  const warrantyRecords = buildProjectedWarrantyRecords(thingRecords);
+  const documentRecords = buildProjectedThingDocumentRecords(projectedRecord, thingRecords, warrantyRecords);
 
   return {
     savedAt,
@@ -1532,6 +1628,8 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
     productRecords,
     thingRecords,
     memoryRecords,
+    warrantyRecords,
+    documentRecords,
   };
 }
 

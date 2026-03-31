@@ -7,7 +7,9 @@ import {
   listProjectedPurchaseEvents,
   listProjectedPurchaseLineItems,
   listProjectedProducts,
+  listProjectedThingDocuments,
   listProjectedThings,
+  listProjectedWarranties,
 } from './receiptWorkflowStore';
 
 type Tone = 'blue' | 'green' | 'amber';
@@ -241,6 +243,19 @@ export type ThingDetailPayload = {
     category: string;
     note: string;
   } | null;
+  warranty: {
+    providerName: string;
+    coverageType: string;
+    endsAt: string;
+    status: string;
+    note: string;
+  } | null;
+  documents: Array<{
+    id: string;
+    title: string;
+    documentRole: string;
+    documentType: string;
+  }>;
   metadata: Array<{ label: string; value: string }>;
   purchaseSource: ReceiptCardData | null;
   linkedPeople: PersonCardData[];
@@ -1310,6 +1325,8 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
   const product = listProjectedProducts().find((candidate) => candidate.linkedThingId === thing.id)
     ?? listProjectedProducts().find((candidate) => candidate.receiptId === thing.receiptId && candidate.displayName === thing.displayName)
     ?? null;
+  const warranty = listProjectedWarranties().find((candidate) => candidate.thingId === thing.id) ?? null;
+  const documents = listProjectedThingDocuments().filter((candidate) => candidate.thingId === thing.id);
   const linkedPeople = thing.personIds.map((id) => personCard(getPerson(id) ?? people[0]));
   const linkedMemories = thing.memoryIds.map((id) => memoryCard(getMemory(id) ?? allMemories()[0]));
   const relatedThings = allThingRecords
@@ -1339,13 +1356,28 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
           note: product.note,
         }
       : null,
+    warranty: warranty
+      ? {
+          providerName: warranty.providerName,
+          coverageType: warranty.coverageType,
+          endsAt: warranty.endsAt,
+          status: warranty.status,
+          note: warranty.note,
+        }
+      : null,
+    documents: documents.map((document) => ({
+      id: document.id,
+      title: document.title,
+      documentRole: document.documentRole,
+      documentType: document.documentType,
+    })),
     metadata: [
       { label: 'Category', value: `${thing.category} / ${thing.subcategory}` },
       { label: 'Purchase source', value: thing.merchantName },
       { label: 'Purchase date', value: thing.acquiredAt },
       { label: 'Receipt document', value: thing.sourceDocumentId ?? 'No linked source document' },
       { label: 'Linked documents', value: String(thing.linkedDocumentCount ?? 0) },
-      { label: 'Warranty', value: thing.warrantyEndsAt ?? 'No warranty tracked' },
+      { label: 'Warranty', value: warranty?.endsAt ?? thing.warrantyEndsAt ?? 'No warranty tracked' },
       { label: 'Return window', value: thing.returnWindowEndsAt ?? 'Closed' },
     ],
     purchaseSource: sourceReceipt ? receiptCard(sourceReceipt) : null,

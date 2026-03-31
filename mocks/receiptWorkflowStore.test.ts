@@ -9,7 +9,9 @@ import {
   listProjectedMemories,
   listProjectedPurchaseReceipts,
   listProjectedProducts,
+  listProjectedThingDocuments,
   listProjectedThings,
+  listProjectedWarranties,
   resetLiveReceiptStore,
   rerunLiveReceiptExtraction,
   saveLiveReceiptHeaderField,
@@ -44,6 +46,8 @@ describe('receiptWorkflowStore projections', () => {
     const projectedProducts = listProjectedProducts();
     const projectedThings = listProjectedThings();
     const projectedMemories = listProjectedMemories();
+    const projectedWarranties = listProjectedWarranties();
+    const projectedDocuments = listProjectedThingDocuments();
 
     expect(projectedPurchaseEvents).toHaveLength(1);
     expect(projectedPurchaseEvents[0]?.merchantId).toBe('merchant_target');
@@ -78,6 +82,9 @@ describe('receiptWorkflowStore projections', () => {
     expect(projectedMemories[0]?.thingIds).toContain(projectedThings[0]?.id ?? '');
     expect(projectedMemories[0]?.memoryState).toBe('candidate');
     expect(projectedReceipts[0]?.memoryIds).toContain(projectedMemories[0]?.id ?? '');
+    expect(projectedWarranties).toHaveLength(1);
+    expect(projectedWarranties[0]?.thingId).toBe(projectedThings[0]?.id);
+    expect(projectedDocuments.filter((document) => document.thingId === projectedThings[0]?.id)).toHaveLength(2);
   });
 
   it('uses OCR snapshot item candidates for uncurated uploaded files', () => {

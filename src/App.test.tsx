@@ -148,6 +148,9 @@ describe('Milestone 1 shell', () => {
 
     expect(screen.getByText('Product record')).toBeTruthy();
     expect(screen.getAllByText('confirmed').length).toBeGreaterThan(0);
+    expect(screen.getByText('Warranty stub')).toBeTruthy();
+    expect(screen.getAllByText('Linked documents').length).toBeGreaterThan(0);
+    expect(screen.getByText('Air Fryer warranty stub')).toBeTruthy();
     expect(screen.getByText('Ownership support')).toBeTruthy();
     expect(screen.getByText('Receipt linked')).toBeTruthy();
     expect(screen.getByText('Receipt document')).toBeTruthy();

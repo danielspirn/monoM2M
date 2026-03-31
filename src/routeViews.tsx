@@ -408,6 +408,37 @@ export function ThingDetailView({ state, payload, onAction }: PageProps<ThingDet
         </SectionCard>
       ) : null}
 
+      {payload.warranty ? (
+        <SectionCard title="Warranty stub">
+          <div className="route-stack route-stack--compact">
+            <div>
+              <p className="eyebrow">{payload.warranty.coverageType}</p>
+              <h3>{payload.warranty.providerName}</h3>
+              <p>{payload.warranty.note}</p>
+            </div>
+            <div className="chip-row">
+              <span className="chip chip--accent">{payload.warranty.status}</span>
+              <span className="chip">Ends {payload.warranty.endsAt}</span>
+            </div>
+          </div>
+        </SectionCard>
+      ) : null}
+
+      {payload.documents.length ? (
+        <SectionCard title="Linked documents">
+          <div className="card-list">
+            {payload.documents.map((document) => (
+              <article className="data-card" key={document.id}>
+                <div>
+                  <h3>{document.title}</h3>
+                  <p>{document.documentRole} · {document.documentType}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </SectionCard>
+      ) : null}
+
       {payload.detail.supportLabels.length ? (
         <SectionCard title="Ownership support">
           <div className="chip-row">
