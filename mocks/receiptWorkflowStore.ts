@@ -716,6 +716,96 @@ export function rerunLiveReceiptExtraction(receiptId: string): ReceiptStudioLive
   return buildStudioPayload(nextRecord);
 }
 
+export function saveLiveReceiptHeaderField(
+  receiptId: string,
+  field: 'merchantName' | 'purchasedAt' | 'grandTotal',
+  value: string,
+): ReceiptStudioLivePayload | null {
+  const records = readStoredReceipts();
+  const index = records.findIndex((record) => record.id === receiptId);
+
+  if (index === -1) {
+    return null;
+  }
+
+  const record = records[index];
+  const now = new Date().toISOString();
+  const nextHeader = { ...record.header };
+
+  if (field === 'merchantName') {
+    nextHeader.merchantName = sanitizeMerchant(value || record.header.merchantName);
+  } else if (field === 'purchasedAt') {
+    nextHeader.purchasedAt = normalizePurchaseDate(value || record.header.purchasedAt, now);
+  } else {
+    nextHeader.grandTotal = coerceCurrencyValue(value, record.header.grandTotal);
+  }
+
+  const nextRecord = refreshRecordAfterReviewEdit(
+    {
+      ...record,
+      updatedAt: now,
+      header: nextHeader,
+      lineItems: record.lineItems.map((item) => ({ ...item, reviewState: item.reviewState === 'auto' ? 'edited' : item.reviewState })),
+    },
+    records.filter((candidate) => candidate.id !== receiptId),
+    { syncHeaderGrandTotalToLineItems: false },
+  );
+
+  records[index] = nextRecord;
+  writeStoredReceipts(records);
+
+  return buildStudioPayload(nextRecord);
+}
+
+export function saveLiveReceiptLineItemField(
+  receiptId: string,
+  lineItemId: string,
+  field: 'descriptionNormalized' | 'lineTotal',
+  value: string,
+): ReceiptStudioLivePayload | null {
+  const records = readStoredReceipts();
+  const index = records.findIndex((record) => record.id === receiptId);
+
+  if (index === -1) {
+    return null;
+  }
+
+  const record = records[index];
+  const now = new Date().toISOString();
+  const nextLineItems = record.lineItems.map((item) => {
+    if (item.id !== lineItemId) {
+      return item;
+    }
+
+    if (field === 'descriptionNormalized') {
+      return buildReviewedLineItem(item, titleCase(value || item.descriptionNormalized));
+    }
+
+    const nextLineTotal = coerceCurrencyValue(value, item.lineTotal);
+    return {
+      ...item,
+      unitPrice: roundCurrency(nextLineTotal / Math.max(item.quantity, 1)),
+      lineTotal: nextLineTotal,
+      reviewState: 'edited',
+    };
+  });
+
+  const nextRecord = refreshRecordAfterReviewEdit(
+    {
+      ...record,
+      updatedAt: now,
+      lineItems: nextLineItems,
+    },
+    records.filter((candidate) => candidate.id !== receiptId),
+    { syncHeaderGrandTotalToLineItems: true },
+  );
+
+  records[index] = nextRecord;
+  writeStoredReceipts(records);
+
+  return buildStudioPayload(nextRecord);
+}
+
 export function resetLiveReceiptStore() {
   if (typeof window === 'undefined') {
     return;
@@ -1082,6 +1172,140 @@ function buildStudioPayload(record: StoredReceiptRecord): ReceiptStudioLivePaylo
     structuredData: record.structuredData,
     searchDocument: record.searchDocument,
     alerts: record.status === 'processing' ? [] : record.alerts,
+  };
+}
+
+function refreshRecordAfterReviewEdit(
+  record: StoredReceiptRecord,
+  siblingRecords: StoredReceiptRecord[],
+  options: { syncHeaderGrandTotalToLineItems: boolean },
+): StoredReceiptRecord {
+  const merchant = sanitizeMerchant(record.header.merchantName);
+  const purchasedAt = normalizePurchaseDate(record.header.purchasedAt, record.updatedAt);
+  const lineItems = record.lineItems.map((item) => buildReviewedLineItem(item, item.descriptionNormalized));
+  const grandTotal = options.syncHeaderGrandTotalToLineItems
+    ? roundCurrency(lineItems.reduce((sum, item) => sum + item.lineTotal, 0))
+    : roundCurrency(record.header.grandTotal);
+  const selectedLineItemId = lineItems.some((item) => item.id === record.selectedLineItemId)
+    ? record.selectedLineItemId
+    : lineItems[0]?.id ?? null;
+  const returnPolicySnippet = lineItems.some((item) => item.assetCandidateFlag)
+    ? 'Return policy candidate detected: keep original receipt for item-level support.'
+    : null;
+  const warrantySnippet = lineItems.some((item) => item.assetCandidateFlag)
+    ? 'Warranty candidate detected from durable-goods language and merchant pattern.'
+    : null;
+  const merchantProfile = buildRetailerProfile(merchant);
+  const duplicateDetected = detectPossibleDuplicate(siblingRecords, merchant, purchasedAt, grandTotal);
+  const evidenceSpans = buildEvidenceSpans(record.id, lineItems, merchant, purchasedAt, grandTotal);
+
+  return {
+    ...record,
+    note: `${merchant} receipt changes saved. Parsed and structured layers now reflect the reviewed values.`,
+    header: {
+      ...record.header,
+      merchantName: merchant,
+      purchasedAt,
+      grandTotal,
+    },
+    parsedData: {
+      ...record.parsedData,
+      rawText: buildRawText(merchant, purchasedAt, lineItems, grandTotal),
+      fieldCandidates: [
+        updateParsedFieldCandidate(record.parsedData.fieldCandidates[0], `${record.id}_field_merchant`, 'Merchant', merchant, 0.99, evidenceSpans),
+        updateParsedFieldCandidate(record.parsedData.fieldCandidates[1], `${record.id}_field_date`, 'Purchase date', purchasedAt, 0.98, evidenceSpans),
+        updateParsedFieldCandidate(record.parsedData.fieldCandidates[2], `${record.id}_field_total`, 'Grand total', `$${grandTotal.toFixed(2)}`, 0.97, evidenceSpans),
+      ],
+      lineItemCandidates: lineItems.map((item, index) =>
+        updateParsedLineItemCandidate(record.parsedData.lineItemCandidates[index], item, record.id, evidenceSpans),
+      ),
+      returnPolicySnippet,
+      warrantySnippet,
+    },
+    lineItems,
+    selectedLineItemId,
+    evidenceSpans,
+    structuredData: {
+      ...record.structuredData,
+      merchantMatchStatus: 'confirmed',
+      merchantMatchConfidence: 0.98,
+      thingCandidateCount: lineItems.filter((item) => item.assetCandidateFlag).length,
+      returnPolicyStatus: returnPolicySnippet ? 'candidate' : 'not_found',
+      warrantyStatus: warrantySnippet ? 'candidate' : 'not_found',
+      retailerProfile: merchantProfile,
+      taxTags: buildTaxTags(lineItems, merchant),
+      lifestyleTags: buildLifestyleTags(lineItems, merchant),
+      productCategories: buildProductCategories(lineItems),
+      returnWindowLabel: lineItems.some((item) => item.assetCandidateFlag) ? 'Likely returnable purchase detected' : 'No notable returnability signal',
+      warrantySupportLabel: lineItems.some((item) => item.assetCandidateFlag) ? 'Durable-goods warranty candidate detected' : 'No warranty signal detected',
+    },
+    searchDocument: {
+      status: 'indexed',
+      keywords: buildSearchKeywords(merchant, lineItems),
+      textPreview: buildSearchPreview(merchant, lineItems),
+    },
+    alerts: buildAlerts({
+      duplicateDetected,
+      merchant,
+      lineItems,
+      merchantProfile,
+      sourceDocument: record.sourceDocument,
+    }),
+  };
+}
+
+function buildReviewedLineItem(item: ReceiptLineItemRecord, description: string): ReceiptLineItemRecord {
+  const normalized = titleCase(description || item.descriptionNormalized);
+  const objectEntry = resolveObjectDirectoryEntry(normalized);
+  const assetCandidateFlag = objectEntry?.thingCandidate ?? looksLikeThing(normalized);
+
+  return {
+    ...item,
+    descriptionNormalized: normalized,
+    descriptionRaw: normalized.toUpperCase(),
+    reviewState: 'edited',
+    assetCandidateFlag,
+    productMatchStatus: assetCandidateFlag ? 'confirmed' : 'unmatched',
+    productMatchConfidence: assetCandidateFlag ? Math.max(item.productMatchConfidence, 0.88) : 0.42,
+    householdTags: objectEntry?.householdTags ?? inferHouseholdTags(normalized),
+    lemTags: objectEntry?.lemTags ?? inferLemTags(normalized),
+  };
+}
+
+function updateParsedFieldCandidate(
+  existing: ParsedFieldCandidate | undefined,
+  id: string,
+  label: string,
+  value: string,
+  confidence: number,
+  evidenceSpans: EvidenceSpanRecord[],
+): ParsedFieldCandidate {
+  return {
+    id,
+    label,
+    value,
+    confidence,
+    source: existing?.source ?? 'derived',
+    evidenceSpanId: evidenceSpans.find((span) => span.label.toLowerCase() === label.toLowerCase())?.id ?? null,
+  };
+}
+
+function updateParsedLineItemCandidate(
+  existing: ParsedLineItemCandidate | undefined,
+  item: ReceiptLineItemRecord,
+  receiptId: string,
+  evidenceSpans: EvidenceSpanRecord[],
+): ParsedLineItemCandidate {
+  return {
+    id: existing?.id ?? `${receiptId}_candidate_line_${item.lineIndex}`,
+    description: item.descriptionNormalized,
+    quantity: item.quantity,
+    unitPrice: item.unitPrice,
+    lineTotal: item.lineTotal,
+    confidence: Math.max(existing?.confidence ?? item.confidenceScore, item.confidenceScore),
+    source: existing?.source ?? 'summary_fallback',
+    thingCandidateHint: item.assetCandidateFlag,
+    evidenceSpanId: evidenceSpans.find((span) => span.targetObjectId === item.id)?.id ?? null,
   };
 }
 
@@ -1800,6 +2024,11 @@ function buildChecksum(value: string) {
 
 function roundCurrency(value: number) {
   return Math.round(value * 100) / 100;
+}
+
+function coerceCurrencyValue(value: string, fallback: number) {
+  const numeric = Number.parseFloat(value.replace(/[^0-9.-]+/g, ''));
+  return Number.isFinite(numeric) ? roundCurrency(numeric) : fallback;
 }
 
 function roundCoordinate(value: number) {

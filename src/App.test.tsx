@@ -218,6 +218,37 @@ describe('Milestone 1 shell', () => {
     expect(screen.getAllByText(/evidence linked/i).length).toBeGreaterThan(0);
   });
 
+  it('saves reviewed receipt edits into the live review flow', () => {
+    vi.useFakeTimers();
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
+    fireEvent.click(screen.getByText('Add Receipt'));
+
+    fireEvent.change(screen.getByLabelText('Merchant'), { target: { value: 'Target' } });
+    fireEvent.change(screen.getByLabelText('Capture source'), { target: { value: 'Upload photo' } });
+    fireEvent.change(screen.getByLabelText('Extracted summary'), { target: { value: 'Air fryer, parchment liners' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Process receipt capture' }));
+
+    act(() => {
+      vi.advanceTimersByTime(2200);
+    });
+
+    const merchantInput = screen.getByLabelText('Reviewed merchant');
+    fireEvent.change(merchantInput, { target: { value: 'Target Run' } });
+    fireEvent.blur(merchantInput);
+
+    expect(screen.getByDisplayValue('Target Run')).toBeTruthy();
+
+    const itemInput = screen.getByLabelText('Item 1');
+    fireEvent.change(itemInput, { target: { value: 'Air Fryer XL' } });
+    fireEvent.blur(itemInput);
+
+    expect(screen.getByDisplayValue('Air Fryer Xl')).toBeTruthy();
+    expect(screen.getByText('Review corrections')).toBeTruthy();
+  });
+
   it('submits the form when return is pressed in a receipt field', () => {
     vi.useFakeTimers();
 

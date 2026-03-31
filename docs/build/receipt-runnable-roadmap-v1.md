@@ -146,13 +146,13 @@ Success signal:
 
 #### Slice 10: Live Receipt Studio persistence
 
-Goal:
-- let reviewed edits become durable structured truth
+Status:
+- complete
 
-Deliver:
-- save reviewed merchant/date/total/line items
-- retry and error states for live data
-- trusted review submission backed by stored parsed-layer records
+Shipped:
+- reviewed merchant, date, total, and line-item edits now save quietly in Receipt Studio
+- saved edits update parsed, evidence, structured, and search layers together
+- trusted review now rides on top of stored reviewed values instead of display-only state
 
 Success signal:
 - live OCR receipts can be corrected and trusted without dropping back to mock-only behavior

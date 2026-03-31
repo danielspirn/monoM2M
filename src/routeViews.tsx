@@ -698,6 +698,13 @@ export function ReceiptStudioView({ state, payload, onAction }: PageProps<Receip
   const selectedLineItem = payload.lineItems.find((lineItem) => lineItem.id === payload.selectedLineItemId) ?? payload.lineItems[0] ?? null;
   const issueAlerts = (payload.alerts ?? []).filter((alert) => alert.level === 'issue');
   const infoAlerts = (payload.alerts ?? []).filter((alert) => alert.level === 'info');
+  const submitEditedValue = (actionPrefix: string, nextValue: string, currentValue: string) => {
+    const normalizedNext = nextValue.trim();
+    if (!normalizedNext || normalizedNext === currentValue.trim()) {
+      return;
+    }
+    onAction(`${actionPrefix}:${encodeURIComponent(normalizedNext)}`);
+  };
   const summaryMetrics: SummaryMetric[] = [
     {
       label: 'Raw document',
@@ -935,6 +942,121 @@ export function ReceiptStudioView({ state, payload, onAction }: PageProps<Receip
           <BlankCard title="Line items pending" body="The receipt is still being structured into purchase line items." />
         )}
       </SectionCard>
+
+      {payload.receipt.status !== 'processing' ? (
+        <SectionCard title="Review corrections">
+          <div className="receipt-grid">
+            <article className="list-card receipt-layer-card">
+              <p className="eyebrow">Header review</p>
+              <div className="mini-stack">
+                <label className="composer-field">
+                  <span>Reviewed merchant</span>
+                  <input
+                    key={`merchant-${payload.header.merchantName}`}
+                    defaultValue={payload.header.merchantName ?? ''}
+                    type="text"
+                    onBlur={(event) =>
+                      submitEditedValue(`receipt:edit-header:${payload.receipt.id}:merchantName`, event.target.value, payload.header.merchantName ?? '')
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.currentTarget.blur();
+                      }
+                    }}
+                  />
+                </label>
+                <label className="composer-field">
+                  <span>Reviewed date</span>
+                  <input
+                    key={`date-${payload.header.purchasedAt}`}
+                    defaultValue={payload.header.purchasedAt ?? ''}
+                    type="text"
+                    onBlur={(event) =>
+                      submitEditedValue(`receipt:edit-header:${payload.receipt.id}:purchasedAt`, event.target.value, payload.header.purchasedAt ?? '')
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.currentTarget.blur();
+                      }
+                    }}
+                  />
+                </label>
+                <label className="composer-field">
+                  <span>Reviewed total</span>
+                  <input
+                    key={`total-${payload.header.grandTotal}`}
+                    defaultValue={String(payload.header.grandTotal ?? '')}
+                    inputMode="decimal"
+                    type="text"
+                    onBlur={(event) =>
+                      submitEditedValue(
+                        `receipt:edit-header:${payload.receipt.id}:grandTotal`,
+                        event.target.value,
+                        String(payload.header.grandTotal ?? ''),
+                      )
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.currentTarget.blur();
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+            </article>
+            <article className="list-card receipt-layer-card">
+              <p className="eyebrow">Line-item review</p>
+              <div className="mini-stack">
+                {payload.lineItems.map((lineItem) => (
+                  <div className="mini-stack" key={`edit-${lineItem.id}`}>
+                    <label className="composer-field">
+                      <span>{`Item ${lineItem.lineIndex}`}</span>
+                      <input
+                        key={`description-${lineItem.id}-${lineItem.descriptionNormalized}`}
+                        defaultValue={lineItem.descriptionNormalized}
+                        type="text"
+                        onBlur={(event) =>
+                          submitEditedValue(
+                            `receipt:edit-line:${payload.receipt.id}:${lineItem.id}:descriptionNormalized`,
+                            event.target.value,
+                            lineItem.descriptionNormalized,
+                          )
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            event.currentTarget.blur();
+                          }
+                        }}
+                      />
+                    </label>
+                    <label className="composer-field">
+                      <span>{`${lineItem.descriptionNormalized} total`}</span>
+                      <input
+                        key={`line-total-${lineItem.id}-${lineItem.lineTotal}`}
+                        defaultValue={String(lineItem.lineTotal)}
+                        inputMode="decimal"
+                        type="text"
+                        onBlur={(event) =>
+                          submitEditedValue(
+                            `receipt:edit-line:${payload.receipt.id}:${lineItem.id}:lineTotal`,
+                            event.target.value,
+                            String(lineItem.lineTotal),
+                          )
+                        }
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            event.currentTarget.blur();
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </article>
+          </div>
+        </SectionCard>
+      ) : null}
 
       <SectionCard title="Retailer and category enrichment">
         {payload.structuredData ? (

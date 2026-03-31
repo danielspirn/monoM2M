@@ -9,6 +9,8 @@ import {
   listProjectedThings,
   resetLiveReceiptStore,
   rerunLiveReceiptExtraction,
+  saveLiveReceiptHeaderField,
+  saveLiveReceiptLineItemField,
   submitLiveReceiptReview,
 } from './receiptWorkflowStore';
 
@@ -113,5 +115,29 @@ describe('receiptWorkflowStore projections', () => {
     expect(reopenedPayload?.parsedData.fieldCandidates.every((field) => Boolean(field.evidenceSpanId))).toBe(true);
     expect(reopenedPayload?.parsedData.lineItemCandidates.every((item) => Boolean(item.evidenceSpanId))).toBe(true);
     expect(reopenedPayload?.parsedData.lineItemCandidates).toEqual(initialPayload?.parsedData.lineItemCandidates);
+  });
+
+  it('persists reviewed header and line-item edits before trust', () => {
+    const capture = createLiveReceiptBatch({
+      merchant: 'Target',
+      purchaseDate: '2026-03-08',
+      source: 'Upload photo',
+      summary: 'Air fryer, parchment liners',
+    });
+
+    vi.advanceTimersByTime(2200);
+
+    saveLiveReceiptHeaderField(capture.primaryReceiptId, 'merchantName', 'Target Run');
+    saveLiveReceiptLineItemField(capture.primaryReceiptId, `${capture.primaryReceiptId}_line_1`, 'descriptionNormalized', 'Air Fryer XL');
+    saveLiveReceiptLineItemField(capture.primaryReceiptId, `${capture.primaryReceiptId}_line_1`, 'lineTotal', '99.50');
+
+    const payload = getLiveReceiptStudioPayload(capture.primaryReceiptId);
+
+    expect(payload?.header.merchantName).toBe('Target Run');
+    expect(payload?.header.grandTotal).toBeGreaterThan(99);
+    expect(payload?.lineItems[0]?.descriptionNormalized).toBe('Air Fryer Xl');
+    expect(payload?.lineItems[0]?.reviewState).toBe('edited');
+    expect(payload?.parsedData.fieldCandidates[0]?.value).toBe('Target Run');
+    expect(payload?.structuredData.merchantMatchStatus).toBe('confirmed');
   });
 });

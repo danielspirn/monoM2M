@@ -12,7 +12,13 @@ import {
   receiptFixtureScenarioOptions,
   resolveReceiptFixtureFilesFromDraft,
 } from '@/mocks/receiptFixtureScenarios';
-import { createLiveReceiptBatch, rerunLiveReceiptExtraction, submitLiveReceiptReview } from '@/mocks/receiptWorkflowStore';
+import {
+  createLiveReceiptBatch,
+  rerunLiveReceiptExtraction,
+  saveLiveReceiptHeaderField,
+  saveLiveReceiptLineItemField,
+  submitLiveReceiptReview,
+} from '@/mocks/receiptWorkflowStore';
 import {
   getDefaultState,
   getPersonaDefinitions,
@@ -287,6 +293,29 @@ function Shell() {
               ? `${nextPayload.header.merchantName} is rerunning extraction so parsed fields and evidence can be refreshed.`
               : 'Receipt rerun is only live for newly captured receipts in this slice.'
           );
+          return;
+        }
+        if (action.startsWith('receipt:edit-header:')) {
+          const [, , receiptId, field, encodedValue] = action.split(':');
+          const nextPayload = saveLiveReceiptHeaderField(
+            receiptId,
+            field as 'merchantName' | 'purchasedAt' | 'grandTotal',
+            decodeURIComponent(encodedValue ?? ''),
+          );
+          setReceiptRefreshToken((current) => current + 1);
+          setNotice(nextPayload ? `${nextPayload.header.merchantName} review changes saved.` : 'Receipt header editing is only live for captured receipts in this slice.');
+          return;
+        }
+        if (action.startsWith('receipt:edit-line:')) {
+          const [, , receiptId, lineItemId, field, encodedValue] = action.split(':');
+          const nextPayload = saveLiveReceiptLineItemField(
+            receiptId,
+            lineItemId,
+            field as 'descriptionNormalized' | 'lineTotal',
+            decodeURIComponent(encodedValue ?? ''),
+          );
+          setReceiptRefreshToken((current) => current + 1);
+          setNotice(nextPayload ? `${nextPayload.header.merchantName} line-item review changes saved.` : 'Receipt line-item editing is only live for captured receipts in this slice.');
           return;
         }
         if (action.startsWith('receipt:convert:')) {
