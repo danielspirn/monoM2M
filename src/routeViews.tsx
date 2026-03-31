@@ -1429,6 +1429,26 @@ export function ReceiptStudioView({ state, payload, onAction }: PageProps<Receip
         )}
       </SectionCard>
 
+      {payload.reviewDecisions?.length ? (
+        <SectionCard title="Review decisions">
+          <div className="card-list">
+            {payload.reviewDecisions.map((decision) => (
+              <article className="data-card" key={decision.id}>
+                <div>
+                  <p className="eyebrow">{decision.label}</p>
+                  <h3>{decision.decisionType}</h3>
+                  <p>{decision.note}</p>
+                </div>
+                <div className="chip-row">
+                  <span className="chip">{decision.previousValue}</span>
+                  <span className="chip chip--accent">{decision.reviewedValue}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </SectionCard>
+      ) : null}
+
       <SectionCard title="People and memory suggestions">
         <div className="receipt-grid">
           <article className="list-card receipt-layer-card">

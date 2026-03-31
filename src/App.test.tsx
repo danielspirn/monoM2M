@@ -334,6 +334,9 @@ describe('Milestone 1 shell', () => {
 
     expect(screen.getByDisplayValue('Air Fryer Xl')).toBeTruthy();
     expect(screen.getByText('Review corrections')).toBeTruthy();
+    expect(screen.getByText('Review decisions')).toBeTruthy();
+    expect(screen.getAllByText('Merchant').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Target Run').length).toBeGreaterThan(0);
   });
 
   it('submits the form when return is pressed in a receipt field', () => {

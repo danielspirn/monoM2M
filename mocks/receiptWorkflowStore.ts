@@ -150,6 +150,18 @@ type DuplicateCandidateRecord = {
   note: string;
 };
 
+type ReviewDecisionRecord = {
+  id: string;
+  targetType: 'header_field' | 'line_item' | 'receipt_review';
+  targetId: string;
+  label: string;
+  previousValue: string;
+  reviewedValue: string;
+  decisionType: 'edited' | 'confirmed';
+  decidedAt: string;
+  note: string;
+};
+
 type StoredReceiptRecord = {
   id: string;
   createdAt: string;
@@ -186,6 +198,7 @@ type StoredReceiptRecord = {
     suggestedTitle: string;
   }>;
   duplicateCandidates: DuplicateCandidateRecord[];
+  reviewDecisions: ReviewDecisionRecord[];
   structuredData: {
     merchantMatchStatus: 'suggested' | 'confirmed';
     merchantMatchConfidence: number;
@@ -269,6 +282,7 @@ export type ReceiptStudioLivePayload = {
     suggestedTitle: string;
   }>;
   duplicateCandidates: Array<DuplicateCandidateRecord & { action: string }>;
+  reviewDecisions: ReviewDecisionRecord[];
   actions: {
     canSave: boolean;
     canConvertToThing: boolean;
@@ -896,6 +910,7 @@ function buildStoredReceiptRecord(params: {
           },
     ],
     duplicateCandidates,
+    reviewDecisions: [],
     structuredData: {
       merchantMatchStatus: 'suggested',
       merchantMatchConfidence: merchantProfile === 'known retailer' ? 0.95 : 0.85,
@@ -1308,6 +1323,7 @@ export function submitLiveReceiptReview(receiptId: string): ReceiptStudioLivePay
 
   const record = records[index];
   const now = new Date().toISOString();
+  const reviewCompletionDecision = buildReviewCompletionDecision(record, now);
   const nextRecord: StoredReceiptRecord = {
     ...record,
     updatedAt: now,
@@ -1331,6 +1347,7 @@ export function submitLiveReceiptReview(receiptId: string): ReceiptStudioLivePay
       merchantMatchStatus: 'confirmed',
       merchantMatchConfidence: 0.97,
     },
+    reviewDecisions: appendReviewDecision(record.reviewDecisions, reviewCompletionDecision),
   };
   nextRecord.purchaseProjection = buildPurchaseProjection(nextRecord, now);
   nextRecord.purchaseGraph = buildStoredPurchaseGraph(nextRecord, now);
@@ -1410,6 +1427,11 @@ export function saveLiveReceiptHeaderField(
     records.filter((candidate) => candidate.id !== receiptId),
     { syncHeaderGrandTotalToLineItems: false },
   );
+  const reviewDecision = buildHeaderReviewDecision(record, nextRecord, field, now);
+
+  if (reviewDecision) {
+    nextRecord.reviewDecisions = appendReviewDecision(nextRecord.reviewDecisions, reviewDecision);
+  }
 
   records[index] = nextRecord;
   writeStoredReceipts(records);
@@ -1459,6 +1481,11 @@ export function saveLiveReceiptLineItemField(
     records.filter((candidate) => candidate.id !== receiptId),
     { syncHeaderGrandTotalToLineItems: true },
   );
+  const reviewDecision = buildLineItemReviewDecision(record, nextRecord, lineItemId, field, now);
+
+  if (reviewDecision) {
+    nextRecord.reviewDecisions = appendReviewDecision(nextRecord.reviewDecisions, reviewDecision);
+  }
 
   records[index] = nextRecord;
   writeStoredReceipts(records);
@@ -2604,6 +2631,7 @@ function buildStudioPayload(record: StoredReceiptRecord): ReceiptStudioLivePaylo
             ...candidate,
             action: `route:/ingest/${candidate.matchedReceiptId}`,
           })),
+    reviewDecisions: record.status === 'processing' ? [] : record.reviewDecisions,
     actions: {
       canSave: record.status !== 'processing',
       canConvertToThing: record.status !== 'processing' && record.lineItems.some((item) => item.assetCandidateFlag),
@@ -2718,6 +2746,95 @@ function refreshRecordAfterReviewEdit(
   }
 
   return nextRecord;
+}
+
+function appendReviewDecision(existing: ReviewDecisionRecord[], nextDecision: ReviewDecisionRecord) {
+  return [...existing.filter((decision) => decision.id !== nextDecision.id), nextDecision]
+    .sort((left, right) => left.decidedAt.localeCompare(right.decidedAt));
+}
+
+function buildHeaderReviewDecision(
+  previousRecord: StoredReceiptRecord,
+  nextRecord: StoredReceiptRecord,
+  field: 'merchantName' | 'purchasedAt' | 'grandTotal',
+  decidedAt: string,
+): ReviewDecisionRecord | null {
+  const labelMap = {
+    merchantName: 'Merchant',
+    purchasedAt: 'Purchase date',
+    grandTotal: 'Grand total',
+  } as const;
+  const previousValue = String(previousRecord.header[field] ?? '');
+  const reviewedValue = String(nextRecord.header[field] ?? '');
+
+  if (previousValue === reviewedValue) {
+    return null;
+  }
+
+  return {
+    id: `review_${previousRecord.id}_${field}`,
+    targetType: 'header_field',
+    targetId: field,
+    label: labelMap[field],
+    previousValue,
+    reviewedValue,
+    decisionType: 'edited',
+    decidedAt,
+    note: `${labelMap[field]} was updated during receipt review.`,
+  };
+}
+
+function buildLineItemReviewDecision(
+  previousRecord: StoredReceiptRecord,
+  nextRecord: StoredReceiptRecord,
+  lineItemId: string,
+  field: 'descriptionNormalized' | 'lineTotal',
+  decidedAt: string,
+): ReviewDecisionRecord | null {
+  const previousLineItem = previousRecord.lineItems.find((item) => item.id === lineItemId);
+  const nextLineItem = nextRecord.lineItems.find((item) => item.id === lineItemId);
+
+  if (!previousLineItem || !nextLineItem) {
+    return null;
+  }
+
+  const previousValue = field === 'lineTotal' ? String(previousLineItem.lineTotal) : previousLineItem.descriptionNormalized;
+  const reviewedValue = field === 'lineTotal' ? String(nextLineItem.lineTotal) : nextLineItem.descriptionNormalized;
+
+  if (previousValue === reviewedValue) {
+    return null;
+  }
+
+  return {
+    id: `review_${previousRecord.id}_${lineItemId}_${field}`,
+    targetType: 'line_item',
+    targetId: lineItemId,
+    label: field === 'lineTotal' ? `${nextLineItem.descriptionNormalized} total` : `Item ${nextLineItem.lineIndex}`,
+    previousValue,
+    reviewedValue,
+    decisionType: 'edited',
+    decidedAt,
+    note: `${nextLineItem.descriptionNormalized} was adjusted during receipt review.`,
+  };
+}
+
+function buildReviewCompletionDecision(record: StoredReceiptRecord, decidedAt: string): ReviewDecisionRecord {
+  const reviewedCount = record.reviewDecisions.filter((decision) => decision.decisionType === 'edited').length;
+
+  return {
+    id: `review_${record.id}_trusted`,
+    targetType: 'receipt_review',
+    targetId: record.id,
+    label: 'Receipt review',
+    previousValue: record.status,
+    reviewedValue: 'trusted',
+    decisionType: 'confirmed',
+    decidedAt,
+    note:
+      reviewedCount > 0
+        ? `Receipt trusted after ${reviewedCount} edit${reviewedCount === 1 ? '' : 's'} were applied.`
+        : 'Receipt trusted without manual corrections.',
+  };
 }
 
 function buildReviewedLineItem(item: ReceiptLineItemRecord, description: string): ReceiptLineItemRecord {

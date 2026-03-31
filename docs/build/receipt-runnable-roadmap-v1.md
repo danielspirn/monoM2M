@@ -432,3 +432,16 @@ Shipped:
 
 Success signal:
 - duplicate review is grounded in an explicit candidate record with a linked receipt instead of a generic warning banner
+
+#### Slice 27: Structured review decision records
+
+Status:
+- complete
+
+Shipped:
+- receipt review edits and final trust confirmation now persist as explicit decision records
+- Receipt Studio now shows the review trail for changed fields and line items
+- future OCR eval and vendor-comparison work can reuse the same human-correction record instead of diffing snapshots
+
+Success signal:
+- review corrections and trust completion are preserved as first-class decisions rather than only the latest receipt state

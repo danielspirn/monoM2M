@@ -232,6 +232,9 @@ describe('receiptWorkflowStore projections', () => {
     expect(payload?.lineItems[0]?.reviewState).toBe('edited');
     expect(payload?.parsedData.fieldCandidates[0]?.value).toBe('Target Run');
     expect(payload?.structuredData.merchantMatchStatus).toBe('confirmed');
+    expect((payload?.reviewDecisions?.length ?? 0)).toBeGreaterThanOrEqual(3);
+    expect(payload?.reviewDecisions.some((decision) => decision.label === 'Merchant')).toBe(true);
+    expect(payload?.reviewDecisions.some((decision) => decision.targetType === 'line_item')).toBe(true);
   });
 
   it('builds duplicate candidate records for similar receipts', () => {
