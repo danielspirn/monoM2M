@@ -532,6 +532,25 @@ export type ProjectedDocumentLinkRecord = {
   note: string;
 };
 
+export type ProjectedSemanticRecord = {
+  id: string;
+  receiptId: string;
+  purchaseEventId: string;
+  sourceDocumentId: string;
+  merchantName: string;
+  purchasedAt: string;
+  retrievalScope: 'trusted_receipt';
+  textPreview: string;
+  keywords: string[];
+  embeddingTerms: string[];
+  embeddingVersion: string;
+  lineHighlights: string[];
+  thingIds: string[];
+  memoryIds: string[];
+  personIds: string[];
+  note: string;
+};
+
 export type SemanticReceiptSearchResult = {
   receiptId: string;
   purchaseEventId: string;
@@ -580,6 +599,7 @@ type StoredPurchaseGraphRecords = {
   warrantyRecords: ProjectedWarrantyRecord[];
   documentRecords: ProjectedThingDocumentRecord[];
   documentLinkRecords: ProjectedDocumentLinkRecord[];
+  semanticRecord: ProjectedSemanticRecord;
 };
 
 export function createLiveReceipt(input: CreateReceiptInput): string {
@@ -973,6 +993,13 @@ export function listProjectedDocumentLinks(): ProjectedDocumentLinkRecord[] {
     );
 }
 
+export function listProjectedSemanticRecords(): ProjectedSemanticRecord[] {
+  return readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .map((record) => getStoredPurchaseGraph(record).semanticRecord)
+    .sort((left, right) => right.purchasedAt.localeCompare(left.purchasedAt));
+}
+
 export function listProjectedThings(): ProjectedThingRecord[] {
   return readStoredReceipts()
     .filter((record) => record.status === 'trusted')
@@ -994,26 +1021,24 @@ export function searchSemanticReceipts(query: string): SemanticReceiptSearchResu
     return [];
   }
 
-  return readStoredReceipts()
-    .filter((record) => record.status === 'trusted')
-    .map((record) => {
-      const purchaseGraph = getStoredPurchaseGraph(record);
-      const matches = normalizedQueryTerms.filter((term) => record.searchDocument.embeddingTerms.includes(term));
+  return listProjectedSemanticRecords()
+    .map((semanticRecord) => {
+      const matches = normalizedQueryTerms.filter((term) => semanticRecord.embeddingTerms.includes(term));
       const lexicalMatches = normalizedQueryTerms.filter((term) =>
-        record.searchDocument.textPreview.toLowerCase().includes(term)
-        || record.searchDocument.keywords.some((keyword) => keyword.toLowerCase().includes(term)),
+        semanticRecord.textPreview.toLowerCase().includes(term)
+        || semanticRecord.keywords.some((keyword) => keyword.toLowerCase().includes(term)),
       );
       const score = matches.length * 2 + lexicalMatches.length;
 
       return score > 0
         ? {
-            receiptId: record.id,
-            purchaseEventId: purchaseGraph.purchaseEvent.id,
-            merchantName: record.header.merchantName,
-            purchasedAt: record.header.purchasedAt,
+            receiptId: semanticRecord.receiptId,
+            purchaseEventId: semanticRecord.purchaseEventId,
+            merchantName: semanticRecord.merchantName,
+            purchasedAt: semanticRecord.purchasedAt,
             matchedTerms: Array.from(new Set([...matches, ...lexicalMatches])),
             score,
-            lineHighlights: purchaseGraph.purchaseLineItems.slice(0, 3).map((item) => item.description),
+            lineHighlights: semanticRecord.lineHighlights,
           }
         : null;
     })
@@ -1315,6 +1340,7 @@ function materializeRecord(record: StoredReceiptRecord): StoredReceiptRecord {
         || !nextRecord.purchaseGraph.warrantyRecords
         || !nextRecord.purchaseGraph.documentRecords
         || !nextRecord.purchaseGraph.documentLinkRecords
+        || !nextRecord.purchaseGraph.semanticRecord
       )
     ) {
       const purchaseProjection = nextRecord.purchaseProjection ?? buildPurchaseProjection(nextRecord, nextRecord.updatedAt);
@@ -1933,6 +1959,33 @@ function joinMemoryItems(purchaseLineItems: ProjectedPurchaseLineItemRecord[]) {
   return `${labels.slice(0, -1).join(', ')}, and ${labels.at(-1)}`;
 }
 
+function buildProjectedSemanticRecord(
+  record: StoredReceiptRecord,
+  purchaseEvent: ProjectedPurchaseEventRecord,
+  purchaseLineItems: ProjectedPurchaseLineItemRecord[],
+  thingRecords: ProjectedThingRecord[],
+  memoryRecords: ProjectedMemoryRecord[],
+): ProjectedSemanticRecord {
+  return {
+    id: `semantic_${record.id}`,
+    receiptId: record.id,
+    purchaseEventId: purchaseEvent.id,
+    sourceDocumentId: record.sourceDocument.id,
+    merchantName: purchaseEvent.merchantName,
+    purchasedAt: purchaseEvent.purchasedAt,
+    retrievalScope: 'trusted_receipt',
+    textPreview: record.searchDocument.textPreview,
+    keywords: record.searchDocument.keywords,
+    embeddingTerms: record.searchDocument.embeddingTerms,
+    embeddingVersion: record.searchDocument.embeddingVersion,
+    lineHighlights: purchaseLineItems.slice(0, 3).map((item) => item.description),
+    thingIds: thingRecords.map((thing) => thing.id),
+    memoryIds: memoryRecords.map((memory) => memory.id),
+    personIds: purchaseEvent.personIds,
+    note: `${purchaseEvent.merchantName} is indexed as a trusted receipt retrieval record grounded in reviewed purchase data.`,
+  };
+}
+
 function buildProjectedWarrantyRecords(thingRecords: ProjectedThingRecord[]): ProjectedWarrantyRecord[] {
   return thingRecords
     .filter((thing) => Boolean(thing.warrantyEndsAt))
@@ -2075,6 +2128,7 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
     ...thing,
     memoryIds: memoryRecords.filter((memory) => memory.thingIds.includes(thing.id)).map((memory) => memory.id),
   }));
+  const semanticRecord = buildProjectedSemanticRecord(projectedRecord, purchaseEvent, purchaseLineItems, thingRecords, memoryRecords);
   const warrantyRecords = buildProjectedWarrantyRecords(thingRecords);
   const documentRecords = buildProjectedThingDocumentRecords(projectedRecord, thingRecords, warrantyRecords);
   const documentLinkRecords = buildProjectedDocumentLinkRecords(
@@ -2106,6 +2160,7 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
     warrantyRecords,
     documentRecords,
     documentLinkRecords,
+    semanticRecord,
   };
 }
 

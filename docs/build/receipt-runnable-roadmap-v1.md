@@ -341,3 +341,16 @@ Shipped:
 
 Success signal:
 - trusted purchase records can be grouped and queried through a real tag graph rather than only ad hoc field arrays
+
+#### Slice 20: Structured semantic records
+
+Status:
+- complete
+
+Shipped:
+- projected semantic records now represent the embedded retrieval layer for trusted receipts
+- semantic search now resolves through explicit projected retrieval records instead of reading only receipt-local fields
+- Thing detail now shows a retrieval profile with embedding version, keyword count, term count, and preview text
+
+Success signal:
+- the embedded/search layer is a first-class record type that future retrieval and agent slices can reuse directly

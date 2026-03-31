@@ -478,6 +478,20 @@ export function ThingDetailView({ state, payload, onAction }: PageProps<ThingDet
         </SectionCard>
       ) : null}
 
+      {payload.retrievalProfile ? (
+        <SectionCard title="Retrieval profile">
+          <article className="list-card receipt-layer-card">
+            <p className="eyebrow">{payload.retrievalProfile.scope}</p>
+            <p>{payload.retrievalProfile.preview}</p>
+            <div className="chip-row">
+              <span className="chip chip--accent">{payload.retrievalProfile.embeddingVersion}</span>
+              <span className="chip">{payload.retrievalProfile.keywordCount}</span>
+              <span className="chip">{payload.retrievalProfile.termCount}</span>
+            </div>
+          </article>
+        </SectionCard>
+      ) : null}
+
       {payload.merchant ? (
         <SectionCard title="Merchant record">
           <div className="route-stack route-stack--compact">

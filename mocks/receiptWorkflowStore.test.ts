@@ -4,6 +4,7 @@ import {
   answerSemanticReceiptQuestion,
   createLiveReceiptBatch,
   getLiveReceiptStudioPayload,
+  listProjectedSemanticRecords,
   listProjectedPurchaseEvents,
   listProjectedPurchaseLineItems,
   listProjectedPurchaseParticipants,
@@ -58,6 +59,7 @@ describe('receiptWorkflowStore projections', () => {
     const projectedDocuments = listProjectedThingDocuments();
     const projectedDocumentLinks = listProjectedDocumentLinks();
     const projectedTags = listProjectedTags();
+    const projectedSemanticRecords = listProjectedSemanticRecords();
 
     expect(projectedPurchaseEvents).toHaveLength(1);
     expect(projectedPurchaseEvents[0]?.merchantId).toBe('merchant_target');
@@ -113,6 +115,10 @@ describe('receiptWorkflowStore projections', () => {
     expect(projectedTags.some((tag) => tag.framework === 'product_category' && tag.label === 'Kitchen')).toBe(true);
     expect(projectedTags.some((tag) => tag.framework === 'household' && tag.linkedThingIds.includes(projectedThings[0]?.id ?? ''))).toBe(true);
     expect(projectedTags.some((tag) => tag.framework === 'vendor_context' && tag.label === 'known retailer')).toBe(true);
+    expect(projectedSemanticRecords).toHaveLength(1);
+    expect(projectedSemanticRecords[0]?.retrievalScope).toBe('trusted_receipt');
+    expect(projectedSemanticRecords[0]?.embeddingVersion).toBe('receipt-embedding-v1');
+    expect(projectedSemanticRecords[0]?.thingIds).toContain(projectedThings[0]?.id ?? '');
   });
 
   it('uses OCR snapshot item candidates for uncurated uploaded files', () => {

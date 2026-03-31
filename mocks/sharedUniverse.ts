@@ -3,6 +3,7 @@ import {
   getLiveReceiptStudioPayload,
   hasLiveReceipt,
   listLiveReceiptCards,
+  listProjectedSemanticRecords,
   listProjectedTags,
   listProjectedMemories,
   listProjectedMerchants,
@@ -276,6 +277,13 @@ export type ThingDetailPayload = {
     spendLabel: string;
     note: string;
   }>;
+  retrievalProfile: {
+    scope: string;
+    embeddingVersion: string;
+    keywordCount: string;
+    termCount: string;
+    preview: string;
+  } | null;
   merchant: {
     title: string;
     retailerProfile: string;
@@ -1387,6 +1395,7 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
     ?? listProjectedObjects().find((candidate) => candidate.displayName === thing.displayName)
     ?? null;
   const thingTags = listProjectedTags().filter((candidate) => candidate.linkedThingIds.includes(thing.id));
+  const semanticRecord = listProjectedSemanticRecords().find((candidate) => candidate.receiptId === thing.receiptId) ?? null;
   const product = listProjectedProducts().find((candidate) => candidate.linkedThingId === thing.id)
     ?? listProjectedProducts().find((candidate) => candidate.receiptId === thing.receiptId && candidate.displayName === thing.displayName)
     ?? null;
@@ -1454,6 +1463,15 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
       spendLabel: `$${tag.trustedSpendTotal.toFixed(2)} tagged spend`,
       note: tag.note,
     })),
+    retrievalProfile: semanticRecord
+      ? {
+          scope: semanticRecord.retrievalScope.replace(/_/g, ' '),
+          embeddingVersion: semanticRecord.embeddingVersion,
+          keywordCount: `${semanticRecord.keywords.length} keywords`,
+          termCount: `${semanticRecord.embeddingTerms.length} embedding terms`,
+          preview: semanticRecord.textPreview,
+        }
+      : null,
     merchant: merchant
       ? {
           title: merchant.displayName,
