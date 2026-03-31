@@ -1,4 +1,5 @@
 import {
+  answerSemanticReceiptQuestion,
   getLiveReceiptStudioPayload,
   hasLiveReceipt,
   listLiveReceiptCards,
@@ -1682,6 +1683,50 @@ function buildAgentChatPayload(options: RouteBuilderOptions): AgentChatPayload {
     };
   }
 
+  const groundedQuery = buildGroundedAgentQuery();
+  const groundedAnswer = groundedQuery ? answerSemanticReceiptQuestion(groundedQuery) : null;
+
+  if (groundedAnswer) {
+    return {
+      mode: 'chat',
+      title: 'Ask Agent',
+      conversation: [
+        {
+          id: 'chat-grounded-1',
+          role: 'user',
+          content: groundedAnswer.query,
+        },
+        {
+          id: 'chat-grounded-2',
+          role: 'assistant',
+          content: groundedAnswer.summary,
+          citations: groundedAnswer.citations.map((citation) => ({
+            type: citation.type,
+            id: citation.id,
+            label: citation.label,
+            action: citation.action,
+          })),
+          structuredResults: groundedAnswer.structuredResults.map((result) => ({
+            id: result.id,
+            title: result.title,
+            body: result.body,
+            actionLabel: result.actionLabel,
+            action: result.action,
+            chips: result.chips,
+          })),
+          suggestedFollowUps: groundedAnswer.suggestedFollowUps,
+        },
+      ],
+      suggestedPrompts: [
+        'What did I buy recently?',
+        'Which receipts have durable goods?',
+        'Show me the latest trusted receipt',
+        'What else did I buy at the same merchant?',
+      ],
+      recentQueries: [groundedAnswer.query, 'Which purchases were with Joe?', 'What memories are linked to last summer?'],
+    };
+  }
+
   return {
     mode: 'chat',
     title: 'Ask Agent',
@@ -1756,6 +1801,41 @@ function buildAgentVoicePayload(options: RouteBuilderOptions): AgentVoicePayload
     };
   }
 
+  const groundedQuery = buildGroundedAgentQuery();
+  const groundedAnswer = groundedQuery ? answerSemanticReceiptQuestion(groundedQuery) : null;
+
+  if (groundedAnswer) {
+    return {
+      mode: 'voice',
+      title: 'Ask Agent by Voice',
+      state: 'answered',
+      transcript: groundedAnswer.query,
+      examples: [
+        'Show me the latest trusted receipt',
+        'Which receipts have durable goods?',
+        'What else did I buy at the same merchant?',
+      ],
+      response: {
+        content: groundedAnswer.summary,
+        citations: groundedAnswer.citations.map((citation) => ({
+          type: citation.type,
+          id: citation.id,
+          label: citation.label,
+          action: citation.action,
+        })),
+        structuredResults: groundedAnswer.structuredResults.map((result) => ({
+          id: result.id,
+          title: result.title,
+          body: result.body,
+          actionLabel: result.actionLabel,
+          action: result.action,
+          chips: result.chips,
+        })),
+        suggestedFollowUps: groundedAnswer.suggestedFollowUps,
+      },
+    };
+  }
+
   return {
     mode: 'voice',
     title: 'Ask Agent by Voice',
@@ -1793,6 +1873,16 @@ function buildAgentVoicePayload(options: RouteBuilderOptions): AgentVoicePayload
       suggestedFollowUps: ['Open the mixer', 'Who is linked to it?', 'Show the receipt'],
     },
   };
+}
+
+function buildGroundedAgentQuery() {
+  const latestPurchaseEvent = listProjectedPurchaseEvents()[0];
+
+  if (!latestPurchaseEvent) {
+    return null;
+  }
+
+  return `What did I buy at ${latestPurchaseEvent.merchantName}?`;
 }
 
 export function buildCoreRoutePayload(routeKey: string, options: RouteBuilderOptions) {

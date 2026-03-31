@@ -290,4 +290,31 @@ describe('Milestone 1 shell', () => {
 
     expect(screen.getByText('Extraction running')).toBeTruthy();
   });
+
+  it('grounds agent chat answers in trusted receipt data', () => {
+    vi.useFakeTimers();
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
+    fireEvent.click(screen.getByText('Add Receipt'));
+
+    fireEvent.change(screen.getByLabelText('Merchant'), { target: { value: 'Target' } });
+    fireEvent.change(screen.getByLabelText('Capture source'), { target: { value: 'Upload photo' } });
+    fireEvent.change(screen.getByLabelText('Extracted summary'), { target: { value: 'Air fryer, parchment liners' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Process receipt capture' }));
+
+    act(() => {
+      vi.advanceTimersByTime(2200);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mark review complete' }));
+    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
+    fireEvent.click(screen.getByText('Ask Agent — Chat'));
+
+    expect(screen.getAllByText('What did I buy at Target?').length).toBeGreaterThan(0);
+    expect(screen.getByText(/grounded receipt match/i)).toBeTruthy();
+    expect(screen.getAllByText('Air Fryer').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Target receipt').length).toBeGreaterThan(0);
+  });
 });

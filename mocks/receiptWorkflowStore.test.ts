@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  answerSemanticReceiptQuestion,
   createLiveReceiptBatch,
   getLiveReceiptStudioPayload,
   listProjectedPurchaseEvents,
@@ -185,5 +186,27 @@ describe('receiptWorkflowStore projections', () => {
 
     expect(results[0]?.receiptId).toBe(capture.primaryReceiptId);
     expect(results[0]?.matchedTerms).toContain('air fryer');
+  });
+
+  it('grounds receipt answers in trusted receipt facts and citations', () => {
+    const capture = createLiveReceiptBatch({
+      merchant: 'Target',
+      purchaseDate: '2026-03-08',
+      source: 'Upload photo',
+      summary: 'Air fryer, parchment liners',
+    });
+
+    vi.advanceTimersByTime(2200);
+    submitLiveReceiptReview(capture.primaryReceiptId);
+
+    const answer = answerSemanticReceiptQuestion('What did I buy at Target?');
+
+    expect(answer?.scope).toBe('trusted_receipts_only');
+    expect(answer?.summary).toContain('Target');
+    expect(answer?.summary).toContain('Air Fryer');
+    expect(answer?.citations.some((citation) => citation.type === 'receipt' && citation.id === capture.primaryReceiptId)).toBe(true);
+    expect(answer?.citations.some((citation) => citation.type === 'thing')).toBe(true);
+    expect(answer?.citations.some((citation) => citation.type === 'evidence')).toBe(true);
+    expect(answer?.structuredResults[0]?.action).toBe(`route:/ingest/${capture.primaryReceiptId}`);
   });
 });

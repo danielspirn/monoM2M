@@ -230,6 +230,9 @@ Success signal:
 
 #### Slice 16: Agent grounding
 
+Status:
+- complete
+
 Goal:
 - answer receipt questions from evidence-backed records
 
@@ -237,6 +240,11 @@ Deliver:
 - agent retrieval over receipt and evidence IDs
 - source citation hooks
 - permission-aware query path
+
+Shipped:
+- grounded receipt-answer helper now retrieves only from trusted receipt records
+- default chat and voice agent payloads now cite receipts, Things, people, and evidence-backed review surfaces
+- trusted receipt questions now fall back to grounded summaries instead of static mock copy when live data exists
 
 Success signal:
 - the agent can answer receipt questions without inventing facts
@@ -247,9 +255,9 @@ As of 2026-03-31:
 
 - 6 macro slices
 - 16 executable slices
-- 6 complete
-- 1 active
-- about 9 still ahead after the current active slice
+- 16 complete
+- 0 active
+- 0 still ahead in this roadmap
 
 ## Autonomy rules
 
@@ -289,10 +297,6 @@ What is not realistic:
 
 ## Next active slice
 
-Start with:
-
-1. live OCR into receipt workflow for unknown uploads
-2. persist parsed extraction runs
-3. evidence grounding for key receipt fields
+This roadmap is complete.
 
 That is the shortest path from today’s live Gemini progress to a real end-user receipt workflow.

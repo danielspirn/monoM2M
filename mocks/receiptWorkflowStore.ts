@@ -400,6 +400,30 @@ export type SemanticReceiptSearchResult = {
   lineHighlights: string[];
 };
 
+export type GroundedReceiptAnswer = {
+  query: string;
+  scope: 'trusted_receipts_only';
+  matchedReceiptCount: number;
+  summary: string;
+  citations: Array<{
+    type: 'receipt' | 'thing' | 'person' | 'evidence';
+    id: string;
+    label: string;
+    action: string;
+    snippet?: string;
+  }>;
+  structuredResults: Array<{
+    id: string;
+    kind: 'receipt' | 'thing';
+    title: string;
+    body: string;
+    actionLabel: string;
+    action: string;
+    chips: string[];
+  }>;
+  suggestedFollowUps: string[];
+};
+
 type StoredPurchaseGraphRecords = {
   savedAt: string;
   purchaseEvent: ProjectedPurchaseEventRecord;
@@ -696,6 +720,56 @@ export function searchSemanticReceipts(query: string): SemanticReceiptSearchResu
     })
     .filter(Boolean)
     .sort((left, right) => (right?.score ?? 0) - (left?.score ?? 0) || (right?.purchasedAt ?? '').localeCompare(left?.purchasedAt ?? '')) as SemanticReceiptSearchResult[];
+}
+
+export function answerSemanticReceiptQuestion(query: string): GroundedReceiptAnswer | null {
+  const matches = searchSemanticReceipts(query);
+
+  if (!matches.length) {
+    return null;
+  }
+
+  const records = readStoredReceipts();
+  const queryTerms = buildSearchQueryTerms(query);
+  const rankedMatches = matches
+    .map((match) => {
+      const record = records.find((candidate) => candidate.id === match.receiptId);
+      return record ? { match, record, purchaseGraph: getStoredPurchaseGraph(record) } : null;
+    })
+    .filter(Boolean)
+    .slice(0, 2) as Array<{
+      match: SemanticReceiptSearchResult;
+      record: StoredReceiptRecord;
+      purchaseGraph: StoredPurchaseGraphRecords;
+    }>;
+
+  if (!rankedMatches.length) {
+    return null;
+  }
+
+  const topMatch = rankedMatches[0];
+  const topThing = topMatch.purchaseGraph.thingRecords[0] ?? null;
+  const topPerson = topMatch.record.peopleSuggestions.find((person) => person.id !== 'person_self') ?? topMatch.record.peopleSuggestions[0] ?? null;
+  const topEvidence = findBestEvidenceSpan(topMatch.record, topMatch.purchaseGraph.purchaseLineItems, queryTerms);
+  const topLineLabels = topMatch.purchaseGraph.purchaseLineItems.slice(0, 3).map((item) => item.description);
+  const summaryParts = [
+    `I found ${rankedMatches.length === 1 ? '1 grounded receipt match' : `${rankedMatches.length} grounded receipt matches`} in your trusted receipts.`,
+    `${topMatch.record.header.merchantName} on ${formatGroundedDate(topMatch.record.header.purchasedAt)} includes ${joinWithAnd(topLineLabels)}.`,
+  ];
+
+  if (topThing) {
+    summaryParts.push(`${topThing.displayName} is already connected to Things from that receipt.`);
+  }
+
+  return {
+    query,
+    scope: 'trusted_receipts_only',
+    matchedReceiptCount: rankedMatches.length,
+    summary: summaryParts.join(' '),
+    citations: buildGroundedCitations(topMatch.record, topThing, topPerson, topEvidence),
+    structuredResults: buildGroundedStructuredResults(rankedMatches),
+    suggestedFollowUps: buildGroundedFollowUps(topMatch.record, topThing, topPerson),
+  };
 }
 
 export function hasLiveReceipt(receiptId: string): boolean {
@@ -1728,6 +1802,149 @@ function buildSearchQueryTerms(query: string) {
   tokenizeInto(query, terms);
   expandSemanticAliases(Array.from(terms)).forEach((term) => terms.add(term));
   return Array.from(terms);
+}
+
+function findBestEvidenceSpan(
+  record: StoredReceiptRecord,
+  purchaseLineItems: ProjectedPurchaseLineItemRecord[],
+  queryTerms: string[],
+) {
+  const matchingLineItem = purchaseLineItems.find((item) =>
+    queryTerms.some((term) =>
+      item.description.toLowerCase().includes(term)
+      || item.householdTags.some((tag) => tag.replace(/_/g, ' ').includes(term))
+      || item.lemTags.some((tag) => tag.replace(/_/g, ' ').includes(term)),
+    ),
+  );
+
+  if (matchingLineItem) {
+    return record.evidenceSpans.find((span) => span.targetObjectId === matchingLineItem.sourceLineItemId) ?? null;
+  }
+
+  return record.evidenceSpans.find((span) => span.targetObjectType === 'purchase_line_item') ?? record.evidenceSpans[0] ?? null;
+}
+
+function buildGroundedCitations(
+  record: StoredReceiptRecord,
+  topThing: ProjectedThingRecord | null,
+  topPerson: StoredReceiptRecord['peopleSuggestions'][number] | null,
+  topEvidence: EvidenceSpanRecord | null,
+) {
+  const citations: GroundedReceiptAnswer['citations'] = [
+    {
+      type: 'receipt',
+      id: record.id,
+      label: `${record.header.merchantName} receipt`,
+      action: `route:/ingest/${record.id}`,
+    },
+  ];
+
+  if (topThing) {
+    citations.push({
+      type: 'thing',
+      id: topThing.id,
+      label: topThing.displayName,
+      action: `route:/things/${topThing.id}`,
+    });
+  }
+
+  if (topPerson) {
+    citations.push({
+      type: 'person',
+      id: topPerson.id,
+      label: topPerson.displayName,
+      action: `route:/people/${topPerson.id}`,
+    });
+  }
+
+  if (topEvidence) {
+    citations.push({
+      type: 'evidence',
+      id: topEvidence.id,
+      label: `Evidence: ${topEvidence.label}`,
+      action: `route:/ingest/${record.id}`,
+      snippet: topEvidence.snippet,
+    });
+  }
+
+  return citations;
+}
+
+function buildGroundedStructuredResults(
+  rankedMatches: Array<{
+    match: SemanticReceiptSearchResult;
+    record: StoredReceiptRecord;
+    purchaseGraph: StoredPurchaseGraphRecords;
+  }>,
+) {
+  return rankedMatches.flatMap(({ match, record, purchaseGraph }, index) => {
+    const receiptResult: GroundedReceiptAnswer['structuredResults'][number] = {
+      id: `grounded-receipt-${record.id}`,
+      kind: 'receipt',
+      title: `${record.header.merchantName} receipt`,
+      body: `${formatGroundedDate(record.header.purchasedAt)} · ${purchaseGraph.purchaseLineItems.length} line items · matched on ${match.matchedTerms.slice(0, 3).join(', ') || 'stored receipt terms'}.`,
+      actionLabel: 'Review receipt',
+      action: `route:/ingest/${record.id}`,
+      chips: [
+        record.structuredData.retailerProfile,
+        ...purchaseGraph.purchaseLineItems.slice(0, 2).map((item) => item.description),
+      ],
+    };
+
+    const thingResult = purchaseGraph.thingRecords[0]
+      ? {
+          id: `grounded-thing-${purchaseGraph.thingRecords[0].id}`,
+          kind: 'thing' as const,
+          title: purchaseGraph.thingRecords[0].displayName,
+          body: `${purchaseGraph.thingRecords[0].category} thing promoted from receipt review with linked support details ready.`,
+          actionLabel: 'Open Thing',
+          action: `route:/things/${purchaseGraph.thingRecords[0].id}`,
+          chips: purchaseGraph.thingRecords[0].supportLabels.slice(0, 3),
+        }
+      : null;
+
+    return index === 0 && thingResult ? [receiptResult, thingResult] : [receiptResult];
+  });
+}
+
+function buildGroundedFollowUps(
+  record: StoredReceiptRecord,
+  topThing: ProjectedThingRecord | null,
+  topPerson: StoredReceiptRecord['peopleSuggestions'][number] | null,
+) {
+  const followUps = ['Review the receipt'];
+
+  if (topThing) {
+    followUps.push(`Open ${topThing.displayName}`);
+  }
+
+  if (topPerson) {
+    followUps.push(`Show ${topPerson.displayName}`);
+  }
+
+  followUps.push(`What else did I buy at ${record.header.merchantName}?`);
+
+  return followUps;
+}
+
+function formatGroundedDate(value: string) {
+  return value.split('T')[0] ?? value;
+}
+
+function joinWithAnd(values: string[]) {
+  if (!values.length) {
+    return 'captured line items';
+  }
+
+  if (values.length === 1) {
+    return values[0];
+  }
+
+  if (values.length === 2) {
+    return `${values[0]} and ${values[1]}`;
+  }
+
+  return `${values.slice(0, -1).join(', ')}, and ${values.at(-1)}`;
 }
 
 function tokenizeInto(value: string, target: Set<string>) {
