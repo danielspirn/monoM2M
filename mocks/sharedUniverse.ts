@@ -5,6 +5,7 @@ import {
   listLiveReceiptCards,
   listProjectedMemories,
   listProjectedMerchants,
+  listProjectedObjects,
   listProjectedPurchaseEvents,
   listProjectedPurchaseLineItems,
   listProjectedProducts,
@@ -264,6 +265,15 @@ export type ThingDetailPayload = {
     purchaseCount: string;
     spendLabel: string;
     defaultCategories: string[];
+    note: string;
+  } | null;
+  object: {
+    title: string;
+    category: string;
+    householdTags: string[];
+    lemTags: string[];
+    purchaseCount: string;
+    spendLabel: string;
     note: string;
   } | null;
   metadata: Array<{ label: string; value: string }>;
@@ -1335,6 +1345,9 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
   const merchant = listProjectedMerchants().find((candidate) => candidate.merchantId === `merchant_${thing.merchantName.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`)
     ?? listProjectedMerchants().find((candidate) => candidate.displayName === thing.merchantName)
     ?? null;
+  const object = listProjectedObjects().find((candidate) => candidate.linkedThingIds.includes(thing.id))
+    ?? listProjectedObjects().find((candidate) => candidate.displayName === thing.displayName)
+    ?? null;
   const product = listProjectedProducts().find((candidate) => candidate.linkedThingId === thing.id)
     ?? listProjectedProducts().find((candidate) => candidate.receiptId === thing.receiptId && candidate.displayName === thing.displayName)
     ?? null;
@@ -1395,6 +1408,19 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
           note: merchant.merchantDirectoryId
             ? 'This merchant is linked to the shared vendor library and can reuse return and category defaults.'
             : 'This merchant is currently only known from your reviewed receipts.',
+        }
+      : null,
+    object: object
+      ? {
+          title: object.displayName,
+          category: `${object.category} / ${object.subcategory}`,
+          householdTags: object.householdTags,
+          lemTags: object.lemTags,
+          purchaseCount: `${object.purchaseCount} trusted purchase${object.purchaseCount === 1 ? '' : 's'}`,
+          spendLabel: `$${object.trustedSpendTotal.toFixed(2)} trusted spend`,
+          note: object.objectDirectoryId
+            ? 'This object is linked to the shared object library for tagging and downstream matching.'
+            : 'This object currently exists only from your trusted purchase graph.',
         }
       : null,
     metadata: [

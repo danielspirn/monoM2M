@@ -407,6 +407,23 @@ export type ProjectedProductRecord = {
   note: string;
 };
 
+export type ProjectedObjectRecord = {
+  id: string;
+  objectDirectoryId: string | null;
+  displayName: string;
+  category: string;
+  subcategory: string;
+  householdTags: string[];
+  lemTags: string[];
+  keywords: string[];
+  thingCandidate: boolean;
+  purchaseCount: number;
+  trustedSpendTotal: number;
+  latestPurchaseAt: string;
+  linkedThingIds: string[];
+  linkedProductIds: string[];
+};
+
 export type ProjectedThingRecord = {
   id: string;
   purchaseEventId: string;
@@ -513,6 +530,7 @@ type StoredPurchaseGraphRecords = {
   purchaseEvent: ProjectedPurchaseEventRecord;
   purchaseLineItems: ProjectedPurchaseLineItemRecord[];
   productRecords: ProjectedProductRecord[];
+  objectRecords: ProjectedObjectRecord[];
   thingRecords: ProjectedThingRecord[];
   memoryRecords: ProjectedMemoryRecord[];
   warrantyRecords: ProjectedWarrantyRecord[];
@@ -807,6 +825,39 @@ export function listProjectedProducts(): ProjectedProductRecord[] {
     .filter((record) => record.status === 'trusted')
     .flatMap((record) => getStoredPurchaseGraph(record).productRecords)
     .sort((left, right) => right.purchasedAt.localeCompare(left.purchasedAt) || left.displayName.localeCompare(right.displayName));
+}
+
+export function listProjectedObjects(): ProjectedObjectRecord[] {
+  const objectMap = new Map<string, ProjectedObjectRecord>();
+
+  readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .forEach((record) => {
+      getStoredPurchaseGraph(record).objectRecords.forEach((objectRecord) => {
+        const existing = objectMap.get(objectRecord.id);
+
+        if (!existing) {
+          objectMap.set(objectRecord.id, objectRecord);
+          return;
+        }
+
+        objectMap.set(objectRecord.id, {
+          ...existing,
+          householdTags: Array.from(new Set([...existing.householdTags, ...objectRecord.householdTags])),
+          lemTags: Array.from(new Set([...existing.lemTags, ...objectRecord.lemTags])),
+          keywords: Array.from(new Set([...existing.keywords, ...objectRecord.keywords])),
+          purchaseCount: existing.purchaseCount + objectRecord.purchaseCount,
+          trustedSpendTotal: roundCurrency(existing.trustedSpendTotal + objectRecord.trustedSpendTotal),
+          latestPurchaseAt: objectRecord.latestPurchaseAt > existing.latestPurchaseAt ? objectRecord.latestPurchaseAt : existing.latestPurchaseAt,
+          linkedThingIds: Array.from(new Set([...existing.linkedThingIds, ...objectRecord.linkedThingIds])),
+          linkedProductIds: Array.from(new Set([...existing.linkedProductIds, ...objectRecord.linkedProductIds])),
+        });
+      });
+    });
+
+  return Array.from(objectMap.values()).sort((left, right) =>
+    right.latestPurchaseAt.localeCompare(left.latestPurchaseAt) || right.trustedSpendTotal - left.trustedSpendTotal,
+  );
 }
 
 export function listProjectedWarranties(): ProjectedWarrantyRecord[] {
@@ -1158,6 +1209,7 @@ function materializeRecord(record: StoredReceiptRecord): StoredReceiptRecord {
         || !nextRecord.purchaseGraph
         || !nextRecord.purchaseGraph.merchantRecord
         || !nextRecord.purchaseGraph.productRecords
+        || !nextRecord.purchaseGraph.objectRecords
         || !nextRecord.purchaseGraph.memoryRecords
         || !nextRecord.purchaseGraph.warrantyRecords
         || !nextRecord.purchaseGraph.documentRecords
@@ -1415,6 +1467,28 @@ function buildProjectedProductRecords(
         ? `${item.description} is still an unmatched product candidate from receipt review.`
         : `${item.productCandidateLabel} is a ${item.productMatchStatus} product candidate grounded in the reviewed receipt.`,
   }));
+}
+
+function buildProjectedObjectRecords(productRecords: ProjectedProductRecord[]): ProjectedObjectRecord[] {
+  return productRecords.map((product) => {
+    const entry = resolveObjectDirectoryEntry(product.displayName);
+    return {
+      id: entry?.id ?? `object_${slugify(product.displayName)}`,
+      objectDirectoryId: entry?.id ?? null,
+      displayName: product.displayName,
+      category: entry?.category ?? product.category,
+      subcategory: entry?.subcategory ?? product.subcategory,
+      householdTags: entry?.householdTags ?? product.householdTags,
+      lemTags: entry?.lemTags ?? product.lemTags,
+      keywords: entry?.keywords ?? [product.displayName.toLowerCase()],
+      thingCandidate: entry?.thingCandidate ?? product.thingCandidate,
+      purchaseCount: 1,
+      trustedSpendTotal: product.lineTotal,
+      latestPurchaseAt: product.purchasedAt,
+      linkedThingIds: product.linkedThingId ? [product.linkedThingId] : [],
+      linkedProductIds: [product.id],
+    };
+  });
 }
 
 function buildProjectedPurchaseReceiptRecord(
@@ -1681,6 +1755,7 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
   const merchantRecord = buildProjectedMerchantRecord(projectedRecord, purchaseEvent);
   const purchaseLineItems = buildProjectedPurchaseLineItemRecords(projectedRecord);
   const productRecords = buildProjectedProductRecords(projectedRecord, purchaseLineItems);
+  const objectRecords = buildProjectedObjectRecords(productRecords);
   const baseThingRecords = productRecords
     .filter((product) => product.thingCandidate && product.linkedThingId)
     .map((product) => buildProjectedThingRecord(product, projectedRecord));
@@ -1698,6 +1773,7 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
     purchaseEvent,
     purchaseLineItems,
     productRecords,
+    objectRecords,
     thingRecords,
     memoryRecords,
     warrantyRecords,

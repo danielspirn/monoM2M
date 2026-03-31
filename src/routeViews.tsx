@@ -463,6 +463,34 @@ export function ThingDetailView({ state, payload, onAction }: PageProps<ThingDet
         </SectionCard>
       ) : null}
 
+      {payload.object ? (
+        <SectionCard title="Object record">
+          <div className="route-stack route-stack--compact">
+            <div>
+              <p className="eyebrow">{payload.object.category}</p>
+              <h3>{payload.object.title}</h3>
+              <p>{payload.object.note}</p>
+            </div>
+            <div className="chip-row">
+              <span className="chip chip--accent">{payload.object.purchaseCount}</span>
+              <span className="chip">{payload.object.spendLabel}</span>
+            </div>
+            <div className="chip-row">
+              {payload.object.householdTags.map((tag) => (
+                <span className="chip" key={`household-${tag}`}>
+                  {tag}
+                </span>
+              ))}
+              {payload.object.lemTags.map((tag) => (
+                <span className="chip" key={`lem-${tag}`}>
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        </SectionCard>
+      ) : null}
+
       {payload.detail.supportLabels.length ? (
         <SectionCard title="Ownership support">
           <div className="chip-row">
