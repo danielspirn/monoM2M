@@ -439,6 +439,25 @@ export function ThingDetailView({ state, payload, onAction }: PageProps<ThingDet
         </SectionCard>
       ) : null}
 
+      {payload.documentLinks.length ? (
+        <SectionCard title="Document links">
+          <div className="card-list">
+            {payload.documentLinks.map((link) => (
+              <article className="data-card" key={link.id}>
+                <div>
+                  <p className="eyebrow">{link.targetObjectType}</p>
+                  <h3>{link.targetLabel}</h3>
+                  <p>{link.note}</p>
+                </div>
+                <div className="chip-row">
+                  <span className="chip chip--accent">{link.documentRole}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </SectionCard>
+      ) : null}
+
       {payload.merchant ? (
         <SectionCard title="Merchant record">
           <div className="route-stack route-stack--compact">

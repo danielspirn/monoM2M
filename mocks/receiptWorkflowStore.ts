@@ -506,6 +506,18 @@ export type ProjectedThingDocumentRecord = {
   documentType: SourceDocumentType;
 };
 
+export type ProjectedDocumentLinkRecord = {
+  id: string;
+  sourceDocumentId: string;
+  receiptId: string;
+  purchaseEventId: string;
+  targetObjectType: 'purchase_event' | 'thing' | 'warranty' | 'memory';
+  targetObjectId: string;
+  targetLabel: string;
+  documentRole: 'source_document' | 'receipt' | 'warranty_stub';
+  note: string;
+};
+
 export type SemanticReceiptSearchResult = {
   receiptId: string;
   purchaseEventId: string;
@@ -552,6 +564,7 @@ type StoredPurchaseGraphRecords = {
   memoryRecords: ProjectedMemoryRecord[];
   warrantyRecords: ProjectedWarrantyRecord[];
   documentRecords: ProjectedThingDocumentRecord[];
+  documentLinkRecords: ProjectedDocumentLinkRecord[];
 };
 
 export function createLiveReceipt(input: CreateReceiptInput): string {
@@ -901,6 +914,17 @@ export function listProjectedThingDocuments(): ProjectedThingDocumentRecord[] {
     .sort((left, right) => left.title.localeCompare(right.title));
 }
 
+export function listProjectedDocumentLinks(): ProjectedDocumentLinkRecord[] {
+  return readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .flatMap((record) => getStoredPurchaseGraph(record).documentLinkRecords)
+    .sort((left, right) =>
+      left.sourceDocumentId.localeCompare(right.sourceDocumentId)
+      || left.targetObjectType.localeCompare(right.targetObjectType)
+      || left.targetLabel.localeCompare(right.targetLabel),
+    );
+}
+
 export function listProjectedThings(): ProjectedThingRecord[] {
   return readStoredReceipts()
     .filter((record) => record.status === 'trusted')
@@ -1241,6 +1265,7 @@ function materializeRecord(record: StoredReceiptRecord): StoredReceiptRecord {
         || !nextRecord.purchaseGraph.memoryRecords
         || !nextRecord.purchaseGraph.warrantyRecords
         || !nextRecord.purchaseGraph.documentRecords
+        || !nextRecord.purchaseGraph.documentLinkRecords
       )
     ) {
       const purchaseProjection = nextRecord.purchaseProjection ?? buildPurchaseProjection(nextRecord, nextRecord.updatedAt);
@@ -1798,6 +1823,66 @@ function buildProjectedThingDocumentRecords(
   });
 }
 
+function buildProjectedDocumentLinkRecords(
+  record: StoredReceiptRecord,
+  purchaseEvent: ProjectedPurchaseEventRecord,
+  thingRecords: ProjectedThingRecord[],
+  memoryRecords: ProjectedMemoryRecord[],
+  warrantyRecords: ProjectedWarrantyRecord[],
+): ProjectedDocumentLinkRecord[] {
+  const baseLinks: ProjectedDocumentLinkRecord[] = [
+    {
+      id: `doclink_event_${purchaseEvent.id}`,
+      sourceDocumentId: record.sourceDocument.id,
+      receiptId: record.id,
+      purchaseEventId: purchaseEvent.id,
+      targetObjectType: 'purchase_event',
+      targetObjectId: purchaseEvent.id,
+      targetLabel: purchaseEvent.merchantName,
+      documentRole: 'source_document',
+      note: 'The original source document is the raw evidence anchor for this purchase event.',
+    },
+  ];
+
+  const thingLinks = thingRecords.map((thing) => ({
+    id: `doclink_thing_${thing.id}`,
+    sourceDocumentId: record.sourceDocument.id,
+    receiptId: record.id,
+    purchaseEventId: purchaseEvent.id,
+    targetObjectType: 'thing' as const,
+    targetObjectId: thing.id,
+    targetLabel: thing.displayName,
+    documentRole: 'receipt' as const,
+    note: 'This Thing is linked back to the reviewed receipt document for ownership support.',
+  }));
+
+  const warrantyLinks = warrantyRecords.map((warranty) => ({
+    id: `doclink_warranty_${warranty.id}`,
+    sourceDocumentId: record.sourceDocument.id,
+    receiptId: record.id,
+    purchaseEventId: purchaseEvent.id,
+    targetObjectType: 'warranty' as const,
+    targetObjectId: warranty.id,
+    targetLabel: warranty.providerName,
+    documentRole: 'warranty_stub' as const,
+    note: 'Warranty support is attached to the same source document until better coverage documents exist.',
+  }));
+
+  const memoryLinks = memoryRecords.map((memory) => ({
+    id: `doclink_memory_${memory.id}`,
+    sourceDocumentId: record.sourceDocument.id,
+    receiptId: record.id,
+    purchaseEventId: purchaseEvent.id,
+    targetObjectType: 'memory' as const,
+    targetObjectId: memory.id,
+    targetLabel: memory.title,
+    documentRole: 'source_document' as const,
+    note: 'This memory candidate stays grounded in the original source document that triggered it.',
+  }));
+
+  return [...baseLinks, ...thingLinks, ...warrantyLinks, ...memoryLinks];
+}
+
 function buildPurchaseProjection(record: StoredReceiptRecord, projectedAt: string) {
   return {
     projectedAt,
@@ -1829,6 +1914,13 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
   }));
   const warrantyRecords = buildProjectedWarrantyRecords(thingRecords);
   const documentRecords = buildProjectedThingDocumentRecords(projectedRecord, thingRecords, warrantyRecords);
+  const documentLinkRecords = buildProjectedDocumentLinkRecords(
+    projectedRecord,
+    purchaseEvent,
+    thingRecords,
+    memoryRecords,
+    warrantyRecords,
+  );
   const participantRecords = buildProjectedPurchaseParticipantRecords(
     projectedRecord,
     purchaseEvent,
@@ -1849,6 +1941,7 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
     memoryRecords,
     warrantyRecords,
     documentRecords,
+    documentLinkRecords,
   };
 }
 

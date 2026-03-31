@@ -10,6 +10,7 @@ import {
   listProjectedMemories,
   listProjectedMerchants,
   listProjectedObjects,
+  listProjectedDocumentLinks,
   listProjectedPurchaseReceipts,
   listProjectedProducts,
   listProjectedThingDocuments,
@@ -54,6 +55,7 @@ describe('receiptWorkflowStore projections', () => {
     const projectedMemories = listProjectedMemories();
     const projectedWarranties = listProjectedWarranties();
     const projectedDocuments = listProjectedThingDocuments();
+    const projectedDocumentLinks = listProjectedDocumentLinks();
 
     expect(projectedPurchaseEvents).toHaveLength(1);
     expect(projectedPurchaseEvents[0]?.merchantId).toBe('merchant_target');
@@ -102,6 +104,10 @@ describe('receiptWorkflowStore projections', () => {
     expect(projectedWarranties).toHaveLength(1);
     expect(projectedWarranties[0]?.thingId).toBe(projectedThings[0]?.id);
     expect(projectedDocuments.filter((document) => document.thingId === projectedThings[0]?.id)).toHaveLength(2);
+    expect(projectedDocumentLinks.some((link) => link.targetObjectType === 'purchase_event')).toBe(true);
+    expect(projectedDocumentLinks.some((link) => link.targetObjectType === 'thing' && link.targetObjectId === projectedThings[0]?.id)).toBe(true);
+    expect(projectedDocumentLinks.some((link) => link.targetObjectType === 'warranty')).toBe(true);
+    expect(projectedDocumentLinks.some((link) => link.targetObjectType === 'memory')).toBe(true);
   });
 
   it('uses OCR snapshot item candidates for uncurated uploaded files', () => {

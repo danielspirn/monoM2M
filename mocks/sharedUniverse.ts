@@ -6,6 +6,7 @@ import {
   listProjectedMemories,
   listProjectedMerchants,
   listProjectedObjects,
+  listProjectedDocumentLinks,
   listProjectedPurchaseEvents,
   listProjectedPurchaseLineItems,
   listProjectedPurchaseParticipants,
@@ -258,6 +259,13 @@ export type ThingDetailPayload = {
     title: string;
     documentRole: string;
     documentType: string;
+  }>;
+  documentLinks: Array<{
+    id: string;
+    targetObjectType: string;
+    targetLabel: string;
+    documentRole: string;
+    note: string;
   }>;
   merchant: {
     title: string;
@@ -1374,6 +1382,9 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
     ?? null;
   const warranty = listProjectedWarranties().find((candidate) => candidate.thingId === thing.id) ?? null;
   const documents = listProjectedThingDocuments().filter((candidate) => candidate.thingId === thing.id);
+  const documentLinks = listProjectedDocumentLinks().filter((candidate) =>
+    candidate.targetObjectId === thing.id || candidate.receiptId === thing.receiptId,
+  );
   const linkedPeople = thing.personIds.map((id) => personCard(getPerson(id) ?? people[0]));
   const linkedMemories = thing.memoryIds.map((id) => memoryCard(getMemory(id) ?? allMemories()[0]));
   const relatedThings = allThingRecords
@@ -1417,6 +1428,13 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
       title: document.title,
       documentRole: document.documentRole,
       documentType: document.documentType,
+    })),
+    documentLinks: documentLinks.map((link) => ({
+      id: link.id,
+      targetObjectType: link.targetObjectType,
+      targetLabel: link.targetLabel,
+      documentRole: link.documentRole,
+      note: link.note,
     })),
     merchant: merchant
       ? {

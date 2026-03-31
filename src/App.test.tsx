@@ -150,6 +150,7 @@ describe('Milestone 1 shell', () => {
     expect(screen.getAllByText('confirmed').length).toBeGreaterThan(0);
     expect(screen.getByText('Warranty stub')).toBeTruthy();
     expect(screen.getAllByText('Linked documents').length).toBeGreaterThan(0);
+    expect(screen.getByText('Document links')).toBeTruthy();
     expect(screen.getByText('Merchant record')).toBeTruthy();
     expect(screen.getAllByText('known retailer').length).toBeGreaterThan(0);
     expect(screen.getAllByText('1 trusted purchase').length).toBeGreaterThan(0);
@@ -159,6 +160,7 @@ describe('Milestone 1 shell', () => {
     expect(screen.getByText('Ownership support')).toBeTruthy();
     expect(screen.getByText('Receipt linked')).toBeTruthy();
     expect(screen.getByText('Receipt document')).toBeTruthy();
+    expect(screen.getAllByText('source_document').length).toBeGreaterThan(0);
   });
 
   it('can preload a real uploaded fixture into the receipt capture flow', () => {

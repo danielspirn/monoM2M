@@ -315,3 +315,16 @@ Shipped:
 
 Success signal:
 - person context is grounded in explicit purchase participation facts instead of only loose relationship links
+
+#### Slice 18: Structured document links
+
+Status:
+- complete
+
+Shipped:
+- projected `document_links` now connect raw source documents to purchase events, Things, warranties, and memory candidates
+- Thing detail exposes the document-link graph alongside the narrower linked-documents list
+- document lineage is now represented as a first-class fact layer instead of only embedded IDs
+
+Success signal:
+- ownership and memory surfaces can explain how a raw uploaded document grounds downstream records
