@@ -5,6 +5,7 @@ import {
   createLiveReceiptBatch,
   getLiveReceiptStudioPayload,
   listProjectedExtractionRuns,
+  listProjectedReturnSupports,
   listProjectedSemanticRecords,
   listProjectedSourceDocuments,
   listProjectedPurchaseEvents,
@@ -64,6 +65,7 @@ describe('receiptWorkflowStore projections', () => {
     const projectedSemanticRecords = listProjectedSemanticRecords();
     const projectedSourceDocuments = listProjectedSourceDocuments();
     const projectedExtractionRuns = listProjectedExtractionRuns();
+    const projectedReturnSupports = listProjectedReturnSupports();
 
     expect(projectedPurchaseEvents).toHaveLength(1);
     expect(projectedPurchaseEvents[0]?.merchantId).toBe('merchant_target');
@@ -128,6 +130,9 @@ describe('receiptWorkflowStore projections', () => {
     expect(projectedExtractionRuns).toHaveLength(1);
     expect(projectedExtractionRuns[0]?.providerLabel).toBeTruthy();
     expect(projectedExtractionRuns[0]?.sourceDocumentId).toBe(projectedSourceDocuments[0]?.id);
+    expect(projectedReturnSupports).toHaveLength(1);
+    expect(projectedReturnSupports[0]?.thingId).toBe(projectedThings[0]?.id);
+    expect(projectedReturnSupports[0]?.policyLabel).toBe('Target return window');
   });
 
   it('uses OCR snapshot item candidates for uncurated uploaded files', () => {

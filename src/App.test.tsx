@@ -149,6 +149,7 @@ describe('Milestone 1 shell', () => {
     expect(screen.getByText('Product record')).toBeTruthy();
     expect(screen.getAllByText('confirmed').length).toBeGreaterThan(0);
     expect(screen.getByText('Warranty stub')).toBeTruthy();
+    expect(screen.getByText('Return support')).toBeTruthy();
     expect(screen.getAllByText('Linked documents').length).toBeGreaterThan(0);
     expect(screen.getByText('Document links')).toBeTruthy();
     expect(screen.getByText('Tag graph')).toBeTruthy();
@@ -167,6 +168,7 @@ describe('Milestone 1 shell', () => {
     expect(screen.getAllByText('household').length).toBeGreaterThan(0);
     expect(screen.getByText('receipt-embedding-v1')).toBeTruthy();
     expect(screen.getAllByText('upload photo').length).toBeGreaterThan(0);
+    expect(screen.getByText('Target return window')).toBeTruthy();
   });
 
   it('can preload a real uploaded fixture into the receipt capture flow', () => {

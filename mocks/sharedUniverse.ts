@@ -4,6 +4,7 @@ import {
   hasLiveReceipt,
   listProjectedExtractionRuns,
   listLiveReceiptCards,
+  listProjectedReturnSupports,
   listProjectedSourceDocuments,
   listProjectedSemanticRecords,
   listProjectedTags,
@@ -255,6 +256,12 @@ export type ThingDetailPayload = {
     providerName: string;
     coverageType: string;
     endsAt: string;
+    status: string;
+    note: string;
+  } | null;
+  returnSupport: {
+    policyLabel: string;
+    windowEndsAt: string;
     status: string;
     note: string;
   } | null;
@@ -1413,6 +1420,7 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
     ?? listProjectedProducts().find((candidate) => candidate.receiptId === thing.receiptId && candidate.displayName === thing.displayName)
     ?? null;
   const warranty = listProjectedWarranties().find((candidate) => candidate.thingId === thing.id) ?? null;
+  const returnSupport = listProjectedReturnSupports().find((candidate) => candidate.thingId === thing.id) ?? null;
   const documents = listProjectedThingDocuments().filter((candidate) => candidate.thingId === thing.id);
   const documentLinks = listProjectedDocumentLinks().filter((candidate) =>
     candidate.targetObjectId === thing.id || candidate.receiptId === thing.receiptId,
@@ -1453,6 +1461,14 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
           endsAt: warranty.endsAt,
           status: warranty.status,
           note: warranty.note,
+        }
+      : null,
+    returnSupport: returnSupport
+      ? {
+          policyLabel: returnSupport.policyLabel,
+          windowEndsAt: returnSupport.windowEndsAt,
+          status: returnSupport.status,
+          note: returnSupport.note,
         }
       : null,
     documents: documents.map((document) => ({

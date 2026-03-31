@@ -424,6 +424,22 @@ export function ThingDetailView({ state, payload, onAction }: PageProps<ThingDet
         </SectionCard>
       ) : null}
 
+      {payload.returnSupport ? (
+        <SectionCard title="Return support">
+          <div className="route-stack route-stack--compact">
+            <div>
+              <p className="eyebrow">{payload.returnSupport.policyLabel}</p>
+              <h3>Return window</h3>
+              <p>{payload.returnSupport.note}</p>
+            </div>
+            <div className="chip-row">
+              <span className="chip chip--accent">{payload.returnSupport.status}</span>
+              <span className="chip">Ends {payload.returnSupport.windowEndsAt}</span>
+            </div>
+          </div>
+        </SectionCard>
+      ) : null}
+
       {payload.documents.length ? (
         <SectionCard title="Linked documents">
           <div className="card-list">

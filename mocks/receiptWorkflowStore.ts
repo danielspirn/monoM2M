@@ -545,6 +545,19 @@ export type ProjectedWarrantyRecord = {
   note: string;
 };
 
+export type ProjectedReturnSupportRecord = {
+  id: string;
+  thingId: string;
+  purchaseEventId: string;
+  receiptId: string;
+  merchantName: string;
+  windowEndsAt: string;
+  status: 'open' | 'closed';
+  policyLabel: string;
+  source: 'receipt_candidate';
+  note: string;
+};
+
 export type ProjectedThingDocumentRecord = {
   id: string;
   thingId: string;
@@ -634,6 +647,7 @@ type StoredPurchaseGraphRecords = {
   thingRecords: ProjectedThingRecord[];
   memoryRecords: ProjectedMemoryRecord[];
   warrantyRecords: ProjectedWarrantyRecord[];
+  returnSupportRecords: ProjectedReturnSupportRecord[];
   documentRecords: ProjectedThingDocumentRecord[];
   documentLinkRecords: ProjectedDocumentLinkRecord[];
   semanticRecord: ProjectedSemanticRecord;
@@ -1026,6 +1040,13 @@ export function listProjectedWarranties(): ProjectedWarrantyRecord[] {
     .sort((left, right) => right.endsAt.localeCompare(left.endsAt));
 }
 
+export function listProjectedReturnSupports(): ProjectedReturnSupportRecord[] {
+  return readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .flatMap((record) => getStoredPurchaseGraph(record).returnSupportRecords)
+    .sort((left, right) => right.windowEndsAt.localeCompare(left.windowEndsAt));
+}
+
 export function listProjectedThingDocuments(): ProjectedThingDocumentRecord[] {
   return readStoredReceipts()
     .filter((record) => record.status === 'trusted')
@@ -1391,6 +1412,7 @@ function materializeRecord(record: StoredReceiptRecord): StoredReceiptRecord {
         || !nextRecord.purchaseGraph.tagRecords
         || !nextRecord.purchaseGraph.memoryRecords
         || !nextRecord.purchaseGraph.warrantyRecords
+        || !nextRecord.purchaseGraph.returnSupportRecords
         || !nextRecord.purchaseGraph.documentRecords
         || !nextRecord.purchaseGraph.documentLinkRecords
         || !nextRecord.purchaseGraph.semanticRecord
@@ -2102,6 +2124,23 @@ function buildProjectedWarrantyRecords(thingRecords: ProjectedThingRecord[]): Pr
     }));
 }
 
+function buildProjectedReturnSupportRecords(thingRecords: ProjectedThingRecord[]): ProjectedReturnSupportRecord[] {
+  return thingRecords
+    .filter((thing) => Boolean(thing.returnWindowEndsAt))
+    .map((thing) => ({
+      id: `return_${thing.id}`,
+      thingId: thing.id,
+      purchaseEventId: thing.purchaseEventId,
+      receiptId: thing.receiptId,
+      merchantName: thing.merchantName,
+      windowEndsAt: thing.returnWindowEndsAt ?? thing.acquiredAt,
+      status: thing.returnWindowEndsAt && Date.parse(thing.returnWindowEndsAt) > Date.now() ? 'open' : 'closed',
+      policyLabel: `${thing.merchantName} return window`,
+      source: 'receipt_candidate',
+      note: 'Return support is inferred from the trusted receipt date and merchant return-window heuristics. Review before relying on the exact deadline.',
+    }));
+}
+
 function buildProjectedThingDocumentRecords(
   record: StoredReceiptRecord,
   thingRecords: ProjectedThingRecord[],
@@ -2230,6 +2269,7 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
   }));
   const semanticRecord = buildProjectedSemanticRecord(projectedRecord, purchaseEvent, purchaseLineItems, thingRecords, memoryRecords);
   const warrantyRecords = buildProjectedWarrantyRecords(thingRecords);
+  const returnSupportRecords = buildProjectedReturnSupportRecords(thingRecords);
   const documentRecords = buildProjectedThingDocumentRecords(projectedRecord, thingRecords, warrantyRecords);
   const documentLinkRecords = buildProjectedDocumentLinkRecords(
     projectedRecord,
@@ -2260,6 +2300,7 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
     thingRecords,
     memoryRecords,
     warrantyRecords,
+    returnSupportRecords,
     documentRecords,
     documentLinkRecords,
     semanticRecord,

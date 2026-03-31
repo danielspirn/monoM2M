@@ -367,3 +367,16 @@ Shipped:
 
 Success signal:
 - ownership surfaces can explain both what was bought and how the trusted record was captured and extracted
+
+#### Slice 22: Structured return support records
+
+Status:
+- complete
+
+Shipped:
+- projected return-support records now represent returnability as a first-class ownership-support layer
+- Thing detail now shows return support next to warranty and linked documents
+- downstream return workflows can now depend on explicit records instead of only inferred labels
+
+Success signal:
+- return windows are represented as stable support records rather than only a field or badge on the Thing
