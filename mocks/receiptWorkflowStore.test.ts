@@ -6,6 +6,7 @@ import {
   getLiveReceiptStudioPayload,
   listProjectedExtractionRuns,
   listProjectedEvidenceRecords,
+  listProjectedLocations,
   listProjectedPolicies,
   listProjectedReturnSupports,
   listProjectedSemanticRecords,
@@ -69,6 +70,7 @@ describe('receiptWorkflowStore projections', () => {
     const projectedExtractionRuns = listProjectedExtractionRuns();
     const projectedReturnSupports = listProjectedReturnSupports();
     const projectedPolicies = listProjectedPolicies();
+    const projectedLocations = listProjectedLocations();
     const projectedEvidenceRecords = listProjectedEvidenceRecords();
 
     expect(projectedPurchaseEvents).toHaveLength(1);
@@ -141,6 +143,9 @@ describe('receiptWorkflowStore projections', () => {
     expect(projectedPolicies.some((policy) => policy.policyKind === 'warranty')).toBe(true);
     expect(projectedPolicies.some((policy) => policy.policyKind === 'return')).toBe(true);
     expect(projectedPolicies.every((policy) => policy.thingId === projectedThings[0]?.id)).toBe(true);
+    expect(projectedLocations).toHaveLength(1);
+    expect(projectedLocations[0]?.locationKind).toBe('merchant_place');
+    expect(projectedLocations[0]?.linkedThingIds).toContain(projectedThings[0]?.id ?? '');
     expect(projectedEvidenceRecords.some((record) => record.targetObjectType === 'purchase_event')).toBe(true);
     expect(projectedEvidenceRecords.some((record) => record.linkedThingIds.includes(projectedThings[0]?.id ?? ''))).toBe(true);
   });

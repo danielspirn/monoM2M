@@ -151,6 +151,7 @@ describe('Milestone 1 shell', () => {
     expect(screen.getByText('Warranty stub')).toBeTruthy();
     expect(screen.getByText('Return support')).toBeTruthy();
     expect(screen.getByText('Policy records')).toBeTruthy();
+    expect(screen.getByText('Location context')).toBeTruthy();
     expect(screen.getByText('Evidence links')).toBeTruthy();
     expect(screen.getAllByText('Linked documents').length).toBeGreaterThan(0);
     expect(screen.getByText('Document links')).toBeTruthy();
@@ -158,6 +159,7 @@ describe('Milestone 1 shell', () => {
     expect(screen.getByText('Retrieval profile')).toBeTruthy();
     expect(screen.getByText('Capture provenance')).toBeTruthy();
     expect(screen.getByText('Merchant record')).toBeTruthy();
+    expect(screen.getByText('merchant place')).toBeTruthy();
     expect(screen.getAllByText('known retailer').length).toBeGreaterThan(0);
     expect(screen.getAllByText('1 trusted purchase').length).toBeGreaterThan(0);
     expect(screen.getByText('Object record')).toBeTruthy();

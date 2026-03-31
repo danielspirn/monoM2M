@@ -531,6 +531,19 @@ export type ProjectedMemoryRecord = {
   thingIds: string[];
 };
 
+export type ProjectedLocationRecord = {
+  id: string;
+  receiptId: string;
+  purchaseEventId: string;
+  label: string;
+  normalizedLabel: string;
+  locationKind: 'merchant_place' | 'home' | 'service_context';
+  linkedThingIds: string[];
+  linkedMemoryIds: string[];
+  linkedPersonIds: string[];
+  note: string;
+};
+
 export type ProjectedWarrantyRecord = {
   id: string;
   thingId: string;
@@ -677,6 +690,7 @@ type StoredPurchaseGraphRecords = {
   tagRecords: ProjectedTagRecord[];
   thingRecords: ProjectedThingRecord[];
   memoryRecords: ProjectedMemoryRecord[];
+  locationRecords: ProjectedLocationRecord[];
   warrantyRecords: ProjectedWarrantyRecord[];
   returnSupportRecords: ProjectedReturnSupportRecord[];
   policyRecords: ProjectedPolicyRecord[];
@@ -1073,6 +1087,13 @@ export function listProjectedWarranties(): ProjectedWarrantyRecord[] {
     .sort((left, right) => right.endsAt.localeCompare(left.endsAt));
 }
 
+export function listProjectedLocations(): ProjectedLocationRecord[] {
+  return readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .flatMap((record) => getStoredPurchaseGraph(record).locationRecords)
+    .sort((left, right) => left.label.localeCompare(right.label));
+}
+
 export function listProjectedReturnSupports(): ProjectedReturnSupportRecord[] {
   return readStoredReceipts()
     .filter((record) => record.status === 'trusted')
@@ -1464,6 +1485,7 @@ function materializeRecord(record: StoredReceiptRecord): StoredReceiptRecord {
         || !nextRecord.purchaseGraph.objectRecords
         || !nextRecord.purchaseGraph.tagRecords
         || !nextRecord.purchaseGraph.memoryRecords
+        || !nextRecord.purchaseGraph.locationRecords
         || !nextRecord.purchaseGraph.warrantyRecords
         || !nextRecord.purchaseGraph.returnSupportRecords
         || !nextRecord.purchaseGraph.policyRecords
@@ -2039,6 +2061,40 @@ function buildProjectedMemoryRecords(
   ];
 }
 
+function buildProjectedLocationRecords(
+  record: StoredReceiptRecord,
+  purchaseEvent: ProjectedPurchaseEventRecord,
+  memoryRecords: ProjectedMemoryRecord[],
+  thingRecords: ProjectedThingRecord[],
+): ProjectedLocationRecord[] {
+  const label = memoryRecords[0]?.placeLabel ?? purchaseEvent.merchantName;
+  const normalizedLabel = slugify(label);
+  const locationKind =
+    normalizedLabel === 'home'
+      ? 'home'
+      : record.structuredData.retailerProfile === 'known service provider'
+        ? 'service_context'
+        : 'merchant_place';
+
+  return [
+    {
+      id: `location_${purchaseEvent.id}_${normalizedLabel}`,
+      receiptId: record.id,
+      purchaseEventId: purchaseEvent.id,
+      label,
+      normalizedLabel,
+      locationKind,
+      linkedThingIds: thingRecords.map((thing) => thing.id),
+      linkedMemoryIds: memoryRecords.map((memory) => memory.id),
+      linkedPersonIds: purchaseEvent.personIds,
+      note:
+        locationKind === 'home'
+          ? 'This trusted purchase appears to support an at-home routine or ownership moment.'
+          : `This trusted purchase is anchored to ${label} as part of the vendor and memory context.`,
+    },
+  ];
+}
+
 function shouldProjectMemoryCandidate(
   record: StoredReceiptRecord,
   purchaseLineItems: ProjectedPurchaseLineItemRecord[],
@@ -2391,6 +2447,7 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
     ...thing,
     memoryIds: memoryRecords.filter((memory) => memory.thingIds.includes(thing.id)).map((memory) => memory.id),
   }));
+  const locationRecords = buildProjectedLocationRecords(projectedRecord, purchaseEvent, memoryRecords, thingRecords);
   const semanticRecord = buildProjectedSemanticRecord(projectedRecord, purchaseEvent, purchaseLineItems, thingRecords, memoryRecords);
   const warrantyRecords = buildProjectedWarrantyRecords(thingRecords);
   const returnSupportRecords = buildProjectedReturnSupportRecords(thingRecords);
@@ -2425,6 +2482,7 @@ function buildStoredPurchaseGraph(record: StoredReceiptRecord, savedAt: string):
     tagRecords,
     thingRecords,
     memoryRecords,
+    locationRecords,
     warrantyRecords,
     returnSupportRecords,
     policyRecords,

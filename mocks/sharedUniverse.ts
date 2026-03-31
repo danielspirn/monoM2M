@@ -3,6 +3,7 @@ import {
   answerSemanticReceiptQuestion,
   getLiveReceiptStudioPayload,
   hasLiveReceipt,
+  listProjectedLocations,
   listProjectedPolicies,
   listProjectedExtractionRuns,
   listLiveReceiptCards,
@@ -275,6 +276,13 @@ export type ThingDetailPayload = {
     status: string;
     effectiveLabel: string;
     linkedSupportLabel: string;
+    note: string;
+  }>;
+  locations: Array<{
+    id: string;
+    label: string;
+    locationKind: string;
+    relationshipLabel: string;
     note: string;
   }>;
   evidenceLinks: Array<{
@@ -1441,6 +1449,7 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
   const warranty = listProjectedWarranties().find((candidate) => candidate.thingId === thing.id) ?? null;
   const returnSupport = listProjectedReturnSupports().find((candidate) => candidate.thingId === thing.id) ?? null;
   const policies = listProjectedPolicies().filter((candidate) => candidate.thingId === thing.id);
+  const locations = listProjectedLocations().filter((candidate) => candidate.linkedThingIds.includes(thing.id));
   const evidenceLinks = listProjectedEvidenceRecords().filter((candidate) => candidate.linkedThingIds.includes(thing.id));
   const documents = listProjectedThingDocuments().filter((candidate) => candidate.thingId === thing.id);
   const documentLinks = listProjectedDocumentLinks().filter((candidate) =>
@@ -1501,6 +1510,13 @@ function buildThingDetailPayload(options: RouteBuilderOptions): ThingDetailPaylo
       effectiveLabel: `${policy.effectiveAt} to ${policy.endsAt}`,
       linkedSupportLabel: policy.linkedSupportRecordId.replace(/_/g, ' '),
       note: policy.note,
+    })),
+    locations: locations.map((location) => ({
+      id: location.id,
+      label: location.label,
+      locationKind: location.locationKind.replace(/_/g, ' '),
+      relationshipLabel: `${location.linkedMemoryIds.length} ${location.linkedMemoryIds.length === 1 ? 'memory' : 'memories'} · ${location.linkedPersonIds.length} people`,
+      note: location.note,
     })),
     evidenceLinks: evidenceLinks.map((evidence) => ({
       id: evidence.id,

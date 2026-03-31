@@ -406,3 +406,16 @@ Shipped:
 
 Success signal:
 - return and warranty support are available through a single structured policy layer tied to the promoted Thing
+
+#### Slice 25: Structured location context records
+
+Status:
+- complete
+
+Shipped:
+- projected location records now connect trusted purchases and promoted Things to place-aware context
+- Thing detail now shows location context derived from receipt and memory signals
+- future map, clustering, and place-aware agent flows can rely on explicit location records instead of only display labels
+
+Success signal:
+- purchases, Things, and memories now share a stable place layer instead of treating location as presentation-only text

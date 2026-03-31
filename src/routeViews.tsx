@@ -462,6 +462,25 @@ export function ThingDetailView({ state, payload, onAction }: PageProps<ThingDet
         </SectionCard>
       ) : null}
 
+      {payload.locations.length ? (
+        <SectionCard title="Location context">
+          <div className="card-list">
+            {payload.locations.map((location) => (
+              <article className="data-card" key={location.id}>
+                <div>
+                  <p className="eyebrow">{location.locationKind}</p>
+                  <h3>{location.label}</h3>
+                  <p>{location.note}</p>
+                </div>
+                <div className="chip-row">
+                  <span className="chip chip--accent">{location.relationshipLabel}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </SectionCard>
+      ) : null}
+
       {payload.evidenceLinks.length ? (
         <SectionCard title="Evidence links">
           <div className="card-list">
