@@ -88,3 +88,7 @@ export type ReceiptProcessingCreateResponse = {
 export type ReceiptProcessingListResponse = {
   records: ReceiptProcessingRecord[];
 };
+
+export type ReceiptProcessingGetResponse = {
+  record: ReceiptProcessingRecord;
+};

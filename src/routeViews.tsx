@@ -1234,6 +1234,15 @@ export function ReceiptStudioView({ state, payload, onAction }: PageProps<Receip
                 <MetricLine label="Routing mode" value={payload.parsedData.providerTrace.routingMode.replace(/_/g, ' ')} />
                 <MetricLine label="Source files" value={String(payload.parsedData.requestProvenance.sourceFileCount)} />
                 <MetricLine label="Source checksum" value={payload.parsedData.requestProvenance.sourceDocumentChecksum} />
+                {payload.parsedData.requestProvenance.backendProcessingRecordId ? (
+                  <MetricLine label="Backend processing record" value={payload.parsedData.requestProvenance.backendProcessingRecordId} />
+                ) : null}
+                {payload.parsedData.requestProvenance.backendExtractionRunId ? (
+                  <MetricLine label="Backend extraction run" value={payload.parsedData.requestProvenance.backendExtractionRunId} />
+                ) : null}
+                {payload.parsedData.requestProvenance.backendSourceDocumentId ? (
+                  <MetricLine label="Backend source document" value={payload.parsedData.requestProvenance.backendSourceDocumentId} />
+                ) : null}
               </div>
             </article>
             {payload.evidenceTrail?.length ? (

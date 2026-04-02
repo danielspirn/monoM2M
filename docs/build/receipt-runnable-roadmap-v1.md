@@ -484,3 +484,16 @@ Shipped:
 
 Success signal:
 - a newly uploaded receipt now produces durable backend processing records and still opens the same review UI with OCR-derived fields and line items
+
+#### Slice 31: Backend receipt-processing retrieval
+
+Status:
+- complete
+
+Shipped:
+- the backend receipt-processing API now supports lookup by processing record ID in addition to list and create
+- live upload responses now thread backend processing IDs into Receipt Studio provenance so the review UI can point at the durable backend record that produced the OCR result
+- server and app tests now cover retrieval and the in-app provenance display for unknown uploads
+
+Success signal:
+- a reviewed receipt can show the exact backend processing record, extraction run, and backend source document IDs that grounded the OCR result

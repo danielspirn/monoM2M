@@ -993,7 +993,12 @@ async function requestLiveReceiptProcessing(files: File[], sourceLabel: string):
   }
 
   const payload = await response.json() as ReceiptProcessingCreateResponse;
-  return payload.ocrPayload;
+  return {
+    ...payload.ocrPayload,
+    backendProcessingRecordId: payload.record.id,
+    backendExtractionRunId: payload.record.extractionRun.id,
+    backendSourceDocumentId: payload.record.sourceDocument.id,
+  };
 }
 
 async function fileToBase64(file: File) {

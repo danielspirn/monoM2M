@@ -79,6 +79,11 @@ export async function listProcessedReceiptRecords(): Promise<ReceiptProcessingRe
   return store.records;
 }
 
+export async function getProcessedReceiptRecordById(recordId: string): Promise<ReceiptProcessingRecord | null> {
+  const store = await readReceiptProcessingStore();
+  return store.records.find((record) => record.id === recordId) ?? null;
+}
+
 export async function clearReceiptProcessingStore() {
   await rm(resolveReceiptProcessingStorePath(), { force: true });
 }

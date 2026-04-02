@@ -31,6 +31,9 @@ export type LiveReceiptOcrPayload = {
     lineTotal: number;
     confidence: number;
   }>;
+  backendProcessingRecordId?: string | null;
+  backendExtractionRunId?: string | null;
+  backendSourceDocumentId?: string | null;
 };
 
 export type SourceDocumentType = 'receipt_image' | 'receipt_pdf';
@@ -129,6 +132,9 @@ type ParsedRequestProvenance = {
   sourceDocumentChecksum: string;
   sourceFileCount: number;
   captureChannel: CaptureChannel;
+  backendProcessingRecordId?: string | null;
+  backendExtractionRunId?: string | null;
+  backendSourceDocumentId?: string | null;
 };
 
 type ParsedProviderTrace = {
@@ -1499,6 +1505,9 @@ export function applyLiveReceiptOcrResult(
         sourceDocumentChecksum: record.sourceDocument.checksum,
         sourceFileCount: record.sourceDocument.sourceFiles.length,
         captureChannel: record.sourceDocument.captureChannel,
+        backendProcessingRecordId: payload.backendProcessingRecordId ?? null,
+        backendExtractionRunId: payload.backendExtractionRunId ?? null,
+        backendSourceDocumentId: payload.backendSourceDocumentId ?? null,
       },
       providerTrace: {
         providerId: payload.providerId,
@@ -1830,6 +1839,9 @@ function materializeParsedData(record: StoredReceiptRecord): StoredParsedData {
         sourceDocumentChecksum: record.sourceDocument.checksum,
         sourceFileCount: record.sourceDocument.sourceFiles.length,
         captureChannel: record.sourceDocument.captureChannel,
+        backendProcessingRecordId: null,
+        backendExtractionRunId: null,
+        backendSourceDocumentId: null,
       },
     providerTrace:
       parsedData.providerTrace ?? {
@@ -3247,6 +3259,9 @@ function buildParsedData(params: {
       sourceDocumentChecksum: sourceDocument.checksum,
       sourceFileCount: sourceDocument.sourceFiles.length,
       captureChannel: sourceDocument.captureChannel,
+      backendProcessingRecordId: null,
+      backendExtractionRunId: null,
+      backendSourceDocumentId: null,
     },
     providerTrace: {
       providerId: parserResult.ocrRoute.provider.id,

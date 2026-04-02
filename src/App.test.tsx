@@ -343,6 +343,8 @@ describe('Milestone 1 shell', () => {
     expect(await screen.findByDisplayValue('Backend Grocer')).toBeTruthy();
     expect(screen.getByText('Google Gemini 2.5 Flash')).toBeTruthy();
     expect(screen.getByDisplayValue('Apples')).toBeTruthy();
+    expect(screen.getByText('Backend processing record')).toBeTruthy();
+    expect(screen.getByText('receiptproc_1')).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/receipt-processing',
       expect.objectContaining({

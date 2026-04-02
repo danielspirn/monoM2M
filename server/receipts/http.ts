@@ -8,6 +8,7 @@ import type { ReceiptOcrBackendRequest } from '../../contracts/schema/integratio
 import type {
   ReceiptProcessingCreateRequest,
   ReceiptProcessingCreateResponse,
+  ReceiptProcessingGetResponse,
   ReceiptProcessingListResponse,
 } from '../../contracts/schema/integrations/receipt-processing.contract';
 import { deriveReceiptOcrSummary } from '../ocr/normalize';
@@ -15,12 +16,26 @@ import { executeGeminiReceiptOcrFromFile } from '../ocr/gemini';
 import { prepareReceiptOcrExecution } from '../ocr/gateway';
 import { executeOpenAiReceiptOcrFromFile } from '../ocr/openai';
 
-import { buildDocumentChecksum, listProcessedReceiptRecords, persistProcessedReceiptRecord } from './store';
+import { buildDocumentChecksum, getProcessedReceiptRecordById, listProcessedReceiptRecords, persistProcessedReceiptRecord } from './store';
 
 const LIVE_PARSER_VERSION = 'live_backend_ocr_v2';
 
 export async function handleReceiptProcessingHttpRequest(req: IncomingMessage, res: ServerResponse) {
   if (req.method === 'GET') {
+    const recordId = readRecordIdFromUrl(req.url);
+
+    if (recordId) {
+      const record = await getProcessedReceiptRecordById(recordId);
+
+      if (!record) {
+        sendJson(res, 404, { error: `Receipt processing record ${recordId} was not found` });
+        return;
+      }
+
+      sendJson<ReceiptProcessingGetResponse>(res, 200, { record });
+      return;
+    }
+
     const records = await listProcessedReceiptRecords();
     sendJson<ReceiptProcessingListResponse>(res, 200, { records });
     return;
@@ -118,4 +133,20 @@ function sendJson<T>(res: ServerResponse, statusCode: number, payload: T) {
 
 function sanitizeFileName(value: string) {
   return value.replace(/[^a-zA-Z0-9._-]+/g, '_');
+}
+
+function readRecordIdFromUrl(rawUrl: string | undefined) {
+  if (!rawUrl) {
+    return null;
+  }
+
+  const parsed = new URL(rawUrl, 'http://localhost');
+  const pathSegments = parsed.pathname.split('/').filter(Boolean);
+  const lastSegment = pathSegments[pathSegments.length - 1];
+
+  if (!lastSegment || lastSegment === 'receipt-processing') {
+    return parsed.searchParams.get('recordId');
+  }
+
+  return decodeURIComponent(lastSegment);
 }
