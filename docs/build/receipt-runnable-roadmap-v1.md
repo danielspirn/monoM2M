@@ -458,3 +458,16 @@ Shipped:
 
 Success signal:
 - a user can see the receipt they uploaded plus clear processing progress and early extracted details before review opens
+
+#### Slice 29: Live backend OCR upload bridge
+
+Status:
+- complete
+
+Shipped:
+- new uploaded receipt files now call the backend OCR bridge instead of staying entirely on the seeded parser path
+- the app creates the processing receipt first, then applies live OCR results back onto that same receipt record when the backend returns
+- known fixture uploads still keep their deterministic shortcut so UX review stays stable while unknown uploads now exercise the real backend seam
+
+Success signal:
+- a user can upload a new receipt image in local development and see the receipt move from processing into review with live OCR-derived merchant, date, total, and line items

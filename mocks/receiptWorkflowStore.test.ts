@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  applyLiveReceiptOcrResult,
   answerSemanticReceiptQuestion,
   createLiveReceiptBatch,
   getLiveReceiptStudioPayload,
@@ -265,6 +266,42 @@ describe('receiptWorkflowStore projections', () => {
     expect(payload?.duplicateCandidates[0]?.confidenceScore).toBeGreaterThan(0.9);
     expect(payload?.alerts.some((alert) => alert.kind === 'duplicate')).toBe(true);
     expect(duplicateCandidates.some((candidate) => candidate.receiptId === secondCapture.primaryReceiptId)).toBe(true);
+  });
+
+  it('applies live OCR results to a processing receipt', () => {
+    const capture = createLiveReceiptBatch({
+      merchant: '',
+      purchaseDate: '2026-04-01',
+      source: 'Upload photo',
+      summary: '',
+      previewUrls: ['blob:preview'],
+    });
+
+    const payload = applyLiveReceiptOcrResult(capture.primaryReceiptId, {
+      providerId: 'google_gemini_2_5_flash',
+      providerLabel: 'Google Gemini 2.5 Flash',
+      modelName: 'gemini-2.5-flash',
+      parserVersion: 'live_backend_ocr_v1',
+      rawText: 'SAFEWAY\n04/01/2026\nBANANAS 2.99\nYOGURT 4.50\nTOTAL 7.49',
+      merchantName: 'Safeway',
+      purchaseDate: '2026-04-01',
+      grandTotal: '7.49',
+      fieldCandidates: [
+        { label: 'Merchant', value: 'Safeway', confidence: 0.98 },
+        { label: 'Purchase date', value: '2026-04-01', confidence: 0.94 },
+        { label: 'Grand total', value: '7.49', confidence: 0.93 },
+      ],
+      lineItemCandidates: [
+        { description: 'Bananas', quantity: 1, unitPrice: 2.99, lineTotal: 2.99, confidence: 0.88 },
+        { description: 'Yogurt', quantity: 1, unitPrice: 4.5, lineTotal: 4.5, confidence: 0.9 },
+      ],
+    });
+
+    expect(payload?.receipt.status).toBe('needs_review');
+    expect(payload?.header.merchantName).toBe('Safeway');
+    expect(payload?.lineItems).toHaveLength(2);
+    expect(payload?.parsedData.requestProvenance.parserMode).toBe('live_backend_ocr');
+    expect(payload?.parsedData.providerTrace.providerLabel).toBe('Google Gemini 2.5 Flash');
   });
 
   it('refreshes stored purchase graph records after trusted edits', () => {

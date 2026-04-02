@@ -13,7 +13,9 @@ import {
   resolveReceiptFixtureFilesFromDraft,
 } from '@/mocks/receiptFixtureScenarios';
 import {
+  applyLiveReceiptOcrResult,
   createLiveReceiptBatch,
+  type LiveReceiptOcrPayload,
   rerunLiveReceiptExtraction,
   saveLiveReceiptHeaderField,
   saveLiveReceiptLineItemField,
@@ -336,7 +338,7 @@ function Shell() {
     }
   }
 
-  function handleComposerSubmit(kind: ComposerKind, draft: Record<string, string>) {
+  async function handleComposerSubmit(kind: ComposerKind, draft: Record<string, string>, files: File[] = []) {
     setComposer(null);
     switch (kind) {
       case 'receipt':
@@ -357,6 +359,25 @@ function Shell() {
           );
           setReceiptRefreshToken((current) => current + 1);
           navigate(`/ingest/${captureResult.primaryReceiptId}`);
+
+          if (files.length && !resolveReceiptFixtureFilesFromDraft(draft).length) {
+            void requestLiveReceiptOcr(files, draft.source)
+              .then((ocrPayload) => {
+                if (!ocrPayload) {
+                  return;
+                }
+
+                const nextPayload = applyLiveReceiptOcrResult(captureResult.primaryReceiptId, ocrPayload);
+
+                if (nextPayload) {
+                  setReceiptRefreshToken((current) => current + 1);
+                  setNotice(`${nextPayload.header.merchantName} OCR details are ready for review.`);
+                }
+              })
+              .catch(() => {
+                setNotice('Live OCR was unavailable, so the receipt stayed on the seeded review path.');
+              });
+          }
         }
         return;
       case 'thing':
@@ -516,7 +537,7 @@ function Shell() {
             key={composer}
             kind={composer}
             onClose={() => setComposer(null)}
-            onSubmit={(draft) => handleComposerSubmit(composer, draft)}
+            onSubmit={(draft, files) => handleComposerSubmit(composer, draft, files)}
           />
         </Overlay>
       ) : null}
@@ -678,9 +699,10 @@ function Overlay(props: { children: ReactNode; onClose: () => void }) {
   );
 }
 
-function CreationSheet(props: { kind: ComposerKind; onClose: () => void; onSubmit: (draft: Record<string, string>) => void }) {
+function CreationSheet(props: { kind: ComposerKind; onClose: () => void; onSubmit: (draft: Record<string, string>, files: File[]) => void }) {
   const [draft, setDraft] = useState<Record<string, string>>(() => getInitialDraft(props.kind));
   const [filePreviewUrls, setFilePreviewUrls] = useState<string[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const config = getComposerConfig(props.kind);
 
   useEffect(() => () => {
@@ -701,6 +723,7 @@ function CreationSheet(props: { kind: ComposerKind; onClose: () => void; onSubmi
   }
 
   function updateReceiptFiles(fileList: FileList | null) {
+    const nextFiles = Array.from(fileList ?? []);
     setFilePreviewUrls((current) => {
       current.forEach((url) => {
         if (url.startsWith('blob:')) {
@@ -710,7 +733,7 @@ function CreationSheet(props: { kind: ComposerKind; onClose: () => void; onSubmi
       return [];
     });
 
-    const previewUrls = Array.from(fileList ?? [])
+    const previewUrls = nextFiles
       .filter((file) => file.type.startsWith('image/'))
       .map((file) => {
         if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
@@ -719,7 +742,8 @@ function CreationSheet(props: { kind: ComposerKind; onClose: () => void; onSubmi
 
         return `preview://${encodeURIComponent(file.name)}`;
       });
-    const fileNames = Array.from(fileList ?? []).map((file) => file.name);
+    const fileNames = nextFiles.map((file) => file.name);
+    setSelectedFiles(nextFiles);
     setFilePreviewUrls(previewUrls);
     setDraft((current) => ({
       ...applyReceiptFilesToDraft(current, fileNames),
@@ -729,7 +753,7 @@ function CreationSheet(props: { kind: ComposerKind; onClose: () => void; onSubmi
 
   function submitDraft(event?: { preventDefault: () => void }) {
     event?.preventDefault();
-    props.onSubmit(draft);
+    props.onSubmit(draft, selectedFiles);
   }
 
   function handleFormKeyDown(event: KeyboardEvent<HTMLFormElement>) {
@@ -744,7 +768,7 @@ function CreationSheet(props: { kind: ComposerKind; onClose: () => void; onSubmi
     }
 
     event.preventDefault();
-    props.onSubmit(draft);
+    props.onSubmit(draft, selectedFiles);
   }
 
   return (
@@ -939,6 +963,67 @@ function parsePreviewUrls(rawValue: string | undefined) {
   } catch {
     return [];
   }
+}
+
+async function requestLiveReceiptOcr(files: File[], sourceLabel: string): Promise<LiveReceiptOcrPayload | null> {
+  const primaryFile = files[0];
+
+  if (!primaryFile) {
+    return null;
+  }
+
+  const base64Data = await fileToBase64(primaryFile);
+  const response = await fetch('/api/receipt-ocr', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      fileName: primaryFile.name,
+      mimeType: primaryFile.type || inferMimeTypeFromName(primaryFile.name),
+      base64Data,
+      captureChannel: mapSourceLabelToCaptureChannel(sourceLabel),
+      fallbackAllowed: true,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Receipt OCR request failed with ${response.status}`);
+  }
+
+  return response.json() as Promise<LiveReceiptOcrPayload>;
+}
+
+async function fileToBase64(file: File) {
+  const buffer = await file.arrayBuffer();
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+
+  for (let index = 0; index < bytes.length; index += 1) {
+    binary += String.fromCharCode(bytes[index] ?? 0);
+  }
+
+  return btoa(binary);
+}
+
+function inferMimeTypeFromName(fileName: string) {
+  const lower = fileName.toLowerCase();
+
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.pdf')) return 'application/pdf';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  return 'image/jpeg';
+}
+
+function mapSourceLabelToCaptureChannel(sourceLabel: string) {
+  const normalized = sourceLabel.toLowerCase();
+
+  if (normalized.includes('pdf')) return 'upload_pdf' as const;
+  if (normalized.includes('video')) return 'video_capture' as const;
+  if (normalized.includes('email')) return 'email_forward' as const;
+  if (normalized.includes('quick')) return 'quick_snap' as const;
+  if (normalized.includes('multi')) return 'multi_receipt_photo' as const;
+  return 'upload_photo' as const;
 }
 
 function iconForFabItem(icon: string) {

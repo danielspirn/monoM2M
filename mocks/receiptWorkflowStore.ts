@@ -10,6 +10,29 @@ import type {
 const RECEIPT_STORE_KEY = 'm2m.live.receipts.v1';
 const EXTRACTION_DELAY_MS = 1800;
 
+export type LiveReceiptOcrPayload = {
+  providerId: ReceiptOcrProviderId;
+  providerLabel: string;
+  modelName: string;
+  parserVersion: string;
+  rawText: string;
+  merchantName: string | null;
+  purchaseDate: string | null;
+  grandTotal: string | null;
+  fieldCandidates: Array<{
+    label: string;
+    value: string;
+    confidence: number;
+  }>;
+  lineItemCandidates: Array<{
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    lineTotal: number;
+    confidence: number;
+  }>;
+};
+
 export type SourceDocumentType = 'receipt_image' | 'receipt_pdf';
 export type ReceiptWorkflowStatus = 'processing' | 'needs_review' | 'trusted';
 export type ReviewState = 'auto' | 'edited' | 'needs_review';
@@ -1407,6 +1430,129 @@ export function rerunLiveReceiptExtraction(receiptId: string): ReceiptStudioLive
   return buildStudioPayload(nextRecord);
 }
 
+export function applyLiveReceiptOcrResult(
+  receiptId: string,
+  payload: LiveReceiptOcrPayload,
+): ReceiptStudioLivePayload | null {
+  const records = readStoredReceipts();
+  const index = records.findIndex((record) => record.id === receiptId);
+
+  if (index === -1) {
+    return null;
+  }
+
+  const record = records[index];
+  const now = new Date().toISOString();
+  const merchant = sanitizeMerchant(payload.merchantName || record.header.merchantName || 'Uploaded Receipt');
+  const purchasedAt = normalizePurchaseDate(payload.purchaseDate || record.header.purchasedAt || now, now);
+  const lineItems = buildLineItems(
+    record.id,
+    merchant,
+    payload.lineItemCandidates.map((item) => item.description).join(', '),
+    payload.lineItemCandidates,
+  );
+  const grandTotal = coerceCurrencyValue(payload.grandTotal ?? '', roundCurrency(
+    lineItems.reduce((sum, item) => sum + item.lineTotal, 0),
+  ));
+  const evidenceSpans = buildEvidenceSpans(record.id, lineItems, merchant, purchasedAt, grandTotal);
+  const selectedLineItemId = lineItems.find((item) => item.reviewState === 'needs_review')?.id ?? lineItems[0]?.id ?? null;
+  const merchantProfile = buildRetailerProfile(merchant);
+  const duplicateCandidates = buildDuplicateCandidates(
+    records.filter((candidate) => candidate.id !== receiptId),
+    merchant,
+    purchasedAt,
+    grandTotal,
+  );
+  const rawText = payload.rawText || buildRawText(merchant, purchasedAt, lineItems, grandTotal);
+
+  const nextRecord: StoredReceiptRecord = {
+    ...record,
+    updatedAt: now,
+    status: 'needs_review',
+    note: `${merchant} receipt was processed with live OCR and is ready for evidence-based review.`,
+    extractionRun: {
+      ...record.extractionRun,
+      status: 'completed',
+      parserVersion: payload.parserVersion,
+      providerId: payload.providerId,
+      providerLabel: payload.providerLabel,
+      startedAt: record.extractionRun.startedAt,
+      completedAt: now,
+      stage: 'ready_for_review',
+      stageLabel: 'Live OCR complete. Review line items and confirm the purchase graph.',
+    },
+    header: {
+      ...record.header,
+      merchantName: merchant,
+      purchasedAt,
+      grandTotal,
+    },
+    parsedData: {
+      rawText,
+      fieldCandidates: buildLiveParsedFieldCandidates(record.id, payload.fieldCandidates, merchant, purchasedAt, grandTotal, evidenceSpans),
+      lineItemCandidates: buildLiveParsedLineItemCandidates(record.id, payload.lineItemCandidates, lineItems, evidenceSpans),
+      requestProvenance: {
+        parserMode: 'live_backend_ocr',
+        parserVersion: payload.parserVersion,
+        processingNote: `${payload.providerLabel} processed the uploaded receipt through the backend OCR bridge.`,
+        sourceDocumentId: record.sourceDocument.id,
+        sourceDocumentChecksum: record.sourceDocument.checksum,
+        sourceFileCount: record.sourceDocument.sourceFiles.length,
+        captureChannel: record.sourceDocument.captureChannel,
+      },
+      providerTrace: {
+        providerId: payload.providerId,
+        providerLabel: payload.providerLabel,
+        routingMode: 'vendor_primary',
+        evaluationStage: 'shadow_eval_required',
+        fallbackProviderLabel: null,
+      },
+      returnPolicySnippet: lineItems.some((item) => item.assetCandidateFlag)
+        ? 'Return policy candidate detected: keep original receipt for item-level support.'
+        : null,
+      warrantySnippet: lineItems.some((item) => item.assetCandidateFlag)
+        ? 'Warranty candidate detected from durable-goods language and merchant pattern.'
+        : null,
+    },
+    lineItems,
+    selectedLineItemId,
+    evidenceSpans,
+    duplicateCandidates,
+    structuredData: {
+      merchantMatchStatus: 'suggested',
+      merchantMatchConfidence: merchantProfile === 'known retailer' ? 0.95 : 0.82,
+      thingCandidateCount: lineItems.filter((item) => item.assetCandidateFlag).length,
+      returnPolicyStatus: lineItems.some((item) => item.assetCandidateFlag) ? 'candidate' : 'not_found',
+      warrantyStatus: lineItems.some((item) => item.assetCandidateFlag) ? 'candidate' : 'not_found',
+      retailerProfile: merchantProfile,
+      taxTags: buildTaxTags(lineItems, merchant),
+      lifestyleTags: buildLifestyleTags(lineItems, merchant),
+      productCategories: buildProductCategories(lineItems),
+      returnWindowLabel: lineItems.some((item) => item.assetCandidateFlag) ? 'Likely returnable purchase detected' : 'No notable returnability signal',
+      warrantySupportLabel: lineItems.some((item) => item.assetCandidateFlag) ? 'Durable-goods warranty candidate detected' : 'No warranty signal detected',
+    },
+    searchDocument: {
+      status: 'indexed',
+      keywords: buildSearchKeywords(merchant, lineItems),
+      textPreview: rawText.slice(0, 240),
+      embeddingTerms: buildEmbeddingTerms(merchant, lineItems),
+      embeddingVersion: 'receipt-embedding-v1',
+    },
+    alerts: buildAlerts({
+      duplicateCandidates,
+      merchant,
+      lineItems,
+      merchantProfile,
+      sourceDocument: record.sourceDocument,
+    }),
+  };
+
+  records[index] = nextRecord;
+  writeStoredReceipts(records);
+
+  return buildStudioPayload(nextRecord);
+}
+
 export function saveLiveReceiptHeaderField(
   receiptId: string,
   field: 'merchantName' | 'purchasedAt' | 'grandTotal',
@@ -2788,6 +2934,95 @@ function buildProcessingFeedback(record: StoredReceiptRecord) {
       `Total detected: ${totalLabel}`,
     ],
   };
+}
+
+function buildLiveParsedFieldCandidates(
+  receiptId: string,
+  fieldCandidates: LiveReceiptOcrPayload['fieldCandidates'],
+  merchant: string,
+  purchasedAt: string,
+  grandTotal: number,
+  evidenceSpans: EvidenceSpanRecord[],
+): ParsedFieldCandidate[] {
+  const merchantEvidence = evidenceSpans.find((span) => span.id === `${receiptId}_evidence_merchant`) ?? null;
+  const dateEvidence = evidenceSpans.find((span) => span.id === `${receiptId}_evidence_date`) ?? null;
+  const totalEvidence = evidenceSpans.find((span) => span.id === `${receiptId}_evidence_total`) ?? null;
+  const normalized = fieldCandidates.map((field, index) => ({
+    id: `${receiptId}_field_live_${index + 1}`,
+    label: field.label,
+    value: field.value,
+    confidence: coerceConfidenceScore(field.confidence),
+    source: 'ocr' as const,
+    evidenceSpanId:
+      field.label.toLowerCase().includes('merchant') ? merchantEvidence?.id ?? null
+      : field.label.toLowerCase().includes('date') ? dateEvidence?.id ?? null
+      : field.label.toLowerCase().includes('total') ? totalEvidence?.id ?? null
+      : null,
+  }));
+
+  if (normalized.length) {
+    return normalized;
+  }
+
+  return [
+    {
+      id: `${receiptId}_field_merchant`,
+      label: 'Merchant',
+      value: merchant,
+      confidence: 0.96,
+      source: 'ocr',
+      evidenceSpanId: merchantEvidence?.id ?? null,
+    },
+    {
+      id: `${receiptId}_field_date`,
+      label: 'Purchase date',
+      value: purchasedAt,
+      confidence: 0.92,
+      source: 'ocr',
+      evidenceSpanId: dateEvidence?.id ?? null,
+    },
+    {
+      id: `${receiptId}_field_total`,
+      label: 'Grand total',
+      value: `$${grandTotal.toFixed(2)}`,
+      confidence: 0.88,
+      source: 'ocr',
+      evidenceSpanId: totalEvidence?.id ?? null,
+    },
+  ];
+}
+
+function buildLiveParsedLineItemCandidates(
+  receiptId: string,
+  lineItemCandidates: LiveReceiptOcrPayload['lineItemCandidates'],
+  lineItems: ReceiptLineItemRecord[],
+  evidenceSpans: EvidenceSpanRecord[],
+): ParsedLineItemCandidate[] {
+  if (lineItemCandidates.length) {
+    return lineItemCandidates.slice(0, 6).map((item, index) => ({
+      id: `${receiptId}_candidate_line_${index + 1}`,
+      description: titleCase(item.description),
+      quantity: item.quantity,
+      unitPrice: roundCurrency(item.unitPrice),
+      lineTotal: roundCurrency(item.lineTotal),
+      confidence: coerceConfidenceScore(item.confidence),
+      source: 'ocr',
+      thingCandidateHint: lineItems[index]?.assetCandidateFlag ?? false,
+      evidenceSpanId: evidenceSpans.find((span) => span.id === `${receiptId}_evidence_line_${index + 1}`)?.id ?? null,
+    }));
+  }
+
+  return lineItems.map((item, index) => ({
+    id: `${receiptId}_candidate_line_${index + 1}`,
+    description: item.descriptionNormalized,
+    quantity: item.quantity,
+    unitPrice: item.unitPrice,
+    lineTotal: item.lineTotal,
+    confidence: item.confidenceScore,
+    source: 'summary_fallback',
+    thingCandidateHint: item.assetCandidateFlag,
+    evidenceSpanId: evidenceSpans.find((span) => span.id === `${receiptId}_evidence_line_${index + 1}`)?.id ?? null,
+  }));
 }
 
 function appendReviewDecision(existing: ReviewDecisionRecord[], nextDecision: ReviewDecisionRecord) {
