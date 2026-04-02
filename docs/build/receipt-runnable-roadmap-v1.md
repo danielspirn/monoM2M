@@ -471,3 +471,16 @@ Shipped:
 
 Success signal:
 - a user can upload a new receipt image in local development and see the receipt move from processing into review with live OCR-derived merchant, date, total, and line items
+
+#### Slice 30: Backend receipt-processing persistence
+
+Status:
+- complete
+
+Shipped:
+- a new backend receipt-processing API now persists `source_document`, `extraction_run`, and OCR output into a local server-side store
+- the upload flow now calls that backend processing API instead of the bare OCR endpoint, while still mapping the returned OCR payload into Receipt Studio
+- server-side tests now cover both persistence and the processing endpoint, and the app has a real unknown-upload test that proves the browser flow uses the backend path
+
+Success signal:
+- a newly uploaded receipt now produces durable backend processing records and still opens the same review UI with OCR-derived fields and line items

@@ -21,6 +21,7 @@ import {
   saveLiveReceiptLineItemField,
   submitLiveReceiptReview,
 } from '@/mocks/receiptWorkflowStore';
+import type { ReceiptProcessingCreateResponse } from '@/contracts/schema/integrations/receipt-processing.contract';
 import {
   getDefaultState,
   getPersonaDefinitions,
@@ -361,7 +362,7 @@ function Shell() {
           navigate(`/ingest/${captureResult.primaryReceiptId}`);
 
           if (files.length && !resolveReceiptFixtureFilesFromDraft(draft).length) {
-            void requestLiveReceiptOcr(files, draft.source)
+            void requestLiveReceiptProcessing(files, draft.source)
               .then((ocrPayload) => {
                 if (!ocrPayload) {
                   return;
@@ -965,7 +966,7 @@ function parsePreviewUrls(rawValue: string | undefined) {
   }
 }
 
-async function requestLiveReceiptOcr(files: File[], sourceLabel: string): Promise<LiveReceiptOcrPayload | null> {
+async function requestLiveReceiptProcessing(files: File[], sourceLabel: string): Promise<LiveReceiptOcrPayload | null> {
   const primaryFile = files[0];
 
   if (!primaryFile) {
@@ -973,7 +974,7 @@ async function requestLiveReceiptOcr(files: File[], sourceLabel: string): Promis
   }
 
   const base64Data = await fileToBase64(primaryFile);
-  const response = await fetch('/api/receipt-ocr', {
+  const response = await fetch('/api/receipt-processing', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -988,10 +989,11 @@ async function requestLiveReceiptOcr(files: File[], sourceLabel: string): Promis
   });
 
   if (!response.ok) {
-    throw new Error(`Receipt OCR request failed with ${response.status}`);
+    throw new Error(`Receipt processing request failed with ${response.status}`);
   }
 
-  return response.json() as Promise<LiveReceiptOcrPayload>;
+  const payload = await response.json() as ReceiptProcessingCreateResponse;
+  return payload.ocrPayload;
 }
 
 async function fileToBase64(file: File) {

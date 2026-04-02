@@ -2,6 +2,7 @@ import react from '@vitejs/plugin-react';
 import path from 'node:path';
 import { defineConfig } from 'vitest/config';
 import { handleReceiptOcrHttpRequest } from './server/ocr/http';
+import { handleReceiptProcessingHttpRequest } from './server/receipts/http';
 
 export default defineConfig({
   plugins: [
@@ -16,6 +17,14 @@ export default defineConfig({
           }
 
           void handleReceiptOcrHttpRequest(req, res);
+        });
+        server.middlewares.use('/api/receipt-processing', (req, res, next) => {
+          if (req.method !== 'GET' && req.method !== 'POST') {
+            next();
+            return;
+          }
+
+          void handleReceiptProcessingHttpRequest(req, res);
         });
       },
     },

@@ -30,7 +30,8 @@ export async function handleReceiptOcrHttpRequest(req: IncomingMessage, res: Ser
 
   try {
     const body = await readJsonBody<ReceiptOcrHttpRequestBody>(req);
-    const tempDir = await mkdir(path.join(os.tmpdir(), 'm2m-receipt-ocr'), { recursive: true });
+    const tempDir = path.join(os.tmpdir(), 'm2m-receipt-ocr');
+    await mkdir(tempDir, { recursive: true });
     const tempFilePath = path.join(tempDir, `${Date.now()}-${sanitizeFileName(body.fileName)}`);
 
     await writeFile(tempFilePath, Buffer.from(body.base64Data, 'base64'));

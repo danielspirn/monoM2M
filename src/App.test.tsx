@@ -11,6 +11,7 @@ describe('Milestone 1 shell', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.useRealTimers();
   });
 
@@ -256,6 +257,98 @@ describe('Milestone 1 shell', () => {
     expect(screen.getByRole('heading', { name: 'Safeway' })).toBeTruthy();
     expect(screen.getAllByText('Raw document').length).toBeGreaterThan(0);
     expect(screen.getByText('Uploaded files')).toBeTruthy();
+  });
+
+  it('sends unknown uploaded receipts through backend processing and renders the OCR review', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        record: {
+          id: 'receiptproc_1',
+          createdAt: '2026-04-01T12:00:00.000Z',
+          sourceDocument: {
+            id: 'srcdoc_1',
+            tenantId: 'local-dev',
+            householdId: null,
+            fileName: 'fresh-upload.jpeg',
+            mimeType: 'image/jpeg',
+            captureChannel: 'upload_photo',
+            checksum: 'abc123',
+            byteSize: 1024,
+            createdAt: '2026-04-01T12:00:00.000Z',
+            storageMode: 'dev_local_json',
+          },
+          extractionRun: {
+            id: 'extract_1',
+            status: 'completed',
+            providerId: 'google_gemini_2_5_flash',
+            providerLabel: 'Google Gemini 2.5 Flash',
+            modelName: 'gemini-2.5-flash',
+            parserVersion: 'live_backend_ocr_v2',
+            promptVersion: 'receipt-ocr-server-prompt-v1',
+            startedAt: '2026-04-01T12:00:00.000Z',
+            completedAt: '2026-04-01T12:00:01.000Z',
+            vendorRequestId: 'vendor_1',
+            processingMs: 850,
+            estimatedCostUsd: 0.002,
+            documentMode: 'single_receipt',
+          },
+          ocr: {
+            summary: {
+              merchantName: 'Backend Grocer',
+              purchaseDate: '2026-04-01',
+              grandTotal: '12.49',
+            },
+            rawText: 'BACKEND GROCER\nAPPLES 4.99\nMILK 7.50\nTOTAL 12.49',
+            fieldCandidates: [],
+            lineItemCandidates: [],
+          },
+        },
+        ocrPayload: {
+          providerId: 'google_gemini_2_5_flash',
+          providerLabel: 'Google Gemini 2.5 Flash',
+          modelName: 'gemini-2.5-flash',
+          parserVersion: 'live_backend_ocr_v2',
+          rawText: 'BACKEND GROCER\nAPPLES 4.99\nMILK 7.50\nTOTAL 12.49',
+          merchantName: 'Backend Grocer',
+          purchaseDate: '2026-04-01',
+          grandTotal: '12.49',
+          fieldCandidates: [
+            { label: 'Merchant', value: 'Backend Grocer', confidence: 0.98 },
+            { label: 'Purchase date', value: '2026-04-01', confidence: 0.94 },
+            { label: 'Grand total', value: '12.49', confidence: 0.95 },
+          ],
+          lineItemCandidates: [
+            { description: 'Apples', quantity: 1, unitPrice: 4.99, lineTotal: 4.99, confidence: 0.9 },
+            { description: 'Milk', quantity: 1, unitPrice: 7.5, lineTotal: 7.5, confidence: 0.91 },
+          ],
+        },
+      }),
+    } as Response);
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
+    fireEvent.click(screen.getByText('Add Receipt'));
+
+    const fileInput = screen.getByLabelText('Choose receipt image or video');
+    const file = new File(['fresh receipt'], 'fresh-upload.jpeg', { type: 'image/jpeg' });
+    Object.defineProperty(file, 'arrayBuffer', {
+      value: async () => new TextEncoder().encode('fresh receipt').buffer,
+    });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Process receipt capture' }));
+
+    expect(await screen.findByDisplayValue('Backend Grocer')).toBeTruthy();
+    expect(screen.getByText('Google Gemini 2.5 Flash')).toBeTruthy();
+    expect(screen.getByDisplayValue('Apples')).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/receipt-processing',
+      expect.objectContaining({
+        method: 'POST',
+      }),
+    );
   });
 
   it('shows persisted OCR line-item candidates and parser provenance for unknown uploaded files', () => {
