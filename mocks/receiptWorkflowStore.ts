@@ -1173,6 +1173,12 @@ function listLocalProjectedMemories() {
     .flatMap((record) => getStoredPurchaseGraph(record).memoryRecords);
 }
 
+function listLocalProjectedSemanticRecords() {
+  return readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .map((record) => getStoredPurchaseGraph(record).semanticRecord);
+}
+
 function listMirroredProjectedPurchaseEvents() {
   return readStoredTrustedPurchaseGraphs().map((record) =>
     buildProjectedPurchaseEventFromTrustedGraph(record.purchaseEvent, record.merchant),
@@ -1217,6 +1223,12 @@ function listMirroredProjectedMemories() {
   );
 }
 
+function listMirroredProjectedSemanticRecords() {
+  return readStoredTrustedPurchaseGraphs().map((record) =>
+    buildProjectedSemanticRecordFromTrustedGraph(record),
+  );
+}
+
 function listAllProjectedPurchaseEvents() {
   return mergeProjectedRecords(listLocalProjectedPurchaseEvents(), listMirroredProjectedPurchaseEvents(), (record) => record.id);
 }
@@ -1239,6 +1251,10 @@ function listAllProjectedThings() {
 
 function listAllProjectedMemories() {
   return mergeProjectedRecords(listLocalProjectedMemories(), listMirroredProjectedMemories(), (record) => record.id);
+}
+
+function listAllProjectedSemanticRecords() {
+  return mergeProjectedRecords(listLocalProjectedSemanticRecords(), listMirroredProjectedSemanticRecords(), (record) => record.id);
 }
 
 function mergeProjectedRecords<T>(primary: T[], secondary: T[], getId: (record: T) => string) {
@@ -1417,6 +1433,40 @@ function buildProjectedMemoryFromTrustedGraph(
     receiptIds: memory.receiptIds,
     personIds: memory.personIds,
     thingIds: memory.thingIds,
+  };
+}
+
+function buildProjectedSemanticRecordFromTrustedGraph(
+  record: TrustedPurchaseGraphRecord,
+): ProjectedSemanticRecord {
+  const keywordSet = new Set<string>([
+    record.purchaseEvent.merchantName,
+    ...record.purchaseEvent.productCategories,
+    ...record.purchaseLineItems.map((item) => titleCase(item.description)),
+    ...record.things.map((thing) => thing.displayName),
+    ...record.memories.map((memory) => memory.title),
+  ]);
+  const embeddingTerms = buildTrustedGraphEmbeddingTerms(record);
+  const lineHighlights = record.purchaseLineItems.slice(0, 3).map((item) => titleCase(item.description));
+  const textPreview = `${record.purchaseEvent.merchantName} trusted purchase with ${joinWithAnd(lineHighlights)}.`;
+
+  return {
+    id: `semantic_${record.receiptId}`,
+    receiptId: record.receiptId,
+    purchaseEventId: record.purchaseEvent.id,
+    sourceDocumentId: record.sourceDocumentId,
+    merchantName: record.purchaseEvent.merchantName,
+    purchasedAt: record.purchaseEvent.purchasedAt,
+    retrievalScope: 'trusted_receipt',
+    textPreview,
+    keywords: Array.from(keywordSet).slice(0, 8),
+    embeddingTerms,
+    embeddingVersion: 'receipt-embedding-v1',
+    lineHighlights,
+    thingIds: record.things.map((thing) => thing.id),
+    memoryIds: record.memories.map((memory) => memory.id),
+    personIds: record.purchaseEvent.personIds,
+    note: `${record.purchaseEvent.merchantName} is indexed from the mirrored trusted purchase graph so agent answers stay grounded after local review state is cleared.`,
   };
 }
 
@@ -1671,9 +1721,7 @@ export function listProjectedDocumentLinks(): ProjectedDocumentLinkRecord[] {
 }
 
 export function listProjectedSemanticRecords(): ProjectedSemanticRecord[] {
-  return readStoredReceipts()
-    .filter((record) => record.status === 'trusted')
-    .map((record) => getStoredPurchaseGraph(record).semanticRecord)
+  return listAllProjectedSemanticRecords()
     .sort((left, right) => right.purchasedAt.localeCompare(left.purchasedAt));
 }
 
@@ -1741,7 +1789,7 @@ export function answerSemanticReceiptQuestion(query: string): GroundedReceiptAns
     }>;
 
   if (!rankedMatches.length) {
-    return null;
+    return buildMirroredGroundedReceiptAnswer(matches, query);
   }
 
   const topMatch = rankedMatches[0];
@@ -1766,6 +1814,69 @@ export function answerSemanticReceiptQuestion(query: string): GroundedReceiptAns
     citations: buildGroundedCitations(topMatch.record, topThing, topPerson, topEvidence),
     structuredResults: buildGroundedStructuredResults(rankedMatches),
     suggestedFollowUps: buildGroundedFollowUps(topMatch.record, topThing, topPerson),
+  };
+}
+
+function buildMirroredGroundedReceiptAnswer(
+  matches: SemanticReceiptSearchResult[],
+  query: string,
+): GroundedReceiptAnswer | null {
+  const trustedGraphs = readStoredTrustedPurchaseGraphs();
+  const rankedMatches = matches
+    .map((match) => {
+      const trustedGraph = trustedGraphs.find((candidate) => candidate.receiptId === match.receiptId);
+
+      if (!trustedGraph) {
+        return null;
+      }
+
+      return {
+        match,
+        trustedGraph,
+        semanticRecord: buildProjectedSemanticRecordFromTrustedGraph(trustedGraph),
+        purchaseLineItems: trustedGraph.purchaseLineItems.map((item, index) =>
+          buildProjectedPurchaseLineItemFromTrustedGraph(item, trustedGraph.purchaseEvent, index),
+        ),
+        thingRecords: trustedGraph.things.map((thing) => buildProjectedThingFromTrustedGraph(thing)),
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 2) as Array<{
+      match: SemanticReceiptSearchResult;
+      trustedGraph: TrustedPurchaseGraphRecord;
+      semanticRecord: ProjectedSemanticRecord;
+      purchaseLineItems: ProjectedPurchaseLineItemRecord[];
+      thingRecords: ProjectedThingRecord[];
+    }>;
+
+  if (!rankedMatches.length) {
+    return null;
+  }
+
+  const topMatch = rankedMatches[0];
+  const topThing = topMatch.thingRecords[0] ?? null;
+  const topPersonId = topMatch.trustedGraph.purchaseEvent.personIds.find((personId) => personId !== 'person_self')
+    ?? topMatch.trustedGraph.purchaseEvent.personIds[0]
+    ?? null;
+  const topLineLabels = topMatch.purchaseLineItems.slice(0, 3).map((item) => item.description);
+  const summaryParts = [
+    `I found ${rankedMatches.length === 1 ? '1 grounded receipt match' : `${rankedMatches.length} grounded receipt matches`} in your trusted receipts.`,
+    `${topMatch.trustedGraph.purchaseEvent.merchantName} on ${formatGroundedDate(topMatch.trustedGraph.purchaseEvent.purchasedAt)} includes ${joinWithAnd(topLineLabels)}.`,
+    'This answer is restored from your trusted purchase graph mirror.',
+  ];
+
+  if (topThing) {
+    summaryParts.push(`${topThing.displayName} is already connected to Things from that purchase.`);
+  }
+
+  return {
+    query,
+    scope: 'trusted_receipts_only',
+    matchedReceiptCount: rankedMatches.length,
+    summary: summaryParts.join(' '),
+    citations: buildMirroredGroundedCitations(topMatch.trustedGraph, topThing, topPersonId),
+    structuredResults: buildMirroredGroundedStructuredResults(rankedMatches),
+    suggestedFollowUps: buildMirroredGroundedFollowUps(topMatch.trustedGraph, topThing, topPersonId),
   };
 }
 
@@ -4110,6 +4221,32 @@ function buildEmbeddingTerms(merchant: string, lineItems: ReceiptLineItemRecord[
   return Array.from(terms).sort();
 }
 
+function buildTrustedGraphEmbeddingTerms(record: TrustedPurchaseGraphRecord) {
+  const terms = new Set<string>();
+
+  tokenizeInto(record.purchaseEvent.merchantName, terms);
+  record.merchant.defaultProductCategories.forEach((category) => tokenizeInto(category, terms));
+  record.purchaseLineItems.forEach((item) => {
+    tokenizeInto(item.description, terms);
+    tokenizeInto(item.category, terms);
+    tokenizeInto(item.subcategory, terms);
+  });
+  record.products.forEach((product) => {
+    tokenizeInto(product.displayName, terms);
+    tokenizeInto(product.category, terms);
+    tokenizeInto(product.subcategory, terms);
+  });
+  record.things.forEach((thing) => tokenizeInto(thing.displayName, terms));
+  record.memories.forEach((memory) => {
+    tokenizeInto(memory.title, terms);
+    tokenizeInto(memory.memoryType, terms);
+  });
+
+  expandSemanticAliases(Array.from(terms)).forEach((term) => terms.add(term));
+
+  return Array.from(terms).sort();
+}
+
 function buildSearchQueryTerms(query: string) {
   const terms = new Set<string>();
   tokenizeInto(query, terms);
@@ -4238,6 +4375,104 @@ function buildGroundedFollowUps(
   followUps.push(`What else did I buy at ${record.header.merchantName}?`);
 
   return followUps;
+}
+
+function buildMirroredGroundedCitations(
+  trustedGraph: TrustedPurchaseGraphRecord,
+  topThing: ProjectedThingRecord | null,
+  topPersonId: string | null,
+) {
+  const citations: GroundedReceiptAnswer['citations'] = [
+    {
+      type: 'receipt',
+      id: trustedGraph.receiptId,
+      label: `${trustedGraph.purchaseEvent.merchantName} receipt`,
+      action: `route:/ingest/${trustedGraph.receiptId}`,
+    },
+  ];
+
+  if (topThing) {
+    citations.push({
+      type: 'thing',
+      id: topThing.id,
+      label: topThing.displayName,
+      action: `route:/things/${topThing.id}`,
+    });
+  }
+
+  if (topPersonId) {
+    citations.push({
+      type: 'person',
+      id: topPersonId,
+      label: humanizePersonId(topPersonId),
+      action: `route:/people/${topPersonId}`,
+    });
+  }
+
+  return citations;
+}
+
+function buildMirroredGroundedStructuredResults(
+  rankedMatches: Array<{
+    match: SemanticReceiptSearchResult;
+    trustedGraph: TrustedPurchaseGraphRecord;
+    semanticRecord: ProjectedSemanticRecord;
+    purchaseLineItems: ProjectedPurchaseLineItemRecord[];
+    thingRecords: ProjectedThingRecord[];
+  }>,
+) {
+  return rankedMatches.flatMap(({ match, trustedGraph, purchaseLineItems, thingRecords }, index) => {
+    const receiptResult: GroundedReceiptAnswer['structuredResults'][number] = {
+      id: `grounded-receipt-${trustedGraph.receiptId}`,
+      kind: 'receipt',
+      title: `${trustedGraph.purchaseEvent.merchantName} receipt`,
+      body: `${formatGroundedDate(trustedGraph.purchaseEvent.purchasedAt)} · ${purchaseLineItems.length} line items · matched on ${match.matchedTerms.slice(0, 3).join(', ') || 'trusted graph terms'}.`,
+      actionLabel: 'Review receipt',
+      action: `route:/ingest/${trustedGraph.receiptId}`,
+      chips: [
+        trustedGraph.merchant.retailerProfile,
+        ...purchaseLineItems.slice(0, 2).map((item) => item.description),
+      ],
+    };
+
+    const thingResult = thingRecords[0]
+      ? {
+          id: `grounded-thing-${thingRecords[0].id}`,
+          kind: 'thing' as const,
+          title: thingRecords[0].displayName,
+          body: `${thingRecords[0].category} thing restored from your trusted purchase graph with linked ownership support intact.`,
+          actionLabel: 'Open Thing',
+          action: `route:/things/${thingRecords[0].id}`,
+          chips: thingRecords[0].supportLabels.slice(0, 3),
+        }
+      : null;
+
+    return index === 0 && thingResult ? [receiptResult, thingResult] : [receiptResult];
+  });
+}
+
+function buildMirroredGroundedFollowUps(
+  trustedGraph: TrustedPurchaseGraphRecord,
+  topThing: ProjectedThingRecord | null,
+  topPersonId: string | null,
+) {
+  const followUps = ['Review the receipt'];
+
+  if (topThing) {
+    followUps.push(`Open ${topThing.displayName}`);
+  }
+
+  if (topPersonId) {
+    followUps.push(`Show ${humanizePersonId(topPersonId)}`);
+  }
+
+  followUps.push(`What else did I buy at ${trustedGraph.purchaseEvent.merchantName}?`);
+
+  return followUps;
+}
+
+function humanizePersonId(personId: string) {
+  return titleCase(personId.replace(/^person_/, '').replace(/_/g, ' '));
 }
 
 function formatGroundedDate(value: string) {

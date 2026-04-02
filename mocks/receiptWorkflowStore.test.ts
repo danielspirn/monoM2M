@@ -668,4 +668,109 @@ describe('receiptWorkflowStore projections', () => {
     expect(answer?.citations.some((citation) => citation.type === 'evidence')).toBe(true);
     expect(answer?.structuredResults[0]?.action).toBe(`route:/ingest/${capture.primaryReceiptId}`);
   });
+
+  it('restores semantic retrieval and grounded answers from mirrored trusted purchase graphs', () => {
+    hydrateTrustedPurchaseGraphRecords([
+      {
+        id: 'receipt_restore_semantic',
+        syncedAt: '2026-04-02T15:00:00.000Z',
+        receiptId: 'receipt_restore_semantic',
+        sourceDocumentId: 'srcdoc_restore_semantic',
+        extractionRunId: 'extract_restore_semantic',
+        purchaseEvent: {
+          id: 'purchase_event_restore_semantic',
+          receiptId: 'receipt_restore_semantic',
+          sourceDocumentId: 'srcdoc_restore_semantic',
+          merchantId: 'merchant_restore_hardware',
+          merchantName: 'Restore Hardware',
+          purchasedAt: '2026-04-02',
+          grandTotal: 84,
+          currency: 'USD',
+          lineItemCount: 1,
+          thingCandidateCount: 1,
+          personIds: ['person_gift_helper'],
+          memorySuggestionIds: ['memory_restore_project'],
+          productCategories: ['home'],
+        },
+        merchant: {
+          id: 'merchant_restore_hardware',
+          displayName: 'Restore Hardware',
+          kind: 'retailer',
+          retailerProfile: 'known retailer',
+          purchaseCount: 1,
+          trustedSpendTotal: 84,
+          latestPurchaseAt: '2026-04-02',
+          defaultProductCategories: ['home'],
+        },
+        purchaseLineItems: [
+          {
+            id: 'line_restore_1',
+            purchaseEventId: 'purchase_event_restore_semantic',
+            sourceLineItemId: 'source_line_restore_1',
+            description: 'Garage Shelf',
+            quantity: 1,
+            lineTotal: 84,
+            category: 'home',
+            subcategory: 'storage',
+            assetCandidateFlag: true,
+            thingId: 'thing_restore_shelf',
+          },
+        ],
+        products: [
+          {
+            id: 'product_restore_shelf',
+            purchaseEventId: 'purchase_event_restore_semantic',
+            sourceLineItemId: 'source_line_restore_1',
+            displayName: 'Garage Shelf',
+            category: 'home',
+            subcategory: 'storage',
+            thingCandidate: true,
+            linkedThingId: 'thing_restore_shelf',
+            lineTotal: 84,
+          },
+        ],
+        things: [
+          {
+            id: 'thing_restore_shelf',
+            purchaseEventId: 'purchase_event_restore_semantic',
+            receiptId: 'receipt_restore_semantic',
+            displayName: 'Garage Shelf',
+            category: 'home',
+            subcategory: 'storage',
+            purchasePrice: 84,
+            acquiredAt: '2026-04-02',
+            merchantName: 'Restore Hardware',
+            personIds: ['person_gift_helper'],
+            memoryIds: ['memory_restore_project'],
+          },
+        ],
+        memories: [
+          {
+            id: 'memory_restore_project',
+            purchaseEventId: 'purchase_event_restore_semantic',
+            receiptId: 'receipt_restore_semantic',
+            title: 'Garage organization project',
+            memoryType: 'home_project',
+            significance: 'medium',
+            startsAt: '2026-04-02',
+            placeLabel: 'Restore Hardware',
+            receiptIds: ['receipt_restore_semantic'],
+            personIds: ['person_gift_helper'],
+            thingIds: ['thing_restore_shelf'],
+          },
+        ],
+      },
+    ]);
+
+    const results = searchSemanticReceipts('storage shelf');
+    const answer = answerSemanticReceiptQuestion('What did I buy at Restore Hardware?');
+
+    expect(listProjectedSemanticRecords().some((record) => record.receiptId === 'receipt_restore_semantic')).toBe(true);
+    expect(results[0]?.receiptId).toBe('receipt_restore_semantic');
+    expect(answer?.summary).toContain('Restore Hardware');
+    expect(answer?.summary).toContain('Garage Shelf');
+    expect(answer?.citations.some((citation) => citation.type === 'thing' && citation.id === 'thing_restore_shelf')).toBe(true);
+    expect(answer?.citations.some((citation) => citation.type === 'person' && citation.id === 'person_gift_helper')).toBe(true);
+    expect(answer?.structuredResults[0]?.action).toBe('route:/ingest/receipt_restore_semantic');
+  });
 });

@@ -575,3 +575,16 @@ Shipped:
 
 Success signal:
 - backend-restored purchase graphs can reopen relationship and memory context, not just receipts and Things, even when a linked person exists only in restored graph data
+
+#### Slice 38: Restore semantic retrieval and agent grounding from backend trusted purchase graphs
+
+Status:
+- complete
+
+Shipped:
+- semantic retrieval records now restore from mirrored trusted purchase graph data, not only browser-local trusted receipt records
+- grounded agent answers now fall back to trusted purchase graph mirrors when the original local receipt review record is missing
+- app and store tests now cover backend-restored semantic search and Ask Agent grounding after local trusted state is cleared
+
+Success signal:
+- after local trusted receipt state is cleared, semantic search and Ask Agent can still answer from trusted backend purchase data instead of going blank

@@ -907,6 +907,131 @@ describe('Milestone 1 shell', () => {
     expect(screen.getByText('Golden Gate Park')).toBeTruthy();
   });
 
+  it('grounds agent chat answers from backend trusted purchase graphs when local trusted state is empty', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async (input) => {
+      if (input === '/api/live-receipt-graph') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ records: [] }),
+        } as Response;
+      }
+
+      if (input === '/api/trusted-purchase-graph') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            records: [
+              {
+                id: 'receipt_agent_restore',
+                syncedAt: '2026-04-02T13:30:00.000Z',
+                receiptId: 'receipt_agent_restore',
+                sourceDocumentId: 'srcdoc_agent_restore',
+                extractionRunId: 'extract_agent_restore',
+                purchaseEvent: {
+                  id: 'purchase_event_agent_restore',
+                  receiptId: 'receipt_agent_restore',
+                  sourceDocumentId: 'srcdoc_agent_restore',
+                  merchantId: 'merchant_restore_hardware',
+                  merchantName: 'Restore Hardware',
+                  purchasedAt: '2026-04-02',
+                  grandTotal: 84,
+                  currency: 'USD',
+                  lineItemCount: 1,
+                  thingCandidateCount: 1,
+                  personIds: ['person_gift_helper'],
+                  memorySuggestionIds: ['memory_restore_project'],
+                  productCategories: ['home'],
+                },
+                merchant: {
+                  id: 'merchant_restore_hardware',
+                  displayName: 'Restore Hardware',
+                  kind: 'retailer',
+                  retailerProfile: 'known retailer',
+                  purchaseCount: 1,
+                  trustedSpendTotal: 84,
+                  latestPurchaseAt: '2026-04-02',
+                  defaultProductCategories: ['home'],
+                },
+                purchaseLineItems: [
+                  {
+                    id: 'line_agent_restore_1',
+                    purchaseEventId: 'purchase_event_agent_restore',
+                    sourceLineItemId: 'source_line_agent_restore_1',
+                    description: 'Garage Shelf',
+                    quantity: 1,
+                    lineTotal: 84,
+                    category: 'home',
+                    subcategory: 'storage',
+                    assetCandidateFlag: true,
+                    thingId: 'thing_restore_shelf',
+                  },
+                ],
+                products: [
+                  {
+                    id: 'product_restore_shelf',
+                    purchaseEventId: 'purchase_event_agent_restore',
+                    sourceLineItemId: 'source_line_agent_restore_1',
+                    displayName: 'Garage Shelf',
+                    category: 'home',
+                    subcategory: 'storage',
+                    thingCandidate: true,
+                    linkedThingId: 'thing_restore_shelf',
+                    lineTotal: 84,
+                  },
+                ],
+                things: [
+                  {
+                    id: 'thing_restore_shelf',
+                    purchaseEventId: 'purchase_event_agent_restore',
+                    receiptId: 'receipt_agent_restore',
+                    displayName: 'Garage Shelf',
+                    category: 'home',
+                    subcategory: 'storage',
+                    purchasePrice: 84,
+                    acquiredAt: '2026-04-02',
+                    merchantName: 'Restore Hardware',
+                    personIds: ['person_gift_helper'],
+                    memoryIds: ['memory_restore_project'],
+                  },
+                ],
+                memories: [
+                  {
+                    id: 'memory_restore_project',
+                    purchaseEventId: 'purchase_event_agent_restore',
+                    receiptId: 'receipt_agent_restore',
+                    title: 'Garage organization project',
+                    memoryType: 'home_project',
+                    significance: 'medium',
+                    startsAt: '2026-04-02',
+                    placeLabel: 'Restore Hardware',
+                    receiptIds: ['receipt_agent_restore'],
+                    personIds: ['person_gift_helper'],
+                    thingIds: ['thing_restore_shelf'],
+                  },
+                ],
+              },
+            ],
+          }),
+        } as Response;
+      }
+
+      throw new Error(`Unexpected fetch: ${String(input)}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
+    fireEvent.click(screen.getByText('Ask Agent — Chat'));
+
+    expect(await screen.findByText(/grounded receipt match/i)).toBeTruthy();
+    expect(screen.getAllByText('What did I buy at Restore Hardware?').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Garage Shelf').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Restore Hardware receipt').length).toBeGreaterThan(0);
+  });
+
   it('shows persisted OCR line-item candidates and parser provenance for unknown uploaded files', () => {
     vi.useFakeTimers();
 
