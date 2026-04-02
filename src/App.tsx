@@ -16,6 +16,8 @@ import {
   applyLiveReceiptOcrResult,
   createLiveReceiptBatch,
   getLiveReceiptStudioPayload,
+  hasLiveReceipt,
+  hydrateLiveReceiptGraphRecord,
   type LiveReceiptOcrPayload,
   type ReceiptStudioLivePayload,
   rerunLiveReceiptExtraction,
@@ -24,6 +26,7 @@ import {
   submitLiveReceiptReview,
 } from '@/mocks/receiptWorkflowStore';
 import type { LiveReceiptGraphUpsertRequest } from '@/contracts/schema/integrations/live-receipt-graph.contract';
+import type { LiveReceiptGraphGetResponse } from '@/contracts/schema/integrations/live-receipt-graph.contract';
 import type { ReceiptProcessingCreateResponse } from '@/contracts/schema/integrations/receipt-processing.contract';
 import {
   getDefaultState,
@@ -149,6 +152,7 @@ function Shell() {
   const [composer, setComposer] = useState<ComposerKind | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [receiptRefreshToken, setReceiptRefreshToken] = useState(0);
+  const [receiptHydrationAttempts, setReceiptHydrationAttempts] = useState<Record<string, true>>({});
 
   useEffect(() => {
     const storedPersona = getSelectedPersona();
@@ -212,6 +216,29 @@ function Shell() {
 
     return () => window.clearTimeout(timer);
   }, [receiptStatus, routeKey, params?.receiptId]);
+
+  useEffect(() => {
+    const receiptId = params?.receiptId;
+
+    if (routeKey !== '/ingest/:receiptId' || !receiptId || hasLiveReceipt(receiptId) || receiptHydrationAttempts[receiptId]) {
+      return;
+    }
+
+    setReceiptHydrationAttempts((current) => ({ ...current, [receiptId]: true }));
+
+    void requestLiveReceiptGraphRecord(receiptId)
+      .then((graphRecord) => {
+        if (!graphRecord) {
+          return;
+        }
+
+        hydrateLiveReceiptGraphRecord(graphRecord);
+        setReceiptRefreshToken((current) => current + 1);
+      })
+      .catch(() => {
+        setNotice('Backend receipt restore was unavailable, so the review screen stayed on the fallback shell.');
+      });
+  }, [params?.receiptId, receiptHydrationAttempts, routeKey]);
 
   function handlePersonaChange(personaId: PersonaId) {
     setPersona(personaId);
@@ -1019,6 +1046,21 @@ async function requestLiveReceiptProcessing(files: File[], sourceLabel: string):
     backendExtractionRunId: payload.record.extractionRun.id,
     backendSourceDocumentId: payload.record.sourceDocument.id,
   };
+}
+
+async function requestLiveReceiptGraphRecord(receiptId: string) {
+  const response = await fetch(`/api/live-receipt-graph/${encodeURIComponent(receiptId)}`);
+
+  if (response.status === 404) {
+    return null;
+  }
+
+  if (!response.ok) {
+    throw new Error(`Live receipt graph request failed with ${response.status}`);
+  }
+
+  const payload = await response.json() as LiveReceiptGraphGetResponse;
+  return payload.record;
 }
 
 async function syncLiveReceiptGraphRecord(payload: ReceiptStudioLivePayload) {

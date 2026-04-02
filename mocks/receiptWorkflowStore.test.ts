@@ -5,6 +5,7 @@ import {
   answerSemanticReceiptQuestion,
   createLiveReceiptBatch,
   getLiveReceiptStudioPayload,
+  hydrateLiveReceiptGraphRecord,
   listLiveDuplicateCandidates,
   listProjectedExtractionRuns,
   listProjectedEvidenceRecords,
@@ -302,6 +303,78 @@ describe('receiptWorkflowStore projections', () => {
     expect(payload?.lineItems).toHaveLength(2);
     expect(payload?.parsedData.requestProvenance.parserMode).toBe('live_backend_ocr');
     expect(payload?.parsedData.providerTrace.providerLabel).toBe('Google Gemini 2.5 Flash');
+  });
+
+  it('hydrates a live receipt from the backend mirror record', () => {
+    const payload = hydrateLiveReceiptGraphRecord({
+      id: 'receipt_backend_restore',
+      syncedAt: '2026-04-02T10:00:00.000Z',
+      receipt: {
+        id: 'receipt_backend_restore',
+        status: 'needs_review',
+        sourceType: 'receipt_image',
+        capturedAt: '2026-04-02T09:59:00.000Z',
+      },
+      header: {
+        merchantName: 'Backend Restore Mart',
+        purchasedAt: '2026-04-02',
+        grandTotal: 18.75,
+        currency: 'USD',
+      },
+      sourceDocument: {
+        id: 'srcdoc_restore',
+        fileName: 'restore.jpeg',
+        mimeType: 'image/jpeg',
+        captureChannel: 'upload_photo',
+        sourceFileCount: 1,
+        checksum: 'restore-checksum',
+        detectedReceiptCount: 1,
+      },
+      extractionRun: {
+        id: 'extract_restore',
+        status: 'completed',
+        stage: 'ready_for_review',
+        stageLabel: 'Ready',
+        providerLabel: 'Google Gemini 2.5 Flash',
+        parserVersion: 'live_backend_ocr_v2',
+      },
+      parsedData: {
+        parserMode: 'live_backend_ocr',
+        parserVersion: 'live_backend_ocr_v2',
+        providerLabel: 'Google Gemini 2.5 Flash',
+        sourceFileCount: 1,
+        sourceDocumentChecksum: 'restore-checksum',
+        backendProcessingRecordId: 'receiptproc_restore',
+        backendExtractionRunId: 'extract_backend_restore',
+        backendSourceDocumentId: 'srcdoc_backend_restore',
+        fieldCandidateCount: 3,
+        lineItemCandidateCount: 2,
+      },
+      lineItems: [
+        {
+          id: 'line_restore_1',
+          description: 'Paper Towels',
+          lineTotal: 8.75,
+          reviewState: 'needs_review',
+          thingCandidate: false,
+        },
+        {
+          id: 'line_restore_2',
+          description: 'Storage Bin',
+          lineTotal: 10,
+          reviewState: 'edited',
+          thingCandidate: true,
+        },
+      ],
+      alertCount: 0,
+      duplicateCandidateCount: 0,
+      reviewDecisionCount: 0,
+    });
+
+    expect(payload.header.merchantName).toBe('Backend Restore Mart');
+    expect(payload.lineItems).toHaveLength(2);
+    expect(payload.parsedData.requestProvenance.backendProcessingRecordId).toBe('receiptproc_restore');
+    expect(getLiveReceiptStudioPayload('receipt_backend_restore')?.header.merchantName).toBe('Backend Restore Mart');
   });
 
   it('refreshes stored purchase graph records after trusted edits', () => {

@@ -1,6 +1,7 @@
 import { parseReceiptCaptureInput } from './receiptParser';
 import { listMerchantDirectoryEntries, resolveMerchantDirectoryEntry } from './catalog/merchantDirectory';
 import { listObjectDirectoryEntries, resolveObjectDirectoryEntry } from './catalog/objectDirectory';
+import type { LiveReceiptGraphRecord } from '@/contracts/schema/integrations/live-receipt-graph.contract';
 import type {
   ReceiptOcrEvaluationStage,
   ReceiptOcrProviderId,
@@ -990,6 +991,16 @@ export function getLiveReceiptStudioPayload(receiptId: string): ReceiptStudioLiv
   return record ? buildStudioPayload(record) : null;
 }
 
+export function hydrateLiveReceiptGraphRecord(graphRecord: LiveReceiptGraphRecord): ReceiptStudioLivePayload {
+  const existingRecords = readStoredReceipts();
+  const hydratedRecord = buildStoredReceiptRecordFromGraph(graphRecord);
+  writeStoredReceipts([
+    hydratedRecord,
+    ...existingRecords.filter((record) => record.id !== hydratedRecord.id),
+  ]);
+  return buildStudioPayload(hydratedRecord);
+}
+
 export function listLiveReceiptCards(): StoredReceiptCard[] {
   return readStoredReceipts()
     .filter((record) => record.status !== 'trusted')
@@ -1866,6 +1877,192 @@ function materializeSearchDocument(record: StoredReceiptRecord) {
     embeddingTerms: buildEmbeddingTerms(record.header.merchantName, record.lineItems),
     embeddingVersion: 'receipt-embedding-v1',
   };
+}
+
+function buildStoredReceiptRecordFromGraph(graphRecord: LiveReceiptGraphRecord): StoredReceiptRecord {
+  const merchant = sanitizeMerchant(graphRecord.header.merchantName);
+  const purchasedAt = normalizePurchaseDate(graphRecord.header.purchasedAt, graphRecord.receipt.capturedAt);
+  const lineItems: ReceiptLineItemRecord[] = graphRecord.lineItems.map((lineItem, index) => {
+    const normalized = titleCase(lineItem.description);
+    const assetCandidateFlag = lineItem.thingCandidate;
+    return {
+      id: lineItem.id,
+      lineIndex: index + 1,
+      descriptionRaw: normalized,
+      descriptionNormalized: normalized,
+      quantity: 1,
+      unitPrice: roundCurrency(lineItem.lineTotal),
+      lineTotal: roundCurrency(lineItem.lineTotal),
+      reviewState: lineItem.reviewState,
+      confidenceScore: lineItem.reviewState === 'edited' ? 0.98 : lineItem.reviewState === 'needs_review' ? 0.91 : 0.93,
+      assetCandidateFlag,
+      productMatchStatus: assetCandidateFlag ? 'confirmed' : 'suggested',
+      productMatchConfidence: assetCandidateFlag ? 0.94 : 0.82,
+      householdTags: [],
+      lemTags: [],
+    };
+  });
+  const grandTotal = coerceCurrencyValue(String(graphRecord.header.grandTotal), roundCurrency(lineItems.reduce((sum, item) => sum + item.lineTotal, 0)));
+  const evidenceSpans = buildEvidenceSpans(graphRecord.id, lineItems, merchant, purchasedAt, grandTotal);
+  const selectedLineItemId = graphRecord.receipt.status === 'processing'
+    ? null
+    : lineItems.find((item) => item.reviewState === 'needs_review')?.id ?? lineItems[0]?.id ?? null;
+  const providerId = inferProviderIdFromLabel(graphRecord.extractionRun.providerLabel);
+  const sourceDocument: StoredSourceDocument = {
+    id: graphRecord.sourceDocument.id,
+    sourceType: graphRecord.receipt.sourceType,
+    captureChannel: graphRecord.sourceDocument.captureChannel as CaptureChannel,
+    fileName: graphRecord.sourceDocument.fileName,
+    sourceFiles: [graphRecord.sourceDocument.fileName],
+    previewUrls: [],
+    mimeType: graphRecord.sourceDocument.mimeType,
+    capturedAt: graphRecord.receipt.capturedAt,
+    checksum: graphRecord.sourceDocument.checksum,
+    storageStatus: 'stored',
+    detectedReceiptCount: graphRecord.sourceDocument.detectedReceiptCount,
+  };
+  const merchantProfile = buildRetailerProfile(merchant);
+
+  return materializeRecord({
+    id: graphRecord.id,
+    createdAt: graphRecord.receipt.capturedAt,
+    updatedAt: graphRecord.syncedAt,
+    status: graphRecord.receipt.status,
+    note:
+      graphRecord.receipt.status === 'processing'
+        ? `${merchant} receipt is still processing and was restored from the backend mirror.`
+        : `${merchant} receipt was restored from the backend live receipt graph.`,
+    captureSession: {
+      id: `capture_${graphRecord.id}`,
+      primaryReceiptId: graphRecord.id,
+      siblingReceiptIds: [],
+      sourceDocumentId: graphRecord.sourceDocument.id,
+    },
+    sourceDocument,
+    extractionRun: {
+      id: graphRecord.extractionRun.id,
+      status: graphRecord.extractionRun.status,
+      parserVersion: graphRecord.extractionRun.parserVersion,
+      providerId,
+      providerLabel: graphRecord.extractionRun.providerLabel,
+      routingMode: 'vendor_primary',
+      evaluationStage: 'shadow_eval_required',
+      fallbackProviderLabel: null,
+      startedAt: graphRecord.receipt.capturedAt,
+      completedAt: graphRecord.extractionRun.status === 'completed' ? graphRecord.syncedAt : null,
+      stage: graphRecord.extractionRun.stage,
+      stageLabel: graphRecord.extractionRun.stageLabel,
+    },
+    header: {
+      title: merchant,
+      merchantName: merchant,
+      purchasedAt,
+      grandTotal,
+      currency: graphRecord.header.currency,
+    },
+    parsedData: {
+      rawText: buildRawText(merchant, purchasedAt, lineItems, grandTotal),
+      fieldCandidates: [
+        {
+          id: `${graphRecord.id}_field_merchant`,
+          label: 'Merchant',
+          value: merchant,
+          confidence: 0.98,
+          source: 'ocr',
+          evidenceSpanId: evidenceSpans.find((span) => span.id === `${graphRecord.id}_evidence_merchant`)?.id ?? null,
+        },
+        {
+          id: `${graphRecord.id}_field_date`,
+          label: 'Purchase date',
+          value: purchasedAt,
+          confidence: 0.95,
+          source: 'ocr',
+          evidenceSpanId: evidenceSpans.find((span) => span.id === `${graphRecord.id}_evidence_date`)?.id ?? null,
+        },
+        {
+          id: `${graphRecord.id}_field_total`,
+          label: 'Grand total',
+          value: `$${grandTotal.toFixed(2)}`,
+          confidence: 0.95,
+          source: 'ocr',
+          evidenceSpanId: evidenceSpans.find((span) => span.id === `${graphRecord.id}_evidence_total`)?.id ?? null,
+        },
+      ],
+      lineItemCandidates: lineItems.map((item, index) => ({
+        id: `${graphRecord.id}_candidate_line_${index + 1}`,
+        description: item.descriptionNormalized,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        lineTotal: item.lineTotal,
+        confidence: item.confidenceScore,
+        source: 'ocr',
+        thingCandidateHint: item.assetCandidateFlag,
+        evidenceSpanId: evidenceSpans.find((span) => span.id === `${graphRecord.id}_evidence_line_${index + 1}`)?.id ?? null,
+      })),
+      requestProvenance: {
+        parserMode: graphRecord.parsedData.parserMode,
+        parserVersion: graphRecord.parsedData.parserVersion,
+        processingNote: 'Restored from backend live receipt graph mirror.',
+        sourceDocumentId: graphRecord.sourceDocument.id,
+        sourceDocumentChecksum: graphRecord.parsedData.sourceDocumentChecksum,
+        sourceFileCount: graphRecord.sourceDocument.sourceFileCount,
+        captureChannel: graphRecord.sourceDocument.captureChannel as CaptureChannel,
+        backendProcessingRecordId: graphRecord.parsedData.backendProcessingRecordId,
+        backendExtractionRunId: graphRecord.parsedData.backendExtractionRunId,
+        backendSourceDocumentId: graphRecord.parsedData.backendSourceDocumentId,
+      },
+      providerTrace: {
+        providerId,
+        providerLabel: graphRecord.parsedData.providerLabel,
+        routingMode: 'vendor_primary',
+        evaluationStage: 'shadow_eval_required',
+        fallbackProviderLabel: null,
+      },
+      returnPolicySnippet: lineItems.some((item) => item.assetCandidateFlag)
+        ? 'Return policy candidate detected: keep original receipt for item-level support.'
+        : null,
+      warrantySnippet: lineItems.some((item) => item.assetCandidateFlag)
+        ? 'Warranty candidate detected from durable-goods language and merchant pattern.'
+        : null,
+    },
+    lineItems,
+    selectedLineItemId,
+    evidenceSpans,
+    peopleSuggestions: [],
+    memorySuggestions: [],
+    duplicateCandidates: [],
+    reviewDecisions: [],
+    structuredData: {
+      merchantMatchStatus: graphRecord.receipt.status === 'trusted' ? 'confirmed' : 'suggested',
+      merchantMatchConfidence: graphRecord.receipt.status === 'trusted' ? 0.98 : 0.9,
+      thingCandidateCount: lineItems.filter((item) => item.assetCandidateFlag).length,
+      returnPolicyStatus: lineItems.some((item) => item.assetCandidateFlag) ? 'candidate' : 'not_found',
+      warrantyStatus: lineItems.some((item) => item.assetCandidateFlag) ? 'candidate' : 'not_found',
+      retailerProfile: merchantProfile,
+      taxTags: buildTaxTags(lineItems, merchant),
+      lifestyleTags: buildLifestyleTags(lineItems, merchant),
+      productCategories: buildProductCategories(lineItems),
+      returnWindowLabel: lineItems.some((item) => item.assetCandidateFlag) ? 'Likely returnable purchase detected' : 'No notable returnability signal',
+      warrantySupportLabel: lineItems.some((item) => item.assetCandidateFlag) ? 'Durable-goods warranty candidate detected' : 'No warranty signal detected',
+    },
+    searchDocument: {
+      status: 'indexed',
+      keywords: buildSearchKeywords(merchant, lineItems),
+      textPreview: buildSearchPreview(merchant, lineItems),
+      embeddingTerms: buildEmbeddingTerms(merchant, lineItems),
+      embeddingVersion: 'receipt-embedding-v1',
+    },
+    alerts:
+      graphRecord.receipt.status === 'processing'
+        ? []
+        : buildAlerts({
+            duplicateCandidates: [],
+            merchant,
+            lineItems,
+            merchantProfile,
+            sourceDocument,
+          }),
+  });
 }
 
 function buildProjectedSourceDocumentRecord(
@@ -4039,6 +4236,10 @@ function buildRawText(merchant: string, purchasedAt: string, lineItems: ReceiptL
 
 function sanitizeMerchant(value: string) {
   return titleCase(value.trim() || 'New Receipt');
+}
+
+function inferProviderIdFromLabel(providerLabel: string): ReceiptOcrProviderId {
+  return providerLabel.toLowerCase().includes('openai') ? 'openai_gpt_4o_mini' : 'google_gemini_2_5_flash';
 }
 
 function normalizePurchaseDate(value: string, fallbackIso: string) {

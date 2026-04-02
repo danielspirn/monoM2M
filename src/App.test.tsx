@@ -5,6 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetLiveReceiptStore } from '@/mocks/receiptWorkflowStore';
 import { App } from './App';
 
+function openAddReceiptComposer() {
+  fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
+  fireEvent.click(screen.getAllByText('Add Receipt').find((element) => element.tagName === 'STRONG')?.closest('button') as HTMLElement);
+}
+
 describe('Milestone 1 shell', () => {
   beforeEach(() => {
     resetLiveReceiptStore();
@@ -13,6 +18,7 @@ describe('Milestone 1 shell', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.useRealTimers();
+    window.history.pushState({}, '', '/home');
   });
 
   it('renders the mobile shell with primary navigation', () => {
@@ -51,8 +57,7 @@ describe('Milestone 1 shell', () => {
 
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
-    fireEvent.click(screen.getByText('Add Receipt'));
+    openAddReceiptComposer();
 
     fireEvent.click(screen.getByRole('button', { name: 'Process receipt capture' }));
 
@@ -75,8 +80,7 @@ describe('Milestone 1 shell', () => {
 
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
-    fireEvent.click(screen.getByText('Add Receipt'));
+    openAddReceiptComposer();
     fireEvent.click(screen.getByRole('button', { name: 'Process receipt capture' }));
 
     act(() => {
@@ -92,8 +96,7 @@ describe('Milestone 1 shell', () => {
 
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
-    fireEvent.click(screen.getByText('Add Receipt'));
+    openAddReceiptComposer();
     fireEvent.click(screen.getByRole('button', { name: 'Process receipt capture' }));
 
     act(() => {
@@ -110,8 +113,7 @@ describe('Milestone 1 shell', () => {
 
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
-    fireEvent.click(screen.getByText('Add Receipt'));
+    openAddReceiptComposer();
 
     fireEvent.change(screen.getByLabelText('Merchant'), { target: { value: 'Target' } });
     fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-03-08' } });
@@ -134,8 +136,7 @@ describe('Milestone 1 shell', () => {
 
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
-    fireEvent.click(screen.getByText('Add Receipt'));
+    openAddReceiptComposer();
 
     fireEvent.change(screen.getByLabelText('Merchant'), { target: { value: 'Target' } });
     fireEvent.change(screen.getByLabelText('Capture source'), { target: { value: 'Upload photo' } });
@@ -186,8 +187,7 @@ describe('Milestone 1 shell', () => {
 
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
-    fireEvent.click(screen.getByText('Add Receipt'));
+    openAddReceiptComposer();
     fireEvent.change(screen.getByLabelText('Merchant'), { target: { value: 'Safeway' } });
     fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-03-10' } });
     fireEvent.change(screen.getByLabelText('Capture source'), { target: { value: 'Upload photo' } });
@@ -198,8 +198,7 @@ describe('Milestone 1 shell', () => {
       vi.advanceTimersByTime(2200);
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
-    fireEvent.click(screen.getByText('Add Receipt'));
+    openAddReceiptComposer();
     fireEvent.change(screen.getByLabelText('Merchant'), { target: { value: 'Safeway' } });
     fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-03-10' } });
     fireEvent.change(screen.getByLabelText('Capture source'), { target: { value: 'Upload photo' } });
@@ -219,8 +218,7 @@ describe('Milestone 1 shell', () => {
   it('can preload a real uploaded fixture into the receipt capture flow', () => {
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
-    fireEvent.click(screen.getByText('Add Receipt'));
+    openAddReceiptComposer();
 
     fireEvent.change(screen.getByLabelText('Uploaded fixture'), { target: { value: 'Safeway grocery receipt' } });
 
@@ -234,8 +232,7 @@ describe('Milestone 1 shell', () => {
 
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
-    fireEvent.click(screen.getByText('Add Receipt'));
+    openAddReceiptComposer();
 
     const fileInput = screen.getByLabelText('Choose receipt image or video');
     const file = new File(['receipt'], 'IMG_7573.jpeg', { type: 'image/jpeg' });
@@ -329,8 +326,7 @@ describe('Milestone 1 shell', () => {
 
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
-    fireEvent.click(screen.getByText('Add Receipt'));
+    openAddReceiptComposer();
 
     const fileInput = screen.getByLabelText('Choose receipt image or video');
     const file = new File(['fresh receipt'], 'fresh-upload.jpeg', { type: 'image/jpeg' });
@@ -359,13 +355,100 @@ describe('Milestone 1 shell', () => {
     );
   });
 
+  it('rehydrates receipt review from the backend live graph when local storage is empty', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async (input) => {
+      if (input === '/api/live-receipt-graph/receipt_backend_reopen') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            record: {
+              id: 'receipt_backend_reopen',
+              syncedAt: '2026-04-02T10:00:00.000Z',
+              receipt: {
+                id: 'receipt_backend_reopen',
+                status: 'needs_review',
+                sourceType: 'receipt_image',
+                capturedAt: '2026-04-02T09:59:00.000Z',
+              },
+              header: {
+                merchantName: 'Backend Restore Mart',
+                purchasedAt: '2026-04-02',
+                grandTotal: 18.75,
+                currency: 'USD',
+              },
+              sourceDocument: {
+                id: 'srcdoc_restore_1',
+                fileName: 'restore.jpeg',
+                mimeType: 'image/jpeg',
+                captureChannel: 'upload_photo',
+                sourceFileCount: 1,
+                checksum: 'restore-checksum',
+                detectedReceiptCount: 1,
+              },
+              extractionRun: {
+                id: 'extract_restore_1',
+                status: 'completed',
+                stage: 'ready_for_review',
+                stageLabel: 'Live OCR complete.',
+                providerLabel: 'Google Gemini 2.5 Flash',
+                parserVersion: 'live_backend_ocr_v2',
+              },
+              parsedData: {
+                parserMode: 'live_backend_ocr',
+                parserVersion: 'live_backend_ocr_v2',
+                providerLabel: 'Google Gemini 2.5 Flash',
+                sourceFileCount: 1,
+                sourceDocumentChecksum: 'restore-checksum',
+                backendProcessingRecordId: 'receiptproc_restore_1',
+                backendExtractionRunId: 'extract_backend_restore_1',
+                backendSourceDocumentId: 'srcdoc_backend_restore_1',
+                fieldCandidateCount: 3,
+                lineItemCandidateCount: 2,
+              },
+              lineItems: [
+                {
+                  id: 'line_restore_1',
+                  description: 'Paper Towels',
+                  lineTotal: 8.75,
+                  reviewState: 'needs_review',
+                  thingCandidate: false,
+                },
+                {
+                  id: 'line_restore_2',
+                  description: 'Storage Bin',
+                  lineTotal: 10,
+                  reviewState: 'edited',
+                  thingCandidate: true,
+                },
+              ],
+              alertCount: 0,
+              duplicateCandidateCount: 0,
+              reviewDecisionCount: 0,
+            },
+          }),
+        } as Response;
+      }
+
+      throw new Error(`Unexpected fetch: ${String(input)}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    window.history.pushState({}, '', '/ingest/receipt_backend_reopen');
+
+    render(<App />);
+
+    expect(await screen.findByDisplayValue('Backend Restore Mart')).toBeTruthy();
+    expect(screen.getByDisplayValue('Paper Towels')).toBeTruthy();
+    expect(screen.getByText('receiptproc_restore_1')).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith('/api/live-receipt-graph/receipt_backend_reopen');
+  });
+
   it('shows persisted OCR line-item candidates and parser provenance for unknown uploaded files', () => {
     vi.useFakeTimers();
 
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
-    fireEvent.click(screen.getByText('Add Receipt'));
+    openAddReceiptComposer();
 
     const fileInput = screen.getByLabelText('Choose receipt image or video');
     const file = new File(['receipt'], 'IMG_7558.jpeg', { type: 'image/jpeg' });
@@ -388,8 +471,7 @@ describe('Milestone 1 shell', () => {
 
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
-    fireEvent.click(screen.getByText('Add Receipt'));
+    openAddReceiptComposer();
 
     const fileInput = screen.getByLabelText('Choose receipt image or video');
     const file = new File(['receipt'], 'IMG_7558.jpeg', { type: 'image/jpeg' });
@@ -418,8 +500,7 @@ describe('Milestone 1 shell', () => {
 
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
-    fireEvent.click(screen.getByText('Add Receipt'));
+    openAddReceiptComposer();
 
     fireEvent.change(screen.getByLabelText('Merchant'), { target: { value: 'Target' } });
     fireEvent.change(screen.getByLabelText('Capture source'), { target: { value: 'Upload photo' } });
@@ -452,8 +533,7 @@ describe('Milestone 1 shell', () => {
 
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
-    fireEvent.click(screen.getByText('Add Receipt'));
+    openAddReceiptComposer();
 
     fireEvent.change(screen.getByLabelText('Merchant'), { target: { value: 'Target' } });
     fireEvent.change(screen.getByLabelText('Capture source'), { target: { value: 'Upload photo' } });
@@ -468,8 +548,7 @@ describe('Milestone 1 shell', () => {
 
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
-    fireEvent.click(screen.getByText('Add Receipt'));
+    openAddReceiptComposer();
 
     fireEvent.change(screen.getByLabelText('Merchant'), { target: { value: 'Target' } });
     fireEvent.change(screen.getByLabelText('Capture source'), { target: { value: 'Upload photo' } });
@@ -495,8 +574,7 @@ describe('Milestone 1 shell', () => {
 
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
-    fireEvent.click(screen.getByText('Add Receipt'));
+    openAddReceiptComposer();
 
     fireEvent.change(screen.getByLabelText('Merchant'), { target: { value: 'Target' } });
     fireEvent.change(screen.getByLabelText('Capture source'), { target: { value: 'Upload photo' } });
@@ -520,8 +598,7 @@ describe('Milestone 1 shell', () => {
 
     render(<App />);
 
-    fireEvent.click(screen.getByRole('button', { name: /open add or ask menu/i }));
-    fireEvent.click(screen.getByText('Add Receipt'));
+    openAddReceiptComposer();
 
     fireEvent.change(screen.getByLabelText('Merchant'), { target: { value: 'Target' } });
     fireEvent.change(screen.getByLabelText('Capture source'), { target: { value: 'Upload photo' } });

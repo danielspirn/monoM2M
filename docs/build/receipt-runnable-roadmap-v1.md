@@ -510,3 +510,16 @@ Shipped:
 
 Success signal:
 - the backend now has a durable receipt-graph record that tracks the current review state of a live receipt instead of only the one-time OCR processing output
+
+#### Slice 33: Backend rehydrate for receipt review
+
+Status:
+- complete
+
+Shipped:
+- `/ingest/:receiptId` now fetches the mirrored backend live receipt graph when the browser-local receipt store is empty
+- the receipt workflow store can now hydrate a usable local review session from that backend graph record
+- app and store tests now cover reopening receipt review from backend state without relying on prior local storage
+
+Success signal:
+- a user can reopen a receipt review from backend state after local browser storage is cleared and still land in a working Receipt Studio session
