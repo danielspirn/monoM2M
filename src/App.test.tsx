@@ -443,6 +443,87 @@ describe('Milestone 1 shell', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/live-receipt-graph/receipt_backend_reopen');
   });
 
+  it('restores Home receipt context from the backend live graph list when local storage is empty', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async (input) => {
+      if (input === '/api/live-receipt-graph') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            records: [
+              {
+                id: 'receipt_home_restore',
+                syncedAt: '2026-04-02T10:00:00.000Z',
+                receipt: {
+                  id: 'receipt_home_restore',
+                  status: 'needs_review',
+                  sourceType: 'receipt_image',
+                  capturedAt: '2026-04-02T09:58:00.000Z',
+                },
+                header: {
+                  merchantName: 'Home Restore Market',
+                  purchasedAt: '2026-04-02',
+                  grandTotal: 14.25,
+                  currency: 'USD',
+                },
+                sourceDocument: {
+                  id: 'srcdoc_home_restore',
+                  fileName: 'home-restore.jpeg',
+                  mimeType: 'image/jpeg',
+                  captureChannel: 'upload_photo',
+                  sourceFileCount: 1,
+                  checksum: 'home-restore-checksum',
+                  detectedReceiptCount: 1,
+                },
+                extractionRun: {
+                  id: 'extract_home_restore',
+                  status: 'completed',
+                  stage: 'ready_for_review',
+                  stageLabel: 'Ready',
+                  providerLabel: 'Google Gemini 2.5 Flash',
+                  parserVersion: 'live_backend_ocr_v2',
+                },
+                parsedData: {
+                  parserMode: 'live_backend_ocr',
+                  parserVersion: 'live_backend_ocr_v2',
+                  providerLabel: 'Google Gemini 2.5 Flash',
+                  sourceFileCount: 1,
+                  sourceDocumentChecksum: 'home-restore-checksum',
+                  backendProcessingRecordId: 'receiptproc_home_restore',
+                  backendExtractionRunId: 'extract_backend_home_restore',
+                  backendSourceDocumentId: 'srcdoc_backend_home_restore',
+                  fieldCandidateCount: 3,
+                  lineItemCandidateCount: 1,
+                },
+                lineItems: [
+                  {
+                    id: 'line_home_restore',
+                    description: 'Coffee Beans',
+                    lineTotal: 14.25,
+                    reviewState: 'needs_review',
+                    thingCandidate: false,
+                  },
+                ],
+                alertCount: 0,
+                duplicateCandidateCount: 0,
+                reviewDecisionCount: 0,
+              },
+            ],
+          }),
+        } as Response;
+      }
+
+      throw new Error(`Unexpected fetch: ${String(input)}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    expect(await screen.findByText('Finish reviewing the Home Restore Market receipt')).toBeTruthy();
+    expect(screen.getAllByText('Home Restore Market').length).toBeGreaterThan(0);
+    expect(fetchMock).toHaveBeenCalledWith('/api/live-receipt-graph');
+  });
+
   it('shows persisted OCR line-item candidates and parser provenance for unknown uploaded files', () => {
     vi.useFakeTimers();
 

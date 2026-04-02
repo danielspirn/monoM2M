@@ -1001,6 +1001,23 @@ export function hydrateLiveReceiptGraphRecord(graphRecord: LiveReceiptGraphRecor
   return buildStudioPayload(hydratedRecord);
 }
 
+export function hydrateLiveReceiptGraphRecords(graphRecords: LiveReceiptGraphRecord[]) {
+  const existingRecords = readStoredReceipts();
+  const mergedRecords = [
+    ...graphRecords.map((graphRecord) => buildStoredReceiptRecordFromGraph(graphRecord)),
+    ...existingRecords,
+  ];
+  const dedupedRecords = Array.from(
+    new Map(mergedRecords.map((record) => [record.id, record])).values(),
+  );
+
+  writeStoredReceipts(dedupedRecords);
+}
+
+export function hasAnyLiveReceiptRecords(): boolean {
+  return readStoredReceipts().length > 0;
+}
+
 export function listLiveReceiptCards(): StoredReceiptCard[] {
   return readStoredReceipts()
     .filter((record) => record.status !== 'trusted')

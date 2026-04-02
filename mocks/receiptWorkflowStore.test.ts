@@ -5,6 +5,8 @@ import {
   answerSemanticReceiptQuestion,
   createLiveReceiptBatch,
   getLiveReceiptStudioPayload,
+  hasAnyLiveReceiptRecords,
+  hydrateLiveReceiptGraphRecords,
   hydrateLiveReceiptGraphRecord,
   listLiveDuplicateCandidates,
   listProjectedExtractionRuns,
@@ -375,6 +377,113 @@ describe('receiptWorkflowStore projections', () => {
     expect(payload.lineItems).toHaveLength(2);
     expect(payload.parsedData.requestProvenance.backendProcessingRecordId).toBe('receiptproc_restore');
     expect(getLiveReceiptStudioPayload('receipt_backend_restore')?.header.merchantName).toBe('Backend Restore Mart');
+  });
+
+  it('hydrates multiple live receipts from the backend mirror list', () => {
+    hydrateLiveReceiptGraphRecords([
+      {
+        id: 'receipt_restore_a',
+        syncedAt: '2026-04-02T10:00:00.000Z',
+        receipt: {
+          id: 'receipt_restore_a',
+          status: 'needs_review',
+          sourceType: 'receipt_image',
+          capturedAt: '2026-04-02T09:59:00.000Z',
+        },
+        header: {
+          merchantName: 'Restore A',
+          purchasedAt: '2026-04-02',
+          grandTotal: 10,
+          currency: 'USD',
+        },
+        sourceDocument: {
+          id: 'srcdoc_restore_a',
+          fileName: 'a.jpeg',
+          mimeType: 'image/jpeg',
+          captureChannel: 'upload_photo',
+          sourceFileCount: 1,
+          checksum: 'checksum-a',
+          detectedReceiptCount: 1,
+        },
+        extractionRun: {
+          id: 'extract_restore_a',
+          status: 'completed',
+          stage: 'ready_for_review',
+          stageLabel: 'Ready',
+          providerLabel: 'Google Gemini 2.5 Flash',
+          parserVersion: 'live_backend_ocr_v2',
+        },
+        parsedData: {
+          parserMode: 'live_backend_ocr',
+          parserVersion: 'live_backend_ocr_v2',
+          providerLabel: 'Google Gemini 2.5 Flash',
+          sourceFileCount: 1,
+          sourceDocumentChecksum: 'checksum-a',
+          backendProcessingRecordId: 'receiptproc_a',
+          backendExtractionRunId: 'extract_backend_a',
+          backendSourceDocumentId: 'srcdoc_backend_a',
+          fieldCandidateCount: 3,
+          lineItemCandidateCount: 1,
+        },
+        lineItems: [{ id: 'line_a', description: 'Milk', lineTotal: 10, reviewState: 'needs_review', thingCandidate: false }],
+        alertCount: 0,
+        duplicateCandidateCount: 0,
+        reviewDecisionCount: 0,
+      },
+      {
+        id: 'receipt_restore_b',
+        syncedAt: '2026-04-02T11:00:00.000Z',
+        receipt: {
+          id: 'receipt_restore_b',
+          status: 'trusted',
+          sourceType: 'receipt_image',
+          capturedAt: '2026-04-02T10:58:00.000Z',
+        },
+        header: {
+          merchantName: 'Restore B',
+          purchasedAt: '2026-04-02',
+          grandTotal: 22,
+          currency: 'USD',
+        },
+        sourceDocument: {
+          id: 'srcdoc_restore_b',
+          fileName: 'b.jpeg',
+          mimeType: 'image/jpeg',
+          captureChannel: 'upload_photo',
+          sourceFileCount: 1,
+          checksum: 'checksum-b',
+          detectedReceiptCount: 1,
+        },
+        extractionRun: {
+          id: 'extract_restore_b',
+          status: 'completed',
+          stage: 'ready_for_review',
+          stageLabel: 'Ready',
+          providerLabel: 'Google Gemini 2.5 Flash',
+          parserVersion: 'live_backend_ocr_v2',
+        },
+        parsedData: {
+          parserMode: 'live_backend_ocr',
+          parserVersion: 'live_backend_ocr_v2',
+          providerLabel: 'Google Gemini 2.5 Flash',
+          sourceFileCount: 1,
+          sourceDocumentChecksum: 'checksum-b',
+          backendProcessingRecordId: 'receiptproc_b',
+          backendExtractionRunId: 'extract_backend_b',
+          backendSourceDocumentId: 'srcdoc_backend_b',
+          fieldCandidateCount: 3,
+          lineItemCandidateCount: 1,
+        },
+        lineItems: [{ id: 'line_b', description: 'Storage Bin', lineTotal: 22, reviewState: 'edited', thingCandidate: true }],
+        alertCount: 0,
+        duplicateCandidateCount: 0,
+        reviewDecisionCount: 1,
+      },
+    ]);
+
+    expect(hasAnyLiveReceiptRecords()).toBe(true);
+    expect(getLiveReceiptStudioPayload('receipt_restore_a')?.header.merchantName).toBe('Restore A');
+    expect(getLiveReceiptStudioPayload('receipt_restore_b')?.receipt.status).toBe('trusted');
   });
 
   it('refreshes stored purchase graph records after trusted edits', () => {

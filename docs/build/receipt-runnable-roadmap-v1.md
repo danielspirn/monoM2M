@@ -523,3 +523,16 @@ Shipped:
 
 Success signal:
 - a user can reopen a receipt review from backend state after local browser storage is cleared and still land in a working Receipt Studio session
+
+#### Slice 34: Backend bulk restore for Home and Things
+
+Status:
+- complete
+
+Shipped:
+- the app now fetches the mirrored backend live receipt graph list when the browser-local receipt store is empty
+- the receipt workflow store can now bulk-hydrate multiple live receipt records from backend graph snapshots instead of only a single receipt review record
+- app and store tests now cover restoring Home receipt context from backend state without relying on prior local storage
+
+Success signal:
+- after local browser receipt storage is cleared, Home and Things can repopulate from backend-mirrored live receipt records instead of appearing empty until a specific receipt review route is opened

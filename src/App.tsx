@@ -16,7 +16,9 @@ import {
   applyLiveReceiptOcrResult,
   createLiveReceiptBatch,
   getLiveReceiptStudioPayload,
+  hasAnyLiveReceiptRecords,
   hasLiveReceipt,
+  hydrateLiveReceiptGraphRecords,
   hydrateLiveReceiptGraphRecord,
   type LiveReceiptOcrPayload,
   type ReceiptStudioLivePayload,
@@ -27,6 +29,7 @@ import {
 } from '@/mocks/receiptWorkflowStore';
 import type { LiveReceiptGraphUpsertRequest } from '@/contracts/schema/integrations/live-receipt-graph.contract';
 import type { LiveReceiptGraphGetResponse } from '@/contracts/schema/integrations/live-receipt-graph.contract';
+import type { LiveReceiptGraphListResponse } from '@/contracts/schema/integrations/live-receipt-graph.contract';
 import type { ReceiptProcessingCreateResponse } from '@/contracts/schema/integrations/receipt-processing.contract';
 import {
   getDefaultState,
@@ -153,6 +156,7 @@ function Shell() {
   const [notice, setNotice] = useState<string | null>(null);
   const [receiptRefreshToken, setReceiptRefreshToken] = useState(0);
   const [receiptHydrationAttempts, setReceiptHydrationAttempts] = useState<Record<string, true>>({});
+  const [receiptGraphListHydrated, setReceiptGraphListHydrated] = useState(false);
 
   useEffect(() => {
     const storedPersona = getSelectedPersona();
@@ -239,6 +243,27 @@ function Shell() {
         setNotice('Backend receipt restore was unavailable, so the review screen stayed on the fallback shell.');
       });
   }, [params?.receiptId, receiptHydrationAttempts, routeKey]);
+
+  useEffect(() => {
+    if (receiptGraphListHydrated || hasAnyLiveReceiptRecords()) {
+      return;
+    }
+
+    void requestLiveReceiptGraphList()
+      .then((records) => {
+        setReceiptGraphListHydrated(true);
+
+        if (!records.length) {
+          return;
+        }
+
+        hydrateLiveReceiptGraphRecords(records);
+        setReceiptRefreshToken((current) => current + 1);
+      })
+      .catch(() => {
+        setReceiptGraphListHydrated(true);
+      });
+  }, [receiptGraphListHydrated]);
 
   function handlePersonaChange(personaId: PersonaId) {
     setPersona(personaId);
@@ -1061,6 +1086,17 @@ async function requestLiveReceiptGraphRecord(receiptId: string) {
 
   const payload = await response.json() as LiveReceiptGraphGetResponse;
   return payload.record;
+}
+
+async function requestLiveReceiptGraphList() {
+  const response = await fetch('/api/live-receipt-graph');
+
+  if (!response.ok) {
+    throw new Error(`Live receipt graph list request failed with ${response.status}`);
+  }
+
+  const payload = await response.json() as LiveReceiptGraphListResponse;
+  return payload.records;
 }
 
 async function syncLiveReceiptGraphRecord(payload: ReceiptStudioLivePayload) {
