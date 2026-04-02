@@ -15,12 +15,15 @@ import {
 import {
   applyLiveReceiptOcrResult,
   createLiveReceiptBatch,
+  getLiveReceiptStudioPayload,
   type LiveReceiptOcrPayload,
+  type ReceiptStudioLivePayload,
   rerunLiveReceiptExtraction,
   saveLiveReceiptHeaderField,
   saveLiveReceiptLineItemField,
   submitLiveReceiptReview,
 } from '@/mocks/receiptWorkflowStore';
+import type { LiveReceiptGraphUpsertRequest } from '@/contracts/schema/integrations/live-receipt-graph.contract';
 import type { ReceiptProcessingCreateResponse } from '@/contracts/schema/integrations/receipt-processing.contract';
 import {
   getDefaultState,
@@ -279,6 +282,9 @@ function Shell() {
         if (action.startsWith('receipt:submit:')) {
           const receiptId = action.replace('receipt:submit:', '');
           const nextPayload = submitLiveReceiptReview(receiptId);
+          if (nextPayload) {
+            void syncLiveReceiptGraphRecord(nextPayload);
+          }
           setReceiptRefreshToken((current) => current + 1);
           setNotice(
             nextPayload
@@ -290,6 +296,9 @@ function Shell() {
         if (action.startsWith('receipt:rerun:')) {
           const receiptId = action.replace('receipt:rerun:', '');
           const nextPayload = rerunLiveReceiptExtraction(receiptId);
+          if (nextPayload) {
+            void syncLiveReceiptGraphRecord(nextPayload);
+          }
           setReceiptRefreshToken((current) => current + 1);
           setNotice(
             nextPayload
@@ -305,6 +314,9 @@ function Shell() {
             field as 'merchantName' | 'purchasedAt' | 'grandTotal',
             decodeURIComponent(encodedValue ?? ''),
           );
+          if (nextPayload) {
+            void syncLiveReceiptGraphRecord(nextPayload);
+          }
           setReceiptRefreshToken((current) => current + 1);
           setNotice(nextPayload ? `${nextPayload.header.merchantName} review changes saved.` : 'Receipt header editing is only live for captured receipts in this slice.');
           return;
@@ -317,6 +329,9 @@ function Shell() {
             field as 'descriptionNormalized' | 'lineTotal',
             decodeURIComponent(encodedValue ?? ''),
           );
+          if (nextPayload) {
+            void syncLiveReceiptGraphRecord(nextPayload);
+          }
           setReceiptRefreshToken((current) => current + 1);
           setNotice(nextPayload ? `${nextPayload.header.merchantName} line-item review changes saved.` : 'Receipt line-item editing is only live for captured receipts in this slice.');
           return;
@@ -360,6 +375,10 @@ function Shell() {
           );
           setReceiptRefreshToken((current) => current + 1);
           navigate(`/ingest/${captureResult.primaryReceiptId}`);
+          const initialPayload = getLiveReceiptStudioPayload(captureResult.primaryReceiptId);
+          if (initialPayload) {
+            void syncLiveReceiptGraphRecord(initialPayload);
+          }
 
           if (files.length && !resolveReceiptFixtureFilesFromDraft(draft).length) {
             void requestLiveReceiptProcessing(files, draft.source)
@@ -371,6 +390,7 @@ function Shell() {
                 const nextPayload = applyLiveReceiptOcrResult(captureResult.primaryReceiptId, ocrPayload);
 
                 if (nextPayload) {
+                  void syncLiveReceiptGraphRecord(nextPayload);
                   setReceiptRefreshToken((current) => current + 1);
                   setNotice(`${nextPayload.header.merchantName} OCR details are ready for review.`);
                 }
@@ -999,6 +1019,82 @@ async function requestLiveReceiptProcessing(files: File[], sourceLabel: string):
     backendExtractionRunId: payload.record.extractionRun.id,
     backendSourceDocumentId: payload.record.sourceDocument.id,
   };
+}
+
+async function syncLiveReceiptGraphRecord(payload: ReceiptStudioLivePayload) {
+  if (typeof fetch !== 'function') {
+    return;
+  }
+
+  const body: LiveReceiptGraphUpsertRequest = {
+    record: {
+      id: payload.receipt.id,
+      syncedAt: new Date().toISOString(),
+      receipt: {
+        id: payload.receipt.id,
+        status: payload.receipt.status,
+        sourceType: payload.receipt.sourceType,
+        capturedAt: payload.receipt.capturedAt,
+      },
+      header: {
+        merchantName: payload.header.merchantName,
+        purchasedAt: payload.header.purchasedAt,
+        grandTotal: payload.header.grandTotal,
+        currency: payload.header.currency,
+      },
+      sourceDocument: {
+        id: payload.sourceDocument.id,
+        fileName: payload.sourceDocument.fileName,
+        mimeType: payload.sourceDocument.mimeType,
+        captureChannel: payload.sourceDocument.captureChannel,
+        sourceFileCount: payload.sourceDocument.sourceFiles.length,
+        checksum: payload.sourceDocument.checksum,
+        detectedReceiptCount: payload.sourceDocument.detectedReceiptCount,
+      },
+      extractionRun: {
+        id: payload.extractionRun.id,
+        status: payload.extractionRun.status,
+        stage: payload.extractionRun.stage,
+        stageLabel: payload.extractionRun.stageLabel,
+        providerLabel: payload.extractionRun.providerLabel,
+        parserVersion: payload.extractionRun.parserVersion,
+      },
+      parsedData: {
+        parserMode: payload.parsedData.requestProvenance.parserMode,
+        parserVersion: payload.parsedData.requestProvenance.parserVersion,
+        providerLabel: payload.parsedData.providerTrace.providerLabel,
+        sourceFileCount: payload.parsedData.requestProvenance.sourceFileCount,
+        sourceDocumentChecksum: payload.parsedData.requestProvenance.sourceDocumentChecksum,
+        backendProcessingRecordId: payload.parsedData.requestProvenance.backendProcessingRecordId ?? null,
+        backendExtractionRunId: payload.parsedData.requestProvenance.backendExtractionRunId ?? null,
+        backendSourceDocumentId: payload.parsedData.requestProvenance.backendSourceDocumentId ?? null,
+        fieldCandidateCount: payload.parsedData.fieldCandidates.length,
+        lineItemCandidateCount: payload.parsedData.lineItemCandidates.length,
+      },
+      lineItems: payload.lineItems.map((item) => ({
+        id: item.id,
+        description: item.descriptionNormalized,
+        lineTotal: item.lineTotal,
+        reviewState: item.reviewState,
+        thingCandidate: item.assetCandidateFlag,
+      })),
+      alertCount: payload.alerts.length,
+      duplicateCandidateCount: payload.duplicateCandidates.length,
+      reviewDecisionCount: payload.reviewDecisions.length,
+    },
+  };
+
+  try {
+    await fetch('/api/live-receipt-graph', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    // Keep the UX moving even if the dev backend mirror is unavailable.
+  }
 }
 
 async function fileToBase64(file: File) {

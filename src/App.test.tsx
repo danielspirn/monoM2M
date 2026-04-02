@@ -346,6 +346,12 @@ describe('Milestone 1 shell', () => {
     expect(screen.getByText('Backend processing record')).toBeTruthy();
     expect(screen.getByText('receiptproc_1')).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledWith(
+      '/api/live-receipt-graph',
+      expect.objectContaining({
+        method: 'POST',
+      }),
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
       '/api/receipt-processing',
       expect.objectContaining({
         method: 'POST',

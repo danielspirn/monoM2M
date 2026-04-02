@@ -497,3 +497,16 @@ Shipped:
 
 Success signal:
 - a reviewed receipt can show the exact backend processing record, extraction run, and backend source document IDs that grounded the OCR result
+
+#### Slice 32: Backend live receipt graph mirror
+
+Status:
+- complete
+
+Shipped:
+- the app now mirrors live receipt graph snapshots into a backend store after capture, OCR completion, reruns, review edits, and trust completion
+- a new backend live-receipt-graph API supports upsert, list, and lookup by receipt ID for those mirrored records
+- the unknown-upload app test now proves the UI writes into both the backend processing store and the backend live receipt graph store
+
+Success signal:
+- the backend now has a durable receipt-graph record that tracks the current review state of a live receipt instead of only the one-time OCR processing output

@@ -1,6 +1,7 @@
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
 import { defineConfig } from 'vitest/config';
+import { handleLiveReceiptGraphHttpRequest } from './server/live-receipts/http';
 import { handleReceiptOcrHttpRequest } from './server/ocr/http';
 import { handleReceiptProcessingHttpRequest } from './server/receipts/http';
 
@@ -25,6 +26,14 @@ export default defineConfig({
           }
 
           void handleReceiptProcessingHttpRequest(req, res);
+        });
+        server.middlewares.use('/api/live-receipt-graph', (req, res, next) => {
+          if (req.method !== 'GET' && req.method !== 'POST' && req.method !== 'PUT') {
+            next();
+            return;
+          }
+
+          void handleLiveReceiptGraphHttpRequest(req, res);
         });
       },
     },
