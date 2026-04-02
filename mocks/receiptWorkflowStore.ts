@@ -2,7 +2,15 @@ import { parseReceiptCaptureInput } from './receiptParser';
 import { listMerchantDirectoryEntries, resolveMerchantDirectoryEntry } from './catalog/merchantDirectory';
 import { listObjectDirectoryEntries, resolveObjectDirectoryEntry } from './catalog/objectDirectory';
 import type { LiveReceiptGraphRecord } from '@/contracts/schema/integrations/live-receipt-graph.contract';
-import type { TrustedPurchaseGraphRecord } from '@/contracts/schema/integrations/trusted-purchase-graph.contract';
+import type {
+  TrustedPurchaseGraphLineItemRecord,
+  TrustedPurchaseGraphMerchantRecord,
+  TrustedPurchaseGraphMemoryRecord,
+  TrustedPurchaseGraphProductRecord,
+  TrustedPurchaseGraphPurchaseEventRecord,
+  TrustedPurchaseGraphRecord,
+  TrustedPurchaseGraphThingRecord,
+} from '@/contracts/schema/integrations/trusted-purchase-graph.contract';
 import type {
   ReceiptOcrEvaluationStage,
   ReceiptOcrProviderId,
@@ -10,6 +18,7 @@ import type {
 } from './ocr/types';
 
 const RECEIPT_STORE_KEY = 'm2m.live.receipts.v1';
+const TRUSTED_PURCHASE_GRAPH_STORE_KEY = 'm2m.trusted.purchase.graph.v1';
 const EXTRACTION_DELAY_MS = 1800;
 
 export type LiveReceiptOcrPayload = {
@@ -1019,6 +1028,23 @@ export function hasAnyLiveReceiptRecords(): boolean {
   return readStoredReceipts().length > 0;
 }
 
+export function hydrateTrustedPurchaseGraphRecords(records: TrustedPurchaseGraphRecord[]) {
+  const existingRecords = readStoredTrustedPurchaseGraphs();
+  const mergedRecords = [
+    ...records,
+    ...existingRecords,
+  ];
+  const dedupedRecords = Array.from(
+    new Map(mergedRecords.map((record) => [record.id, record])).values(),
+  );
+
+  writeStoredTrustedPurchaseGraphs(dedupedRecords);
+}
+
+export function hasAnyTrustedPurchaseGraphRecords(): boolean {
+  return readStoredTrustedPurchaseGraphs().length > 0;
+}
+
 export function buildTrustedPurchaseGraphRecord(receiptId: string): TrustedPurchaseGraphRecord | null {
   const record = readStoredReceipts().find((candidate) => candidate.id === receiptId && candidate.status === 'trusted');
 
@@ -1111,6 +1137,289 @@ export function buildTrustedPurchaseGraphRecord(receiptId: string): TrustedPurch
   };
 }
 
+function listLocalProjectedPurchaseEvents() {
+  return readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .map((record) => getStoredPurchaseGraph(record).purchaseEvent);
+}
+
+function listLocalProjectedMerchants() {
+  return readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .map((record) => getStoredPurchaseGraph(record).merchantRecord);
+}
+
+function listLocalProjectedPurchaseLineItems() {
+  return readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .flatMap((record) => getStoredPurchaseGraph(record).purchaseLineItems);
+}
+
+function listLocalProjectedProducts() {
+  return readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .flatMap((record) => getStoredPurchaseGraph(record).productRecords);
+}
+
+function listLocalProjectedThings() {
+  return readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .flatMap((record) => getStoredPurchaseGraph(record).thingRecords);
+}
+
+function listLocalProjectedMemories() {
+  return readStoredReceipts()
+    .filter((record) => record.status === 'trusted')
+    .flatMap((record) => getStoredPurchaseGraph(record).memoryRecords);
+}
+
+function listMirroredProjectedPurchaseEvents() {
+  return readStoredTrustedPurchaseGraphs().map((record) =>
+    buildProjectedPurchaseEventFromTrustedGraph(record.purchaseEvent, record.merchant),
+  );
+}
+
+function listMirroredProjectedMerchants() {
+  return readStoredTrustedPurchaseGraphs().map((record) =>
+    buildProjectedMerchantFromTrustedGraph(record.merchant, record.purchaseEvent.id),
+  );
+}
+
+function listMirroredProjectedPurchaseLineItems() {
+  return readStoredTrustedPurchaseGraphs().flatMap((record) =>
+    record.purchaseLineItems.map((item, index) =>
+      buildProjectedPurchaseLineItemFromTrustedGraph(item, record.purchaseEvent, index),
+    ),
+  );
+}
+
+function listMirroredProjectedProducts() {
+  return readStoredTrustedPurchaseGraphs().flatMap((record) =>
+    record.products.map((product) =>
+      buildProjectedProductFromTrustedGraph(product, record.purchaseEvent),
+    ),
+  );
+}
+
+function listMirroredProjectedThings() {
+  return readStoredTrustedPurchaseGraphs().flatMap((record) =>
+    record.things.map((thing) =>
+      buildProjectedThingFromTrustedGraph(thing),
+    ),
+  );
+}
+
+function listMirroredProjectedMemories() {
+  return readStoredTrustedPurchaseGraphs().flatMap((record) =>
+    record.memories.map((memory) =>
+      buildProjectedMemoryFromTrustedGraph(memory, record.purchaseEvent.merchantName),
+    ),
+  );
+}
+
+function listAllProjectedPurchaseEvents() {
+  return mergeProjectedRecords(listLocalProjectedPurchaseEvents(), listMirroredProjectedPurchaseEvents(), (record) => record.id);
+}
+
+function listAllProjectedMerchants() {
+  return mergeProjectedRecords(listLocalProjectedMerchants(), listMirroredProjectedMerchants(), (record) => record.id);
+}
+
+function listAllProjectedPurchaseLineItems() {
+  return mergeProjectedRecords(listLocalProjectedPurchaseLineItems(), listMirroredProjectedPurchaseLineItems(), (record) => record.id);
+}
+
+function listAllProjectedProducts() {
+  return mergeProjectedRecords(listLocalProjectedProducts(), listMirroredProjectedProducts(), (record) => record.id);
+}
+
+function listAllProjectedThings() {
+  return mergeProjectedRecords(listLocalProjectedThings(), listMirroredProjectedThings(), (record) => record.id);
+}
+
+function listAllProjectedMemories() {
+  return mergeProjectedRecords(listLocalProjectedMemories(), listMirroredProjectedMemories(), (record) => record.id);
+}
+
+function mergeProjectedRecords<T>(primary: T[], secondary: T[], getId: (record: T) => string) {
+  const seen = new Set<string>();
+  const merged: T[] = [];
+
+  [...primary, ...secondary].forEach((record) => {
+    const id = getId(record);
+
+    if (seen.has(id)) {
+      return;
+    }
+
+    seen.add(id);
+    merged.push(record);
+  });
+
+  return merged;
+}
+
+function buildProjectedPurchaseEventFromTrustedGraph(
+  purchaseEvent: TrustedPurchaseGraphPurchaseEventRecord,
+  merchant: TrustedPurchaseGraphMerchantRecord,
+): ProjectedPurchaseEventRecord {
+  return {
+    id: purchaseEvent.id,
+    receiptId: purchaseEvent.receiptId,
+    sourceDocumentId: purchaseEvent.sourceDocumentId,
+    merchantId: purchaseEvent.merchantId,
+    merchantDirectoryId: purchaseEvent.merchantId,
+    merchantName: purchaseEvent.merchantName,
+    purchasedAt: purchaseEvent.purchasedAt,
+    grandTotal: purchaseEvent.grandTotal,
+    currency: purchaseEvent.currency,
+    lineItemCount: purchaseEvent.lineItemCount,
+    retailerProfile: merchant.retailerProfile,
+    merchantMatchStatus: 'confirmed',
+    merchantMatchConfidence: 0.97,
+    merchantResolutionSource: 'reviewed_receipt',
+    taxTags: [],
+    lifestyleTags: [],
+    productCategories: purchaseEvent.productCategories,
+    thingCandidateCount: purchaseEvent.thingCandidateCount,
+    personIds: purchaseEvent.personIds,
+    memorySuggestionIds: purchaseEvent.memorySuggestionIds,
+    searchKeywords: [purchaseEvent.merchantName, ...purchaseEvent.productCategories],
+    note: 'Restored from the backend trusted purchase graph mirror.',
+  };
+}
+
+function buildProjectedMerchantFromTrustedGraph(
+  merchant: TrustedPurchaseGraphMerchantRecord,
+  latestPurchaseEventId: string,
+): ProjectedMerchantRecord {
+  return {
+    id: merchant.id,
+    merchantId: merchant.id,
+    merchantDirectoryId: merchant.id,
+    displayName: merchant.displayName,
+    kind: merchant.kind,
+    retailerProfile: merchant.retailerProfile,
+    aliases: [merchant.displayName],
+    purchaseCount: merchant.purchaseCount,
+    trustedSpendTotal: merchant.trustedSpendTotal,
+    latestPurchaseAt: merchant.latestPurchaseAt,
+    latestPurchaseEventId,
+    defaultProductCategories: merchant.defaultProductCategories,
+  };
+}
+
+function buildProjectedPurchaseLineItemFromTrustedGraph(
+  item: TrustedPurchaseGraphLineItemRecord,
+  purchaseEvent: TrustedPurchaseGraphPurchaseEventRecord,
+  index: number,
+): ProjectedPurchaseLineItemRecord {
+  return {
+    id: item.id,
+    purchaseEventId: item.purchaseEventId,
+    receiptId: purchaseEvent.receiptId,
+    purchasedAt: purchaseEvent.purchasedAt,
+    merchantName: purchaseEvent.merchantName,
+    currency: purchaseEvent.currency,
+    sourceLineItemId: item.sourceLineItemId,
+    lineIndex: index + 1,
+    description: titleCase(item.description),
+    quantity: item.quantity,
+    unitPrice: roundCurrency(item.lineTotal / Math.max(item.quantity, 1)),
+    lineTotal: item.lineTotal,
+    reviewState: 'edited',
+    confidenceScore: item.assetCandidateFlag ? 0.96 : 0.9,
+    assetCandidateFlag: item.assetCandidateFlag,
+    productMatchStatus: item.assetCandidateFlag ? 'confirmed' : 'suggested',
+    productMatchConfidence: item.assetCandidateFlag ? 0.9 : 0.82,
+    productCandidateKey: slugify(item.description),
+    productCandidateLabel: titleCase(item.description),
+    householdTags: [],
+    lemTags: [],
+    category: item.category,
+    subcategory: item.subcategory,
+    returnable: item.assetCandidateFlag,
+    warrantyEligible: item.assetCandidateFlag,
+    thingId: item.thingId,
+    evidenceSpanIds: [],
+    personIds: purchaseEvent.personIds,
+  };
+}
+
+function buildProjectedProductFromTrustedGraph(
+  product: TrustedPurchaseGraphProductRecord,
+  purchaseEvent: TrustedPurchaseGraphPurchaseEventRecord,
+): ProjectedProductRecord {
+  return {
+    id: product.id,
+    purchaseEventId: product.purchaseEventId,
+    receiptId: purchaseEvent.receiptId,
+    sourceLineItemId: product.sourceLineItemId,
+    purchasedAt: purchaseEvent.purchasedAt,
+    merchantName: purchaseEvent.merchantName,
+    currency: purchaseEvent.currency,
+    displayName: product.displayName,
+    canonicalLabel: product.displayName,
+    category: product.category,
+    subcategory: product.subcategory,
+    matchStatus: product.thingCandidate ? 'confirmed' : 'suggested',
+    matchConfidence: product.thingCandidate ? 0.9 : 0.82,
+    thingCandidate: product.thingCandidate,
+    linkedThingId: product.linkedThingId,
+    lineTotal: product.lineTotal,
+    householdTags: [],
+    lemTags: [],
+    evidenceSpanIds: [],
+    personIds: purchaseEvent.personIds,
+    note: 'Restored from the backend trusted purchase graph mirror.',
+  };
+}
+
+function buildProjectedThingFromTrustedGraph(thing: TrustedPurchaseGraphThingRecord): ProjectedThingRecord {
+  return {
+    id: thing.id,
+    purchaseEventId: thing.purchaseEventId,
+    sourceDocumentId: `source_${thing.receiptId}`,
+    displayName: thing.displayName,
+    category: thing.category,
+    subcategory: thing.subcategory,
+    status: 'recent',
+    purchasePrice: thing.purchasePrice,
+    currency: 'USD',
+    acquiredAt: thing.acquiredAt,
+    merchantName: thing.merchantName,
+    receiptId: thing.receiptId,
+    notes: 'Restored from the backend trusted purchase graph mirror.',
+    badgeLabels: ['Receipt linked'],
+    supportLabels: ['Trusted purchase'],
+    linkedDocumentCount: 1,
+    personIds: thing.personIds,
+    memoryIds: thing.memoryIds,
+  };
+}
+
+function buildProjectedMemoryFromTrustedGraph(
+  memory: TrustedPurchaseGraphMemoryRecord,
+  merchantName: string,
+): ProjectedMemoryRecord {
+  return {
+    id: memory.id,
+    purchaseEventId: memory.purchaseEventId,
+    receiptId: memory.receiptId,
+    title: memory.title,
+    memoryState: 'candidate',
+    memoryType: memory.memoryType,
+    significance: memory.significance,
+    startsAt: memory.startsAt,
+    placeLabel: memory.placeLabel,
+    summary: `${memory.title} was restored from a trusted purchase at ${merchantName}.`,
+    notes: 'Restored from the backend trusted purchase graph mirror.',
+    receiptIds: memory.receiptIds,
+    personIds: memory.personIds,
+    thingIds: memory.thingIds,
+  };
+}
+
 export function listLiveReceiptCards(): StoredReceiptCard[] {
   return readStoredReceipts()
     .filter((record) => record.status !== 'trusted')
@@ -1153,11 +1462,11 @@ export function listLiveDuplicateCandidates(): LiveDuplicateCandidateRecord[] {
 }
 
 export function listProjectedPurchaseReceipts(): ProjectedPurchaseReceiptRecord[] {
-  return readStoredReceipts()
-    .filter((record) => record.status === 'trusted')
-    .map((record) => {
-      const graph = getStoredPurchaseGraph(record);
-      return buildProjectedPurchaseReceiptRecord(graph.purchaseEvent, graph.purchaseLineItems, graph.memoryRecords);
+  return listAllProjectedPurchaseEvents()
+    .map((purchaseEvent) => {
+      const purchaseLineItems = listAllProjectedPurchaseLineItems().filter((item) => item.purchaseEventId === purchaseEvent.id);
+      const memoryRecords = listAllProjectedMemories().filter((memory) => memory.receiptIds.includes(purchaseEvent.receiptId));
+      return buildProjectedPurchaseReceiptRecord(purchaseEvent, purchaseLineItems, memoryRecords);
     })
     .sort((left, right) => right.purchasedAt.localeCompare(left.purchasedAt));
 }
@@ -1177,9 +1486,7 @@ export function listProjectedExtractionRuns(): ProjectedExtractionRunRecord[] {
 }
 
 export function listProjectedPurchaseEvents(): ProjectedPurchaseEventRecord[] {
-  return readStoredReceipts()
-    .filter((record) => record.status === 'trusted')
-    .map((record) => getStoredPurchaseGraph(record).purchaseEvent)
+  return listAllProjectedPurchaseEvents()
     .sort((left, right) => right.purchasedAt.localeCompare(left.purchasedAt));
 }
 
@@ -1196,11 +1503,8 @@ export function listProjectedPurchaseParticipants(): ProjectedPurchaseParticipan
 export function listProjectedMerchants(): ProjectedMerchantRecord[] {
   const merchantMap = new Map<string, ProjectedMerchantRecord>();
 
-  readStoredReceipts()
-    .filter((record) => record.status === 'trusted')
-    .forEach((record) => {
-      const graph = getStoredPurchaseGraph(record);
-      const merchant = graph.merchantRecord;
+  listAllProjectedMerchants()
+    .forEach((merchant) => {
       const existing = merchantMap.get(merchant.id);
 
       if (!existing) {
@@ -1226,9 +1530,7 @@ export function listProjectedMerchants(): ProjectedMerchantRecord[] {
 }
 
 export function listProjectedPurchaseLineItems(): ProjectedPurchaseLineItemRecord[] {
-  return readStoredReceipts()
-    .filter((record) => record.status === 'trusted')
-    .flatMap((record) => getStoredPurchaseGraph(record).purchaseLineItems)
+  return listAllProjectedPurchaseLineItems()
     .sort((left, right) => {
       if (left.purchasedAt && right.purchasedAt) {
         return right.purchasedAt.localeCompare(left.purchasedAt) || left.lineIndex - right.lineIndex;
@@ -1239,9 +1541,7 @@ export function listProjectedPurchaseLineItems(): ProjectedPurchaseLineItemRecor
 }
 
 export function listProjectedProducts(): ProjectedProductRecord[] {
-  return readStoredReceipts()
-    .filter((record) => record.status === 'trusted')
-    .flatMap((record) => getStoredPurchaseGraph(record).productRecords)
+  return listAllProjectedProducts()
     .sort((left, right) => right.purchasedAt.localeCompare(left.purchasedAt) || left.displayName.localeCompare(right.displayName));
 }
 
@@ -1378,16 +1678,12 @@ export function listProjectedSemanticRecords(): ProjectedSemanticRecord[] {
 }
 
 export function listProjectedThings(): ProjectedThingRecord[] {
-  return readStoredReceipts()
-    .filter((record) => record.status === 'trusted')
-    .flatMap((record) => getStoredPurchaseGraph(record).thingRecords)
+  return listAllProjectedThings()
     .sort((left, right) => right.acquiredAt.localeCompare(left.acquiredAt));
 }
 
 export function listProjectedMemories(): ProjectedMemoryRecord[] {
-  return readStoredReceipts()
-    .filter((record) => record.status === 'trusted')
-    .flatMap((record) => getStoredPurchaseGraph(record).memoryRecords)
+  return listAllProjectedMemories()
     .sort((left, right) => right.startsAt.localeCompare(left.startsAt));
 }
 
@@ -1789,6 +2085,7 @@ export function resetLiveReceiptStore() {
   }
 
   window.localStorage.removeItem(RECEIPT_STORE_KEY);
+  window.localStorage.removeItem(TRUSTED_PURCHASE_GRAPH_STORE_KEY);
 }
 
 function readStoredReceipts(): StoredReceiptRecord[] {
@@ -1815,6 +2112,23 @@ function writeStoredReceipts(records: StoredReceiptRecord[]) {
   window.localStorage.setItem(RECEIPT_STORE_KEY, JSON.stringify(records));
 }
 
+function readStoredTrustedPurchaseGraphs(): TrustedPurchaseGraphRecord[] {
+  if (typeof window === 'undefined') {
+    return [];
+  }
+
+  const raw = window.localStorage.getItem(TRUSTED_PURCHASE_GRAPH_STORE_KEY);
+  return safeParseTrustedPurchaseGraphs(raw);
+}
+
+function writeStoredTrustedPurchaseGraphs(records: TrustedPurchaseGraphRecord[]) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.localStorage.setItem(TRUSTED_PURCHASE_GRAPH_STORE_KEY, JSON.stringify(records));
+}
+
 function safeParseRecords(raw: string | null): StoredReceiptRecord[] {
   if (!raw) {
     return [];
@@ -1823,6 +2137,19 @@ function safeParseRecords(raw: string | null): StoredReceiptRecord[] {
   try {
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? (parsed as StoredReceiptRecord[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function safeParseTrustedPurchaseGraphs(raw: string | null): TrustedPurchaseGraphRecord[] {
+  if (!raw) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as TrustedPurchaseGraphRecord[]) : [];
   } catch {
     return [];
   }

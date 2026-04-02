@@ -549,3 +549,16 @@ Shipped:
 
 Success signal:
 - once a receipt becomes trusted, the backend has a durable purchase graph snapshot that can feed Home, Things, People, and Memories without depending only on browser-local trusted projections
+
+#### Slice 36: Restore Home and Things from backend trusted purchase graphs
+
+Status:
+- complete
+
+Shipped:
+- backend trusted purchase graph records can now be cached locally and merged into the existing projected selectors for receipts, things, memories, merchants, products, and line items
+- the app now fetches the trusted purchase graph list on startup when local trusted state is empty
+- app and store tests now cover restoring Things and Home-adjacent purchase context from backend trusted purchase graph records alone
+
+Success signal:
+- after local browser trusted state is cleared, core consumer surfaces can still repopulate from backend trusted purchase graph data without first reopening each trusted receipt review session

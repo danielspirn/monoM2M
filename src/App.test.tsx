@@ -409,6 +409,14 @@ describe('Milestone 1 shell', () => {
 
   it('rehydrates receipt review from the backend live graph when local storage is empty', async () => {
     const fetchMock = vi.fn<typeof fetch>().mockImplementation(async (input) => {
+      if (input === '/api/trusted-purchase-graph') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ records: [] }),
+        } as Response;
+      }
+
       if (input === '/api/live-receipt-graph/receipt_backend_reopen') {
         return {
           ok: true,
@@ -565,6 +573,14 @@ describe('Milestone 1 shell', () => {
         } as Response;
       }
 
+      if (input === '/api/trusted-purchase-graph') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ records: [] }),
+        } as Response;
+      }
+
       throw new Error(`Unexpected fetch: ${String(input)}`);
     });
     vi.stubGlobal('fetch', fetchMock);
@@ -574,6 +590,128 @@ describe('Milestone 1 shell', () => {
     expect(await screen.findByText('Finish reviewing the Home Restore Market receipt')).toBeTruthy();
     expect(screen.getAllByText('Home Restore Market').length).toBeGreaterThan(0);
     expect(fetchMock).toHaveBeenCalledWith('/api/live-receipt-graph');
+  });
+
+  it('restores Things from the backend trusted purchase graph when local trusted state is empty', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async (input) => {
+      if (input === '/api/live-receipt-graph') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ records: [] }),
+        } as Response;
+      }
+
+      if (input === '/api/trusted-purchase-graph') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            records: [
+              {
+                id: 'receipt_trusted_restore',
+                syncedAt: '2026-04-02T12:00:00.000Z',
+                receiptId: 'receipt_trusted_restore',
+                sourceDocumentId: 'srcdoc_trusted_restore',
+                extractionRunId: 'extract_trusted_restore',
+                purchaseEvent: {
+                  id: 'purchase_event_restore',
+                  receiptId: 'receipt_trusted_restore',
+                  sourceDocumentId: 'srcdoc_trusted_restore',
+                  merchantId: 'merchant_restore_hardware',
+                  merchantName: 'Restore Hardware',
+                  purchasedAt: '2026-04-02',
+                  grandTotal: 84,
+                  currency: 'USD',
+                  lineItemCount: 1,
+                  thingCandidateCount: 1,
+                  personIds: [],
+                  memorySuggestionIds: ['memory_restore_project'],
+                  productCategories: ['home'],
+                },
+                merchant: {
+                  id: 'merchant_restore_hardware',
+                  displayName: 'Restore Hardware',
+                  kind: 'retailer',
+                  retailerProfile: 'known retailer',
+                  purchaseCount: 1,
+                  trustedSpendTotal: 84,
+                  latestPurchaseAt: '2026-04-02',
+                  defaultProductCategories: ['home'],
+                },
+                purchaseLineItems: [
+                  {
+                    id: 'line_restore_1',
+                    purchaseEventId: 'purchase_event_restore',
+                    sourceLineItemId: 'source_line_restore_1',
+                    description: 'Garage Shelf',
+                    quantity: 1,
+                    lineTotal: 84,
+                    category: 'home',
+                    subcategory: 'storage',
+                    assetCandidateFlag: true,
+                    thingId: 'thing_restore_shelf',
+                  },
+                ],
+                products: [
+                  {
+                    id: 'product_restore_shelf',
+                    purchaseEventId: 'purchase_event_restore',
+                    sourceLineItemId: 'source_line_restore_1',
+                    displayName: 'Garage Shelf',
+                    category: 'home',
+                    subcategory: 'storage',
+                    thingCandidate: true,
+                    linkedThingId: 'thing_restore_shelf',
+                    lineTotal: 84,
+                  },
+                ],
+                things: [
+                  {
+                    id: 'thing_restore_shelf',
+                    purchaseEventId: 'purchase_event_restore',
+                    receiptId: 'receipt_trusted_restore',
+                    displayName: 'Garage Shelf',
+                    category: 'home',
+                    subcategory: 'storage',
+                    purchasePrice: 84,
+                    acquiredAt: '2026-04-02',
+                    merchantName: 'Restore Hardware',
+                    personIds: [],
+                    memoryIds: ['memory_restore_project'],
+                  },
+                ],
+                memories: [
+                  {
+                    id: 'memory_restore_project',
+                    purchaseEventId: 'purchase_event_restore',
+                    receiptId: 'receipt_trusted_restore',
+                    title: 'Garage organization project',
+                    memoryType: 'home_project',
+                    significance: 'medium',
+                    startsAt: '2026-04-02',
+                    placeLabel: 'Restore Hardware',
+                    receiptIds: ['receipt_trusted_restore'],
+                    personIds: [],
+                    thingIds: ['thing_restore_shelf'],
+                  },
+                ],
+              },
+            ],
+          }),
+        } as Response;
+      }
+
+      throw new Error(`Unexpected fetch: ${String(input)}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('navigation', { name: 'Primary navigation' }).querySelectorAll('button')[1]);
+
+    expect(await screen.findByText('Garage Shelf')).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith('/api/trusted-purchase-graph');
   });
 
   it('shows persisted OCR line-item candidates and parser provenance for unknown uploaded files', () => {

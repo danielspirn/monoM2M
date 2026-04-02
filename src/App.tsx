@@ -18,8 +18,10 @@ import {
   createLiveReceiptBatch,
   getLiveReceiptStudioPayload,
   hasAnyLiveReceiptRecords,
+  hasAnyTrustedPurchaseGraphRecords,
   hasLiveReceipt,
   hydrateLiveReceiptGraphRecords,
+  hydrateTrustedPurchaseGraphRecords,
   hydrateLiveReceiptGraphRecord,
   type LiveReceiptOcrPayload,
   type ReceiptStudioLivePayload,
@@ -32,7 +34,7 @@ import type { LiveReceiptGraphUpsertRequest } from '@/contracts/schema/integrati
 import type { LiveReceiptGraphGetResponse } from '@/contracts/schema/integrations/live-receipt-graph.contract';
 import type { LiveReceiptGraphListResponse } from '@/contracts/schema/integrations/live-receipt-graph.contract';
 import type { ReceiptProcessingCreateResponse } from '@/contracts/schema/integrations/receipt-processing.contract';
-import type { TrustedPurchaseGraphUpsertRequest } from '@/contracts/schema/integrations/trusted-purchase-graph.contract';
+import type { TrustedPurchaseGraphListResponse, TrustedPurchaseGraphUpsertRequest } from '@/contracts/schema/integrations/trusted-purchase-graph.contract';
 import {
   getDefaultState,
   getPersonaDefinitions,
@@ -159,6 +161,7 @@ function Shell() {
   const [receiptRefreshToken, setReceiptRefreshToken] = useState(0);
   const [receiptHydrationAttempts, setReceiptHydrationAttempts] = useState<Record<string, true>>({});
   const [receiptGraphListHydrated, setReceiptGraphListHydrated] = useState(false);
+  const [trustedPurchaseGraphHydrated, setTrustedPurchaseGraphHydrated] = useState(false);
 
   useEffect(() => {
     const storedPersona = getSelectedPersona();
@@ -266,6 +269,27 @@ function Shell() {
         setReceiptGraphListHydrated(true);
       });
   }, [receiptGraphListHydrated]);
+
+  useEffect(() => {
+    if (trustedPurchaseGraphHydrated || hasAnyTrustedPurchaseGraphRecords()) {
+      return;
+    }
+
+    void requestTrustedPurchaseGraphList()
+      .then((records) => {
+        setTrustedPurchaseGraphHydrated(true);
+
+        if (!records.length) {
+          return;
+        }
+
+        hydrateTrustedPurchaseGraphRecords(records);
+        setReceiptRefreshToken((current) => current + 1);
+      })
+      .catch(() => {
+        setTrustedPurchaseGraphHydrated(true);
+      });
+  }, [trustedPurchaseGraphHydrated]);
 
   function handlePersonaChange(personaId: PersonaId) {
     setPersona(personaId);
@@ -1098,6 +1122,17 @@ async function requestLiveReceiptGraphList() {
   }
 
   const payload = await response.json() as LiveReceiptGraphListResponse;
+  return payload.records;
+}
+
+async function requestTrustedPurchaseGraphList() {
+  const response = await fetch('/api/trusted-purchase-graph');
+
+  if (!response.ok) {
+    throw new Error(`Trusted purchase graph list request failed with ${response.status}`);
+  }
+
+  const payload = await response.json() as TrustedPurchaseGraphListResponse;
   return payload.records;
 }
 

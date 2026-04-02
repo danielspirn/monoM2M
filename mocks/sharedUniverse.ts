@@ -1218,20 +1218,27 @@ function firstNeedsReviewReceiptCard() {
 }
 
 function thingCategoryBreakdown() {
-  const totals = new Map<string, { count: number; spend: number }>();
+  const totals = new Map<string, { label: string; count: number; spend: number }>();
 
   allThings().forEach((thing) => {
-    const current = totals.get(thing.category) ?? { count: 0, spend: 0 };
-    totals.set(thing.category, {
+    const normalizedKey = thing.category.toLowerCase();
+    const label = thing.category
+      .split(/[\s_-]+/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .join(' ');
+    const current = totals.get(normalizedKey) ?? { label, count: 0, spend: 0 };
+    totals.set(normalizedKey, {
+      label: current.label,
       count: current.count + 1,
       spend: current.spend + thing.purchasePrice,
     });
   });
 
   return Array.from(totals.entries())
-    .map(([label, value]) => ({
-      id: `cat_${label.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`,
-      label,
+    .map(([key, value]) => ({
+      id: `cat_${key.replace(/[^a-z0-9]+/g, '_')}`,
+      label: value.label,
       thingCount: value.count,
       spend: Number(value.spend.toFixed(2)),
     }))
