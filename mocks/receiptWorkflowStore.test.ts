@@ -773,4 +773,91 @@ describe('receiptWorkflowStore projections', () => {
     expect(answer?.citations.some((citation) => citation.type === 'person' && citation.id === 'person_gift_helper')).toBe(true);
     expect(answer?.structuredResults[0]?.action).toBe('route:/ingest/receipt_restore_semantic');
   });
+
+  it('rebuilds receipt studio payloads from mirrored trusted purchase graphs', () => {
+    hydrateTrustedPurchaseGraphRecords([
+      {
+        id: 'receipt_restore_studio',
+        syncedAt: '2026-04-02T16:00:00.000Z',
+        receiptId: 'receipt_restore_studio',
+        sourceDocumentId: 'srcdoc_restore_studio',
+        extractionRunId: 'extract_restore_studio',
+        purchaseEvent: {
+          id: 'purchase_event_restore_studio',
+          receiptId: 'receipt_restore_studio',
+          sourceDocumentId: 'srcdoc_restore_studio',
+          merchantId: 'merchant_restore_market',
+          merchantName: 'Restore Market',
+          purchasedAt: '2026-04-02',
+          grandTotal: 28.5,
+          currency: 'USD',
+          lineItemCount: 2,
+          thingCandidateCount: 0,
+          personIds: ['person_self'],
+          memorySuggestionIds: ['memory_restore_meal'],
+          productCategories: ['food'],
+        },
+        merchant: {
+          id: 'merchant_restore_market',
+          displayName: 'Restore Market',
+          kind: 'marketplace',
+          retailerProfile: 'known retailer',
+          purchaseCount: 1,
+          trustedSpendTotal: 28.5,
+          latestPurchaseAt: '2026-04-02',
+          defaultProductCategories: ['food'],
+        },
+        purchaseLineItems: [
+          {
+            id: 'line_restore_studio_1',
+            purchaseEventId: 'purchase_event_restore_studio',
+            sourceLineItemId: 'source_line_restore_studio_1',
+            description: 'Picnic Bread',
+            quantity: 1,
+            lineTotal: 8.5,
+            category: 'food',
+            subcategory: 'bakery',
+            assetCandidateFlag: false,
+          },
+          {
+            id: 'line_restore_studio_2',
+            purchaseEventId: 'purchase_event_restore_studio',
+            sourceLineItemId: 'source_line_restore_studio_2',
+            description: 'Cheese Board',
+            quantity: 1,
+            lineTotal: 20,
+            category: 'food',
+            subcategory: 'prepared',
+            assetCandidateFlag: false,
+          },
+        ],
+        products: [],
+        things: [],
+        memories: [
+          {
+            id: 'memory_restore_meal',
+            purchaseEventId: 'purchase_event_restore_studio',
+            receiptId: 'receipt_restore_studio',
+            title: 'Park lunch',
+            memoryType: 'outing',
+            significance: 'medium',
+            startsAt: '2026-04-02',
+            placeLabel: 'Restore Market',
+            receiptIds: ['receipt_restore_studio'],
+            personIds: ['person_self'],
+            thingIds: [],
+          },
+        ],
+      },
+    ]);
+
+    const payload = getLiveReceiptStudioPayload('receipt_restore_studio');
+
+    expect(payload?.receipt.status).toBe('trusted');
+    expect(payload?.header.merchantName).toBe('Restore Market');
+    expect(payload?.parsedData.requestProvenance.parserMode).toBe('trusted_purchase_graph_restore');
+    expect(payload?.lineItems).toHaveLength(2);
+    expect(payload?.evidenceTrail[0]?.label).toBe('Picnic Bread');
+    expect(payload?.alerts[0]?.title).toBe('Trusted graph restore');
+  });
 });

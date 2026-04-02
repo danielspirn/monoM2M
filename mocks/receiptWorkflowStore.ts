@@ -998,7 +998,17 @@ function buildStoredReceiptRecord(params: {
 export function getLiveReceiptStudioPayload(receiptId: string): ReceiptStudioLivePayload | null {
   const records = readStoredReceipts();
   const record = records.find((candidate) => candidate.id === receiptId);
-  return record ? buildStudioPayload(record) : null;
+
+  if (record) {
+    return buildStudioPayload(record);
+  }
+
+  const trustedGraph = readStoredTrustedPurchaseGraphs().find((candidate) => candidate.receiptId === receiptId);
+  return trustedGraph ? buildTrustedGraphStudioPayload(trustedGraph) : null;
+}
+
+export function hasTrustedPurchaseGraphReceipt(receiptId: string): boolean {
+  return readStoredTrustedPurchaseGraphs().some((record) => record.receiptId === receiptId);
 }
 
 export function hydrateLiveReceiptGraphRecord(graphRecord: LiveReceiptGraphRecord): ReceiptStudioLivePayload {
@@ -3574,6 +3584,227 @@ function buildStudioPayload(record: StoredReceiptRecord): ReceiptStudioLivePaylo
     structuredData: record.structuredData,
     searchDocument: record.searchDocument,
     alerts: record.status === 'processing' ? [] : record.alerts,
+  };
+}
+
+function buildTrustedGraphStudioPayload(record: TrustedPurchaseGraphRecord): ReceiptStudioLivePayload {
+  const purchaseLineItems = record.purchaseLineItems.map((item, index) =>
+    buildProjectedPurchaseLineItemFromTrustedGraph(item, record.purchaseEvent, index),
+  );
+  const trustedLineItems: ReceiptLineItemRecord[] = purchaseLineItems.map((item, index) => ({
+    id: item.id,
+    lineIndex: index + 1,
+    descriptionRaw: item.description,
+    descriptionNormalized: item.description,
+    quantity: item.quantity,
+    unitPrice: item.unitPrice,
+    lineTotal: item.lineTotal,
+    reviewState: 'confirmed',
+    confidenceScore: item.confidenceScore,
+    assetCandidateFlag: item.assetCandidateFlag,
+    productMatchStatus: item.productMatchStatus,
+    productMatchConfidence: item.productMatchConfidence,
+    householdTags: item.householdTags,
+    lemTags: item.lemTags,
+  }));
+  const evidenceTrail = trustedLineItems.map((lineItem) => ({
+    id: `evidence_${lineItem.id}`,
+    label: lineItem.descriptionNormalized,
+    snippet: `${lineItem.descriptionNormalized} · $${lineItem.lineTotal.toFixed(2)} from the trusted purchase graph mirror.`,
+    targetObjectId: lineItem.id,
+  }));
+  const parsedData: StoredParsedData = {
+    rawText: `${record.purchaseEvent.merchantName}\n${trustedLineItems.map((lineItem) => `${lineItem.descriptionNormalized} ${lineItem.lineTotal.toFixed(2)}`).join('\n')}`,
+    fieldCandidates: [
+      {
+        id: `field_merchant_${record.receiptId}`,
+        label: 'Merchant',
+        value: record.purchaseEvent.merchantName,
+        confidence: 1,
+        source: 'derived',
+        evidenceSpanId: evidenceTrail[0]?.id ?? null,
+      },
+      {
+        id: `field_date_${record.receiptId}`,
+        label: 'Date',
+        value: record.purchaseEvent.purchasedAt,
+        confidence: 1,
+        source: 'derived',
+        evidenceSpanId: evidenceTrail[0]?.id ?? null,
+      },
+      {
+        id: `field_total_${record.receiptId}`,
+        label: 'Total',
+        value: `$${record.purchaseEvent.grandTotal.toFixed(2)}`,
+        confidence: 1,
+        source: 'derived',
+        evidenceSpanId: evidenceTrail[0]?.id ?? null,
+      },
+    ],
+    lineItemCandidates: trustedLineItems.map((lineItem) => ({
+      id: `candidate_${lineItem.id}`,
+      description: lineItem.descriptionNormalized,
+      quantity: lineItem.quantity,
+      unitPrice: lineItem.unitPrice,
+      lineTotal: lineItem.lineTotal,
+      confidence: 1,
+      source: 'ocr',
+      thingCandidateHint: lineItem.assetCandidateFlag,
+      evidenceSpanId: `evidence_${lineItem.id}`,
+    })),
+    requestProvenance: {
+      parserMode: 'trusted_purchase_graph_restore',
+      parserVersion: 'trusted_purchase_graph_restore_v1',
+      processingNote: 'Restored from the mirrored trusted purchase graph.',
+      sourceDocumentId: record.sourceDocumentId,
+      sourceDocumentChecksum: record.sourceDocumentId,
+      sourceFileCount: 1,
+      captureChannel: 'upload_photo',
+      backendExtractionRunId: record.extractionRunId,
+      backendSourceDocumentId: record.sourceDocumentId,
+    },
+    providerTrace: {
+      providerId: 'google_gemini_2_5_flash',
+      providerLabel: 'Trusted purchase graph restore',
+      routingMode: 'primary',
+      evaluationStage: 'approved',
+      fallbackProviderLabel: null,
+    },
+    returnPolicySnippet: record.things.length ? `${record.purchaseEvent.merchantName} trusted return support linked through Things.` : null,
+    warrantySnippet: record.things.length ? 'Trusted ownership support records are available.' : null,
+  };
+  const structuredData: StoredReceiptRecord['structuredData'] = {
+    merchantMatchStatus: 'confirmed',
+    merchantMatchConfidence: 1,
+    thingCandidateCount: record.purchaseEvent.thingCandidateCount,
+    returnPolicyStatus: record.things.length ? 'candidate' : 'not_found',
+    warrantyStatus: record.things.length ? 'candidate' : 'not_found',
+    retailerProfile: record.merchant.retailerProfile,
+    taxTags: [],
+    lifestyleTags: [],
+    productCategories: record.purchaseEvent.productCategories,
+    returnWindowLabel: record.things.length ? 'Trusted return support records are attached through the purchase graph.' : 'No linked return support records.',
+    warrantySupportLabel: record.things.length ? 'Trusted warranty support records are attached through the purchase graph.' : 'No linked warranty records.',
+  };
+  const searchDocument = buildProjectedSemanticRecordFromTrustedGraph(record);
+  const sourceDocument: StoredSourceDocument = {
+    id: record.sourceDocumentId,
+    sourceType: 'receipt_image',
+    captureChannel: 'upload_photo',
+    fileName: `${slugify(record.purchaseEvent.merchantName)}-${record.sourceDocumentId}.jpg`,
+    sourceFiles: [],
+    previewUrls: [],
+    mimeType: 'image/jpeg',
+    capturedAt: record.syncedAt,
+    checksum: record.sourceDocumentId,
+    storageStatus: 'stored',
+    detectedReceiptCount: 1,
+  };
+  const extractionRun: StoredExtractionRun = {
+    id: record.extractionRunId,
+    status: 'completed',
+    parserVersion: 'trusted_purchase_graph_restore_v1',
+    providerId: 'google_gemini_2_5_flash',
+    providerLabel: 'Trusted purchase graph restore',
+    routingMode: 'primary',
+    evaluationStage: 'approved',
+    fallbackProviderLabel: null,
+    startedAt: record.syncedAt,
+    completedAt: record.syncedAt,
+    stage: 'ready_for_review',
+    stageLabel: 'Ready',
+  };
+  const peopleSuggestions = record.purchaseEvent.personIds.map((personId) => ({
+    id: personId,
+    displayName: humanizePersonId(personId),
+    relationshipType: personId === 'person_self' ? 'self' : 'linked person',
+  }));
+  const memorySuggestions = record.memories.map((memory) => ({
+    id: memory.id,
+    memoryState: 'candidate' as const,
+    suggestedTitle: memory.title,
+  }));
+  const reviewDecisions: ReviewDecisionRecord[] = [
+    {
+      id: `decision_restore_${record.receiptId}`,
+      targetType: 'receipt_review',
+      targetId: record.receiptId,
+      label: 'Trusted restore',
+      previousValue: 'Stored only in backend trusted purchase graph',
+      reviewedValue: 'Restored into Receipt Studio',
+      decisionType: 'confirmed',
+      decidedAt: record.syncedAt,
+      note: 'This receipt detail was restored from the trusted purchase graph mirror because local receipt review state was unavailable.',
+    },
+  ];
+
+  return {
+    receipt: {
+      id: record.receiptId,
+      status: 'trusted',
+      sourceType: sourceDocument.sourceType,
+      capturedAt: record.syncedAt,
+    },
+    header: {
+      title: 'Review Receipt',
+      merchantName: record.purchaseEvent.merchantName,
+      purchasedAt: record.purchaseEvent.purchasedAt,
+      grandTotal: record.purchaseEvent.grandTotal,
+      currency: record.purchaseEvent.currency,
+    },
+    progress: null,
+    processingFeedback: null,
+    lineItems: trustedLineItems,
+    selectedLineItemId: trustedLineItems[0]?.id ?? null,
+    evidence: evidenceTrail[0]
+      ? {
+          targetObjectType: 'purchase_line_item',
+          targetObjectId: evidenceTrail[0].targetObjectId,
+          evidenceType: 'text_span',
+          pageNumber: 1,
+          x: null,
+          y: null,
+          width: null,
+          height: null,
+          snippet: evidenceTrail[0].snippet,
+        }
+      : null,
+    evidenceTrail,
+    peopleSuggestions,
+    memorySuggestions,
+    duplicateCandidates: [],
+    reviewDecisions,
+    actions: {
+      canSave: false,
+      canConvertToThing: record.things.length > 0,
+      canTagPeople: record.purchaseEvent.personIds.length > 0,
+      canAddToMemory: record.memories.length > 0,
+    },
+    captureSession: {
+      id: `capture_restore_${record.receiptId}`,
+      detectedReceiptCount: 1,
+      siblings: [],
+    },
+    sourceDocument,
+    extractionRun,
+    parsedData,
+    structuredData,
+    searchDocument: {
+      status: 'indexed',
+      keywords: searchDocument.keywords,
+      textPreview: searchDocument.textPreview,
+      embeddingTerms: searchDocument.embeddingTerms,
+      embeddingVersion: searchDocument.embeddingVersion,
+    },
+    alerts: [
+      {
+        id: `alert_restore_${record.receiptId}`,
+        kind: 'library_lookup',
+        level: 'info',
+        title: 'Trusted graph restore',
+        body: 'This receipt detail was rebuilt from your trusted backend purchase graph because local review state was unavailable.',
+      },
+    ],
   };
 }
 

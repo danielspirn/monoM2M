@@ -588,3 +588,16 @@ Shipped:
 
 Success signal:
 - after local trusted receipt state is cleared, semantic search and Ask Agent can still answer from trusted backend purchase data instead of going blank
+
+#### Slice 39: Restore trusted receipt review from backend trusted purchase graphs
+
+Status:
+- complete
+
+Shipped:
+- Receipt Studio can now rebuild a trusted receipt detail payload directly from a mirrored trusted purchase graph when no live receipt graph record exists
+- the app skips the unnecessary per-receipt live-graph fetch on `/ingest/:receiptId` when a trusted purchase graph mirror already covers that receipt
+- app and store tests now cover reopening trusted receipt review from backend trusted graph data alone
+
+Success signal:
+- a trusted receipt citation can reopen a meaningful receipt review surface from backend-trusted data even after local live receipt state is cleared

@@ -20,6 +20,7 @@ import {
   hasAnyLiveReceiptRecords,
   hasAnyTrustedPurchaseGraphRecords,
   hasLiveReceipt,
+  hasTrustedPurchaseGraphReceipt,
   hydrateLiveReceiptGraphRecords,
   hydrateTrustedPurchaseGraphRecords,
   hydrateLiveReceiptGraphRecord,
@@ -229,7 +230,17 @@ function Shell() {
   useEffect(() => {
     const receiptId = params?.receiptId;
 
-    if (routeKey !== '/ingest/:receiptId' || !receiptId || hasLiveReceipt(receiptId) || receiptHydrationAttempts[receiptId]) {
+    if (
+      routeKey !== '/ingest/:receiptId'
+      || !receiptId
+      || hasLiveReceipt(receiptId)
+      || hasTrustedPurchaseGraphReceipt(receiptId)
+      || receiptHydrationAttempts[receiptId]
+    ) {
+      return;
+    }
+
+    if (!trustedPurchaseGraphHydrated && !hasAnyTrustedPurchaseGraphRecords()) {
       return;
     }
 
@@ -247,7 +258,7 @@ function Shell() {
       .catch(() => {
         setNotice('Backend receipt restore was unavailable, so the review screen stayed on the fallback shell.');
       });
-  }, [params?.receiptId, receiptHydrationAttempts, routeKey]);
+  }, [params?.receiptId, receiptHydrationAttempts, routeKey, trustedPurchaseGraphHydrated]);
 
   useEffect(() => {
     if (receiptGraphListHydrated || hasAnyLiveReceiptRecords()) {

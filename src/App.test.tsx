@@ -1032,6 +1032,115 @@ describe('Milestone 1 shell', () => {
     expect(screen.getAllByText('Restore Hardware receipt').length).toBeGreaterThan(0);
   });
 
+  it('restores trusted receipt review from backend trusted purchase graphs when local live state is empty', async () => {
+    window.history.pushState({}, '', '/ingest/receipt_trusted_review_restore');
+
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async (input) => {
+      if (input === '/api/live-receipt-graph') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ records: [] }),
+        } as Response;
+      }
+
+      if (input === '/api/trusted-purchase-graph') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            records: [
+              {
+                id: 'receipt_trusted_review_restore',
+                syncedAt: '2026-04-02T14:00:00.000Z',
+                receiptId: 'receipt_trusted_review_restore',
+                sourceDocumentId: 'srcdoc_trusted_review_restore',
+                extractionRunId: 'extract_trusted_review_restore',
+                purchaseEvent: {
+                  id: 'purchase_event_trusted_review_restore',
+                  receiptId: 'receipt_trusted_review_restore',
+                  sourceDocumentId: 'srcdoc_trusted_review_restore',
+                  merchantId: 'merchant_restore_grocery',
+                  merchantName: 'Restore Grocery',
+                  purchasedAt: '2026-04-02',
+                  grandTotal: 18.25,
+                  currency: 'USD',
+                  lineItemCount: 2,
+                  thingCandidateCount: 0,
+                  personIds: ['person_self'],
+                  memorySuggestionIds: ['memory_restore_picnic'],
+                  productCategories: ['food'],
+                },
+                merchant: {
+                  id: 'merchant_restore_grocery',
+                  displayName: 'Restore Grocery',
+                  kind: 'marketplace',
+                  retailerProfile: 'known retailer',
+                  purchaseCount: 1,
+                  trustedSpendTotal: 18.25,
+                  latestPurchaseAt: '2026-04-02',
+                  defaultProductCategories: ['food'],
+                },
+                purchaseLineItems: [
+                  {
+                    id: 'line_trusted_review_restore_1',
+                    purchaseEventId: 'purchase_event_trusted_review_restore',
+                    sourceLineItemId: 'source_line_trusted_review_restore_1',
+                    description: 'Fresh Bread',
+                    quantity: 1,
+                    lineTotal: 6.25,
+                    category: 'food',
+                    subcategory: 'bakery',
+                    assetCandidateFlag: false,
+                  },
+                  {
+                    id: 'line_trusted_review_restore_2',
+                    purchaseEventId: 'purchase_event_trusted_review_restore',
+                    sourceLineItemId: 'source_line_trusted_review_restore_2',
+                    description: 'Cheese',
+                    quantity: 1,
+                    lineTotal: 12,
+                    category: 'food',
+                    subcategory: 'deli',
+                    assetCandidateFlag: false,
+                  },
+                ],
+                products: [],
+                things: [],
+                memories: [
+                  {
+                    id: 'memory_restore_picnic',
+                    purchaseEventId: 'purchase_event_trusted_review_restore',
+                    receiptId: 'receipt_trusted_review_restore',
+                    title: 'Picnic setup',
+                    memoryType: 'outing',
+                    significance: 'medium',
+                    startsAt: '2026-04-02',
+                    placeLabel: 'Restore Grocery',
+                    receiptIds: ['receipt_trusted_review_restore'],
+                    personIds: ['person_self'],
+                    thingIds: [],
+                  },
+                ],
+              },
+            ],
+          }),
+        } as Response;
+      }
+
+      throw new Error(`Unexpected fetch: ${String(input)}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    expect(await screen.findByRole('heading', { name: 'Restore Grocery' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Receipt trusted' })).toBeTruthy();
+    expect(screen.getByText('Trusted graph restore')).toBeTruthy();
+    expect(screen.getAllByText('Fresh Bread').length).toBeGreaterThan(0);
+    expect(fetchMock.mock.calls.map((call) => String(call[0]))).not.toContain('/api/live-receipt-graph/receipt_trusted_review_restore');
+  });
+
   it('shows persisted OCR line-item candidates and parser provenance for unknown uploaded files', () => {
     vi.useFakeTimers();
 
