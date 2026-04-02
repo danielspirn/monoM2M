@@ -131,6 +131,58 @@ describe('Milestone 1 shell', () => {
     expect(screen.getByText('Air Fryer')).toBeTruthy();
   });
 
+  it('mirrors trusted purchase graphs to the backend on review completion', async () => {
+    vi.useFakeTimers();
+
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async (input) => {
+      if (input === '/api/live-receipt-graph') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ records: [] }),
+        } as Response;
+      }
+
+      if (input === '/api/trusted-purchase-graph') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ record: { id: 'receipt_trusted_mock' } }),
+        } as Response;
+      }
+
+      throw new Error(`Unexpected fetch: ${String(input)}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    openAddReceiptComposer();
+
+    fireEvent.change(screen.getByLabelText('Merchant'), { target: { value: 'Target' } });
+    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-03-08' } });
+    fireEvent.change(screen.getByLabelText('Capture source'), { target: { value: 'Upload photo' } });
+    fireEvent.change(screen.getByLabelText('Extracted summary'), { target: { value: 'Air fryer, parchment liners' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Process receipt capture' }));
+
+    act(() => {
+      vi.advanceTimersByTime(2200);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Mark review complete' }));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/trusted-purchase-graph',
+      expect.objectContaining({
+        method: 'POST',
+      }),
+    );
+  });
+
   it('shows receipt-linked ownership support on promoted Things', () => {
     vi.useFakeTimers();
 

@@ -2,6 +2,7 @@ import { parseReceiptCaptureInput } from './receiptParser';
 import { listMerchantDirectoryEntries, resolveMerchantDirectoryEntry } from './catalog/merchantDirectory';
 import { listObjectDirectoryEntries, resolveObjectDirectoryEntry } from './catalog/objectDirectory';
 import type { LiveReceiptGraphRecord } from '@/contracts/schema/integrations/live-receipt-graph.contract';
+import type { TrustedPurchaseGraphRecord } from '@/contracts/schema/integrations/trusted-purchase-graph.contract';
 import type {
   ReceiptOcrEvaluationStage,
   ReceiptOcrProviderId,
@@ -1016,6 +1017,98 @@ export function hydrateLiveReceiptGraphRecords(graphRecords: LiveReceiptGraphRec
 
 export function hasAnyLiveReceiptRecords(): boolean {
   return readStoredReceipts().length > 0;
+}
+
+export function buildTrustedPurchaseGraphRecord(receiptId: string): TrustedPurchaseGraphRecord | null {
+  const record = readStoredReceipts().find((candidate) => candidate.id === receiptId && candidate.status === 'trusted');
+
+  if (!record) {
+    return null;
+  }
+
+  const graph = getStoredPurchaseGraph(record);
+
+  return {
+    id: record.id,
+    syncedAt: record.updatedAt,
+    receiptId: record.id,
+    sourceDocumentId: graph.sourceDocumentRecord.id,
+    extractionRunId: graph.extractionRunRecord.id,
+    purchaseEvent: {
+      id: graph.purchaseEvent.id,
+      receiptId: graph.purchaseEvent.receiptId,
+      sourceDocumentId: graph.purchaseEvent.sourceDocumentId,
+      merchantId: graph.purchaseEvent.merchantId,
+      merchantName: graph.purchaseEvent.merchantName,
+      purchasedAt: graph.purchaseEvent.purchasedAt,
+      grandTotal: graph.purchaseEvent.grandTotal,
+      currency: graph.purchaseEvent.currency,
+      lineItemCount: graph.purchaseEvent.lineItemCount,
+      thingCandidateCount: graph.purchaseEvent.thingCandidateCount,
+      personIds: graph.purchaseEvent.personIds,
+      memorySuggestionIds: graph.purchaseEvent.memorySuggestionIds,
+      productCategories: graph.purchaseEvent.productCategories,
+    },
+    merchant: {
+      id: graph.merchantRecord.id,
+      displayName: graph.merchantRecord.displayName,
+      kind: graph.merchantRecord.kind,
+      retailerProfile: graph.merchantRecord.retailerProfile,
+      purchaseCount: graph.merchantRecord.purchaseCount,
+      trustedSpendTotal: graph.merchantRecord.trustedSpendTotal,
+      latestPurchaseAt: graph.merchantRecord.latestPurchaseAt,
+      defaultProductCategories: graph.merchantRecord.defaultProductCategories,
+    },
+    purchaseLineItems: graph.purchaseLineItems.map((item) => ({
+      id: item.id,
+      purchaseEventId: item.purchaseEventId,
+      sourceLineItemId: item.sourceLineItemId,
+      description: item.description,
+      quantity: item.quantity,
+      lineTotal: item.lineTotal,
+      category: item.category,
+      subcategory: item.subcategory,
+      assetCandidateFlag: item.assetCandidateFlag,
+      thingId: item.thingId,
+    })),
+    products: graph.productRecords.map((product) => ({
+      id: product.id,
+      purchaseEventId: product.purchaseEventId,
+      sourceLineItemId: product.sourceLineItemId,
+      displayName: product.displayName,
+      category: product.category,
+      subcategory: product.subcategory,
+      thingCandidate: product.thingCandidate,
+      linkedThingId: product.linkedThingId,
+      lineTotal: product.lineTotal,
+    })),
+    things: graph.thingRecords.map((thing) => ({
+      id: thing.id,
+      purchaseEventId: thing.purchaseEventId,
+      receiptId: thing.receiptId,
+      displayName: thing.displayName,
+      category: thing.category,
+      subcategory: thing.subcategory,
+      purchasePrice: thing.purchasePrice,
+      acquiredAt: thing.acquiredAt,
+      merchantName: thing.merchantName,
+      personIds: thing.personIds,
+      memoryIds: thing.memoryIds,
+    })),
+    memories: graph.memoryRecords.map((memory) => ({
+      id: memory.id,
+      purchaseEventId: memory.purchaseEventId,
+      receiptId: memory.receiptId,
+      title: memory.title,
+      memoryType: memory.memoryType,
+      significance: memory.significance,
+      startsAt: memory.startsAt,
+      placeLabel: memory.placeLabel,
+      receiptIds: memory.receiptIds,
+      personIds: memory.personIds,
+      thingIds: memory.thingIds,
+    })),
+  };
 }
 
 export function listLiveReceiptCards(): StoredReceiptCard[] {

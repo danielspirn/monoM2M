@@ -3,6 +3,7 @@ import path from 'node:path';
 import { defineConfig } from 'vitest/config';
 import { handleLiveReceiptGraphHttpRequest } from './server/live-receipts/http';
 import { handleReceiptOcrHttpRequest } from './server/ocr/http';
+import { handleTrustedPurchaseGraphHttpRequest } from './server/purchase-graph/http';
 import { handleReceiptProcessingHttpRequest } from './server/receipts/http';
 
 export default defineConfig({
@@ -34,6 +35,14 @@ export default defineConfig({
           }
 
           void handleLiveReceiptGraphHttpRequest(req, res);
+        });
+        server.middlewares.use('/api/trusted-purchase-graph', (req, res, next) => {
+          if (req.method !== 'GET' && req.method !== 'POST' && req.method !== 'PUT') {
+            next();
+            return;
+          }
+
+          void handleTrustedPurchaseGraphHttpRequest(req, res);
         });
       },
     },

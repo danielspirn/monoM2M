@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   applyLiveReceiptOcrResult,
   answerSemanticReceiptQuestion,
+  buildTrustedPurchaseGraphRecord,
   createLiveReceiptBatch,
   getLiveReceiptStudioPayload,
   hasAnyLiveReceiptRecords,
@@ -507,6 +508,25 @@ describe('receiptWorkflowStore projections', () => {
     expect(purchaseEvents[0]?.merchantResolutionSource).toBe('reviewed_receipt');
     expect(purchaseLineItems.find((item) => item.lineIndex === 1)?.description).toBe('Air Fryer Xl');
     expect(purchaseLineItems.find((item) => item.lineIndex === 1)?.productCandidateLabel).toBe('Air Fryer Xl');
+  });
+
+  it('builds a trusted purchase graph mirror record for backend sync', () => {
+    const capture = createLiveReceiptBatch({
+      merchant: 'Target',
+      purchaseDate: '2026-03-08',
+      source: 'Upload photo',
+      summary: 'Air fryer, parchment liners',
+    });
+
+    vi.advanceTimersByTime(2200);
+    submitLiveReceiptReview(capture.primaryReceiptId);
+
+    const trustedGraph = buildTrustedPurchaseGraphRecord(capture.primaryReceiptId);
+
+    expect(trustedGraph?.receiptId).toBe(capture.primaryReceiptId);
+    expect(trustedGraph?.purchaseEvent.merchantName).toBe('Target');
+    expect(trustedGraph?.products[0]?.displayName).toBe('Air Fryer');
+    expect(trustedGraph?.things[0]?.displayName).toBe('Air Fryer');
   });
 
   it('finds receipts through semantic retrieval without exact wording matches', () => {

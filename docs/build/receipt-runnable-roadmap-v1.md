@@ -536,3 +536,16 @@ Shipped:
 
 Success signal:
 - after local browser receipt storage is cleared, Home and Things can repopulate from backend-mirrored live receipt records instead of appearing empty until a specific receipt review route is opened
+
+#### Slice 35: Backend trusted purchase graph mirror
+
+Status:
+- complete
+
+Shipped:
+- trusted receipt reviews now build a backend-safe purchase graph mirror record with purchase event, merchant, line item, product, thing, and memory projections
+- the dev backend now supports storing and retrieving those trusted purchase graph records through a dedicated API
+- app, store, and server tests now cover syncing the trusted purchase graph mirror after review completion
+
+Success signal:
+- once a receipt becomes trusted, the backend has a durable purchase graph snapshot that can feed Home, Things, People, and Memories without depending only on browser-local trusted projections

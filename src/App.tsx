@@ -14,6 +14,7 @@ import {
 } from '@/mocks/receiptFixtureScenarios';
 import {
   applyLiveReceiptOcrResult,
+  buildTrustedPurchaseGraphRecord,
   createLiveReceiptBatch,
   getLiveReceiptStudioPayload,
   hasAnyLiveReceiptRecords,
@@ -31,6 +32,7 @@ import type { LiveReceiptGraphUpsertRequest } from '@/contracts/schema/integrati
 import type { LiveReceiptGraphGetResponse } from '@/contracts/schema/integrations/live-receipt-graph.contract';
 import type { LiveReceiptGraphListResponse } from '@/contracts/schema/integrations/live-receipt-graph.contract';
 import type { ReceiptProcessingCreateResponse } from '@/contracts/schema/integrations/receipt-processing.contract';
+import type { TrustedPurchaseGraphUpsertRequest } from '@/contracts/schema/integrations/trusted-purchase-graph.contract';
 import {
   getDefaultState,
   getPersonaDefinitions,
@@ -335,7 +337,7 @@ function Shell() {
           const receiptId = action.replace('receipt:submit:', '');
           const nextPayload = submitLiveReceiptReview(receiptId);
           if (nextPayload) {
-            void syncLiveReceiptGraphRecord(nextPayload);
+            void syncReceiptMirrors(nextPayload);
           }
           setReceiptRefreshToken((current) => current + 1);
           setNotice(
@@ -349,7 +351,7 @@ function Shell() {
           const receiptId = action.replace('receipt:rerun:', '');
           const nextPayload = rerunLiveReceiptExtraction(receiptId);
           if (nextPayload) {
-            void syncLiveReceiptGraphRecord(nextPayload);
+            void syncReceiptMirrors(nextPayload);
           }
           setReceiptRefreshToken((current) => current + 1);
           setNotice(
@@ -367,7 +369,7 @@ function Shell() {
             decodeURIComponent(encodedValue ?? ''),
           );
           if (nextPayload) {
-            void syncLiveReceiptGraphRecord(nextPayload);
+            void syncReceiptMirrors(nextPayload);
           }
           setReceiptRefreshToken((current) => current + 1);
           setNotice(nextPayload ? `${nextPayload.header.merchantName} review changes saved.` : 'Receipt header editing is only live for captured receipts in this slice.');
@@ -382,7 +384,7 @@ function Shell() {
             decodeURIComponent(encodedValue ?? ''),
           );
           if (nextPayload) {
-            void syncLiveReceiptGraphRecord(nextPayload);
+            void syncReceiptMirrors(nextPayload);
           }
           setReceiptRefreshToken((current) => current + 1);
           setNotice(nextPayload ? `${nextPayload.header.merchantName} line-item review changes saved.` : 'Receipt line-item editing is only live for captured receipts in this slice.');
@@ -429,7 +431,7 @@ function Shell() {
           navigate(`/ingest/${captureResult.primaryReceiptId}`);
           const initialPayload = getLiveReceiptStudioPayload(captureResult.primaryReceiptId);
           if (initialPayload) {
-            void syncLiveReceiptGraphRecord(initialPayload);
+            void syncReceiptMirrors(initialPayload);
           }
 
           if (files.length && !resolveReceiptFixtureFilesFromDraft(draft).length) {
@@ -442,7 +444,7 @@ function Shell() {
                 const nextPayload = applyLiveReceiptOcrResult(captureResult.primaryReceiptId, ocrPayload);
 
                 if (nextPayload) {
-                  void syncLiveReceiptGraphRecord(nextPayload);
+                  void syncReceiptMirrors(nextPayload);
                   setReceiptRefreshToken((current) => current + 1);
                   setNotice(`${nextPayload.header.merchantName} OCR details are ready for review.`);
                 }
@@ -1172,6 +1174,40 @@ async function syncLiveReceiptGraphRecord(payload: ReceiptStudioLivePayload) {
     });
   } catch {
     // Keep the UX moving even if the dev backend mirror is unavailable.
+  }
+}
+
+async function syncTrustedPurchaseGraphRecord(receiptId: string) {
+  if (typeof fetch !== 'function') {
+    return;
+  }
+
+  const record = buildTrustedPurchaseGraphRecord(receiptId);
+
+  if (!record) {
+    return;
+  }
+
+  const body: TrustedPurchaseGraphUpsertRequest = { record };
+
+  try {
+    await fetch('/api/trusted-purchase-graph', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    // Keep the UX moving even if the dev backend trusted purchase mirror is unavailable.
+  }
+}
+
+async function syncReceiptMirrors(payload: ReceiptStudioLivePayload) {
+  await syncLiveReceiptGraphRecord(payload);
+
+  if (payload.receipt.status === 'trusted') {
+    await syncTrustedPurchaseGraphRecord(payload.receipt.id);
   }
 }
 
