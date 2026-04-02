@@ -562,3 +562,16 @@ Shipped:
 
 Success signal:
 - after local browser trusted state is cleared, core consumer surfaces can still repopulate from backend trusted purchase graph data without first reopening each trusted receipt review session
+
+#### Slice 37: Restore People and Memories from backend trusted purchase graphs
+
+Status:
+- complete
+
+Shipped:
+- the shared consumer universe can now synthesize People records from restored trusted purchase graph links when those people are not already present in the static persona pack
+- People and Memories routes now stay useful after local trusted state is cleared because restored trusted graphs continue to feed linked person and memory context
+- app tests now cover People and Memories restoration from backend trusted purchase graph data
+
+Success signal:
+- backend-restored purchase graphs can reopen relationship and memory context, not just receipts and Things, even when a linked person exists only in restored graph data

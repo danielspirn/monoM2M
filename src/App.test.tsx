@@ -714,6 +714,199 @@ describe('Milestone 1 shell', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/trusted-purchase-graph');
   });
 
+  it('restores People context from backend trusted purchase graphs, including linked people outside the static persona pack', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async (input) => {
+      if (input === '/api/live-receipt-graph') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ records: [] }),
+        } as Response;
+      }
+
+      if (input === '/api/trusted-purchase-graph') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            records: [
+              {
+                id: 'receipt_people_restore',
+                syncedAt: '2026-04-02T12:30:00.000Z',
+                receiptId: 'receipt_people_restore',
+                sourceDocumentId: 'srcdoc_people_restore',
+                extractionRunId: 'extract_people_restore',
+                purchaseEvent: {
+                  id: 'purchase_event_people_restore',
+                  receiptId: 'receipt_people_restore',
+                  sourceDocumentId: 'srcdoc_people_restore',
+                  merchantId: 'merchant_party_store',
+                  merchantName: 'Party Store',
+                  purchasedAt: '2026-04-02',
+                  grandTotal: 56,
+                  currency: 'USD',
+                  lineItemCount: 1,
+                  thingCandidateCount: 0,
+                  personIds: ['person_gift_helper'],
+                  memorySuggestionIds: ['memory_party_restore'],
+                  productCategories: ['celebration'],
+                },
+                merchant: {
+                  id: 'merchant_party_store',
+                  displayName: 'Party Store',
+                  kind: 'retailer',
+                  retailerProfile: 'known retailer',
+                  purchaseCount: 1,
+                  trustedSpendTotal: 56,
+                  latestPurchaseAt: '2026-04-02',
+                  defaultProductCategories: ['celebration'],
+                },
+                purchaseLineItems: [
+                  {
+                    id: 'line_people_restore_1',
+                    purchaseEventId: 'purchase_event_people_restore',
+                    sourceLineItemId: 'source_line_people_restore_1',
+                    description: 'Party Supplies',
+                    quantity: 1,
+                    lineTotal: 56,
+                    category: 'celebration',
+                    subcategory: 'party',
+                    assetCandidateFlag: false,
+                  },
+                ],
+                products: [],
+                things: [],
+                memories: [
+                  {
+                    id: 'memory_party_restore',
+                    purchaseEventId: 'purchase_event_people_restore',
+                    receiptId: 'receipt_people_restore',
+                    title: 'Birthday prep',
+                    memoryType: 'celebration',
+                    significance: 'medium',
+                    startsAt: '2026-04-02',
+                    placeLabel: 'Party Store',
+                    receiptIds: ['receipt_people_restore'],
+                    personIds: ['person_gift_helper'],
+                    thingIds: [],
+                  },
+                ],
+              },
+            ],
+          }),
+        } as Response;
+      }
+
+      throw new Error(`Unexpected fetch: ${String(input)}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('navigation', { name: 'Primary navigation' }).querySelectorAll('button')[3]);
+
+    const personName = await screen.findByText('Gift Helper');
+    fireEvent.click(personName.closest('button') as HTMLElement);
+
+    expect((await screen.findAllByText('Birthday prep')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Party Store').length).toBeGreaterThan(0);
+  });
+
+  it('restores Memories from backend trusted purchase graphs when local trusted state is empty', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async (input) => {
+      if (input === '/api/live-receipt-graph') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ records: [] }),
+        } as Response;
+      }
+
+      if (input === '/api/trusted-purchase-graph') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            records: [
+              {
+                id: 'receipt_memory_restore',
+                syncedAt: '2026-04-02T13:00:00.000Z',
+                receiptId: 'receipt_memory_restore',
+                sourceDocumentId: 'srcdoc_memory_restore',
+                extractionRunId: 'extract_memory_restore',
+                purchaseEvent: {
+                  id: 'purchase_event_memory_restore',
+                  receiptId: 'receipt_memory_restore',
+                  sourceDocumentId: 'srcdoc_memory_restore',
+                  merchantId: 'merchant_picnic_market',
+                  merchantName: 'Picnic Market',
+                  purchasedAt: '2026-04-02',
+                  grandTotal: 32,
+                  currency: 'USD',
+                  lineItemCount: 2,
+                  thingCandidateCount: 0,
+                  personIds: ['person_self'],
+                  memorySuggestionIds: ['memory_picnic_restore'],
+                  productCategories: ['food'],
+                },
+                merchant: {
+                  id: 'merchant_picnic_market',
+                  displayName: 'Picnic Market',
+                  kind: 'marketplace',
+                  retailerProfile: 'known retailer',
+                  purchaseCount: 1,
+                  trustedSpendTotal: 32,
+                  latestPurchaseAt: '2026-04-02',
+                  defaultProductCategories: ['food'],
+                },
+                purchaseLineItems: [
+                  {
+                    id: 'line_memory_restore_1',
+                    purchaseEventId: 'purchase_event_memory_restore',
+                    sourceLineItemId: 'source_line_memory_restore_1',
+                    description: 'Picnic Snacks',
+                    quantity: 1,
+                    lineTotal: 32,
+                    category: 'food',
+                    subcategory: 'snacks',
+                    assetCandidateFlag: false,
+                  },
+                ],
+                products: [],
+                things: [],
+                memories: [
+                  {
+                    id: 'memory_picnic_restore',
+                    purchaseEventId: 'purchase_event_memory_restore',
+                    receiptId: 'receipt_memory_restore',
+                    title: 'Picnic afternoon',
+                    memoryType: 'outing',
+                    significance: 'medium',
+                    startsAt: '2026-04-02',
+                    placeLabel: 'Golden Gate Park',
+                    receiptIds: ['receipt_memory_restore'],
+                    personIds: ['person_self'],
+                    thingIds: [],
+                  },
+                ],
+              },
+            ],
+          }),
+        } as Response;
+      }
+
+      throw new Error(`Unexpected fetch: ${String(input)}`);
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    fireEvent.click(screen.getByRole('navigation', { name: 'Primary navigation' }).querySelectorAll('button')[4]);
+
+    expect(await screen.findByText('Picnic afternoon')).toBeTruthy();
+    expect(screen.getByText('Golden Gate Park')).toBeTruthy();
+  });
+
   it('shows persisted OCR line-item candidates and parser provenance for unknown uploaded files', () => {
     vi.useFakeTimers();
 

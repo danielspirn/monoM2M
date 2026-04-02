@@ -957,6 +957,40 @@ function allMemories() {
   return [...projectedMemories(), ...memories];
 }
 
+function allPeople() {
+  const byId = new Map<string, PersonRecord>(people.map((person) => [person.id, person]));
+
+  const linkedPersonIds = new Set<string>();
+  allReceipts().forEach((receipt) => {
+    receipt.personIds.forEach((personId) => linkedPersonIds.add(personId));
+  });
+  allThings().forEach((thing) => {
+    thing.personIds.forEach((personId) => linkedPersonIds.add(personId));
+  });
+  allMemories().forEach((memory) => {
+    memory.personIds.forEach((personId) => linkedPersonIds.add(personId));
+  });
+
+  linkedPersonIds.forEach((personId) => {
+    if (byId.has(personId)) {
+      return;
+    }
+
+    byId.set(personId, {
+      id: personId,
+      displayName: humanizePersonId(personId),
+      relationshipType: 'linked person',
+      tags: ['restored'],
+      notes: 'Restored from trusted purchase graph context.',
+      linkedReceiptIds: [],
+      linkedThingIds: [],
+      linkedMemoryIds: [],
+    });
+  });
+
+  return Array.from(byId.values());
+}
+
 function getReceipt(id: string) {
   return allReceipts().find((receipt) => receipt.id === id);
 }
@@ -966,7 +1000,7 @@ function getThing(id: string) {
 }
 
 function getPerson(id: string) {
-  return people.find((person) => person.id === id);
+  return allPeople().find((person) => person.id === id);
 }
 
 function getMemory(id: string) {
@@ -1141,6 +1175,15 @@ function getLinkedReceiptIdsForPerson(personId: string) {
   });
 
   return Array.from(ids);
+}
+
+function humanizePersonId(personId: string) {
+  return personId
+    .replace(/^person[_-]?/i, '')
+    .split(/[_-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ') || 'Linked Person';
 }
 
 function getLinkedThingIdsForPerson(personId: string) {
@@ -1669,10 +1712,10 @@ function buildPeoplePayload(options: RouteBuilderOptions): PeoplePayload {
     summaryMetrics: [
       {
         label: 'People',
-        value: String(people.length),
+        value: String(allPeople().length),
         note: 'Who matters in your purchase graph',
         tone: 'blue',
-        trend: trend(people.length),
+        trend: trend(allPeople().length),
       },
       {
         label: 'Linked Things',
@@ -1715,7 +1758,7 @@ function buildPeoplePayload(options: RouteBuilderOptions): PeoplePayload {
       actionLabel: 'Open Coco',
       action: 'route:/people/person_coco',
     },
-    people: people.map(personCard),
+    people: allPeople().map(personCard),
     upgradeCard: state.includes('family')
       ? upgradeCard('family_pro', 'Share People context with household members', 'Family Pro is the upgrade path for collaborative household relationship context.')
       : null,
@@ -1723,7 +1766,7 @@ function buildPeoplePayload(options: RouteBuilderOptions): PeoplePayload {
 }
 
 function buildPersonDetailPayload(options: RouteBuilderOptions): PersonDetailPayload {
-  const person = getPerson(options.params?.personId ?? 'person_coco') ?? people[0];
+  const person = getPerson(options.params?.personId ?? 'person_coco') ?? allPeople()[0];
   const linkedThingIds = getLinkedThingIdsForPerson(person.id);
   const linkedReceiptIds = getLinkedReceiptIdsForPerson(person.id);
   const linkedMemoryIds = getLinkedMemoryIdsForPerson(person.id);
