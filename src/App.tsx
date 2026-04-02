@@ -347,6 +347,7 @@ function Shell() {
             source: draft.source,
             summary: draft.summary,
             fixtureFiles: resolveReceiptFixtureFilesFromDraft(draft),
+            previewUrls: parsePreviewUrls(draft.receiptPreviewUrls),
           });
 
           setNotice(
@@ -679,7 +680,16 @@ function Overlay(props: { children: ReactNode; onClose: () => void }) {
 
 function CreationSheet(props: { kind: ComposerKind; onClose: () => void; onSubmit: (draft: Record<string, string>) => void }) {
   const [draft, setDraft] = useState<Record<string, string>>(() => getInitialDraft(props.kind));
+  const [filePreviewUrls, setFilePreviewUrls] = useState<string[]>([]);
   const config = getComposerConfig(props.kind);
+
+  useEffect(() => () => {
+    filePreviewUrls.forEach((url) => {
+      if (url.startsWith('blob:')) {
+        URL.revokeObjectURL(url);
+      }
+    });
+  }, [filePreviewUrls]);
 
   function updateDraft(fieldId: string, value: string) {
     if (props.kind === 'receipt' && fieldId === 'fixtureScenario') {
@@ -691,8 +701,30 @@ function CreationSheet(props: { kind: ComposerKind; onClose: () => void; onSubmi
   }
 
   function updateReceiptFiles(fileList: FileList | null) {
+    setFilePreviewUrls((current) => {
+      current.forEach((url) => {
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+      return [];
+    });
+
+    const previewUrls = Array.from(fileList ?? [])
+      .filter((file) => file.type.startsWith('image/'))
+      .map((file) => {
+        if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+          return URL.createObjectURL(file);
+        }
+
+        return `preview://${encodeURIComponent(file.name)}`;
+      });
     const fileNames = Array.from(fileList ?? []).map((file) => file.name);
-    setDraft((current) => applyReceiptFilesToDraft(current, fileNames));
+    setFilePreviewUrls(previewUrls);
+    setDraft((current) => ({
+      ...applyReceiptFilesToDraft(current, fileNames),
+      receiptPreviewUrls: JSON.stringify(previewUrls),
+    }));
   }
 
   function submitDraft(event?: { preventDefault: () => void }) {
@@ -770,6 +802,22 @@ function CreationSheet(props: { kind: ComposerKind; onClose: () => void; onSubmi
             <p className="eyebrow">Preview</p>
             <h3>{draft[config.previewTitleField] || config.previewFallback}</h3>
             <p>{config.previewBody(draft)}</p>
+            {props.kind === 'receipt' ? (
+              <div className="composer-receipt-preview">
+                {filePreviewUrls[0] ? (
+                  <img alt="Receipt preview" className="composer-receipt-preview__image" src={filePreviewUrls[0]} />
+                ) : (
+                  <div className="composer-receipt-preview__placeholder">
+                    <Icon name="receipt" className="icon-md" />
+                    <span>{draft.selectedFileNames || 'Choose a receipt image to preview it here.'}</span>
+                  </div>
+                )}
+                <div className="mini-stack">
+                  <small>{draft.selectedFileNames || 'No local image selected yet.'}</small>
+                  <small>{draft.source || 'Upload photo'}</small>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
         <div className="composer-sheet__actions composer-sheet__actions--sticky">
@@ -878,6 +926,19 @@ function getHomeSearchPlaceholder(payload: unknown) {
   }
 
   return 'Search purchases, Things, people, memories';
+}
+
+function parsePreviewUrls(rawValue: string | undefined) {
+  if (!rawValue) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue);
+    return Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === 'string') : [];
+  } catch {
+    return [];
+  }
 }
 
 function iconForFabItem(icon: string) {

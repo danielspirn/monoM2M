@@ -42,6 +42,7 @@ type ReceiptStudioPayload = {
     stage: string;
     label: string;
   } | null;
+  processingFeedback?: ReceiptStudioLivePayload['processingFeedback'];
   lineItems: ReceiptStudioLivePayload['lineItems'];
   selectedLineItemId?: string | null;
   evidence?: {
@@ -1029,21 +1030,58 @@ export function ReceiptStudioView({ state, payload, onAction }: PageProps<Receip
       <SummaryBand items={summaryMetrics} />
 
       {payload.progress ? (
-        <FeaturePanel
-          eyebrow="Extraction running"
-          title={payload.progress.label}
-          body={
-            payload.captureSession && payload.captureSession.detectedReceiptCount > 1
-              ? 'One upload can quietly split into multiple receipts. Each one keeps its own parsed, structured, and search-ready layers.'
-              : 'The receipt core keeps the raw file first, then layers parsed output, structured purchase data, and search-ready text on top.'
-          }
-          actionLabel="Return Home"
-          onAction={() => onAction('route:/home')}
-          chips={[
-            payload.extractionRun?.providerLabel ?? payload.extractionRun?.parserVersion ?? 'receipt-core-v1',
-            payload.progress.stage.replace(/_/g, ' '),
-          ]}
-        />
+        <section className="feature-panel feature-panel--processing">
+          <div className="feature-panel__processing-grid">
+            <div className="feature-panel__processing-preview">
+              {payload.processingFeedback?.previewUrl ? (
+                <img alt="Uploaded receipt preview" className="feature-panel__processing-image" src={payload.processingFeedback.previewUrl} />
+              ) : (
+                <div className="feature-panel__processing-placeholder">
+                  <Icon name="receipt" className="icon-lg" />
+                  <span>{payload.processingFeedback?.previewLabel ?? payload.sourceDocument?.fileName ?? 'Receipt preview pending'}</span>
+                </div>
+              )}
+            </div>
+            <div className="route-stack route-stack--compact">
+              <div>
+                <p className="eyebrow">Extraction running</p>
+                <h2>{payload.progress.label}</h2>
+              </div>
+              <p>
+                {payload.processingFeedback?.statusLabel
+                  ?? (
+                    payload.captureSession && payload.captureSession.detectedReceiptCount > 1
+                      ? 'One upload can quietly split into multiple receipts. Each one keeps its own parsed, structured, and search-ready layers.'
+                      : 'The receipt core keeps the raw file first, then layers parsed output, structured purchase data, and search-ready text on top.'
+                  )}
+              </p>
+              <div className="processing-progress">
+                <div className="processing-progress__track">
+                  <div className="processing-progress__fill" style={{ width: `${payload.processingFeedback?.progressPercent ?? 18}%` }} />
+                </div>
+                <strong>{payload.processingFeedback?.progressPercent ?? 18}%</strong>
+              </div>
+              {payload.processingFeedback?.detailLines?.length ? (
+                <div className="mini-stack">
+                  {payload.processingFeedback.detailLines.map((detail) => (
+                    <p className="processing-progress__detail" key={detail}>{detail}</p>
+                  ))}
+                </div>
+              ) : null}
+              <div className="chip-row">
+                {[
+                  payload.extractionRun?.providerLabel ?? payload.extractionRun?.parserVersion ?? 'receipt-core-v1',
+                  payload.progress.stage.replace(/_/g, ' '),
+                ].map((chip) => (
+                  <span className="chip" key={chip}>
+                    {chip}
+                  </span>
+                ))}
+              </div>
+              <ActionButton label="Return Home" onClick={() => onAction('route:/home')} tone="primary" />
+            </div>
+          </div>
+        </section>
       ) : null}
 
       {payload.receipt.status === 'trusted' ? (

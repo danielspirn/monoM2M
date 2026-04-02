@@ -445,3 +445,16 @@ Shipped:
 
 Success signal:
 - review corrections and trust completion are preserved as first-class decisions rather than only the latest receipt state
+
+#### Slice 28: Capture preview and processing feedback
+
+Status:
+- complete
+
+Shipped:
+- the Add Receipt sheet now shows a real preview for selected receipt images before submission
+- Receipt Studio now shows an uploaded-image preview, progress bar, and live extraction feedback while processing
+- processing feedback now surfaces vendor, item-count, and total hints so the capture flow feels informative instead of opaque
+
+Success signal:
+- a user can see the receipt they uploaded plus clear processing progress and early extracted details before review opens

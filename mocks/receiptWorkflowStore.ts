@@ -21,6 +21,7 @@ export type CreateReceiptInput = {
   source: string;
   summary: string;
   fixtureFiles?: string[];
+  previewUrls?: string[];
 };
 
 export type CreateReceiptBatchResult = {
@@ -36,6 +37,7 @@ type StoredSourceDocument = {
   captureChannel: CaptureChannel;
   fileName: string;
   sourceFiles: string[];
+  previewUrls: string[];
   mimeType: string;
   capturedAt: string;
   checksum: string;
@@ -251,6 +253,13 @@ export type ReceiptStudioLivePayload = {
   progress: {
     stage: string;
     label: string;
+  } | null;
+  processingFeedback: {
+    progressPercent: number;
+    previewUrl: string | null;
+    previewLabel: string;
+    statusLabel: string;
+    detailLines: string[];
   } | null;
   lineItems: ReceiptLineItemRecord[];
   selectedLineItemId: string | null;
@@ -765,6 +774,7 @@ export function createLiveReceiptBatch(input: CreateReceiptInput): CreateReceipt
     captureChannel,
     fileName: `${slugify(primaryDraft.merchant)}-${sourceDocumentId}.${sourceDocumentType === 'receipt_pdf' ? 'pdf' : 'jpg'}`,
     sourceFiles: paramsFixtureFiles(input),
+    previewUrls: paramsPreviewUrls(input),
     mimeType: sourceDocumentType === 'receipt_pdf' ? 'application/pdf' : 'image/jpeg',
     capturedAt: now,
     checksum: sharedChecksum,
@@ -797,6 +807,10 @@ export function createLiveReceiptBatch(input: CreateReceiptInput): CreateReceipt
 
 function paramsFixtureFiles(input: CreateReceiptInput) {
   return input.fixtureFiles?.length ? input.fixtureFiles : [];
+}
+
+function paramsPreviewUrls(input: CreateReceiptInput) {
+  return input.previewUrls?.length ? input.previewUrls : [];
 }
 
 function buildStoredReceiptRecord(params: {
@@ -2598,6 +2612,7 @@ function buildStudioPayload(record: StoredReceiptRecord): ReceiptStudioLivePaylo
             label: record.extractionRun.stageLabel,
           }
         : null,
+    processingFeedback: record.status === 'processing' ? buildProcessingFeedback(record) : null,
     lineItems: record.status === 'processing' ? [] : record.lineItems,
     selectedLineItemId: record.status === 'processing' ? null : record.selectedLineItemId,
     evidence: selectedEvidence
@@ -2746,6 +2761,33 @@ function refreshRecordAfterReviewEdit(
   }
 
   return nextRecord;
+}
+
+function buildProcessingFeedback(record: StoredReceiptRecord) {
+  const elapsedMs = Math.max(0, Date.now() - Date.parse(record.extractionRun.startedAt));
+  const ratio = Math.min(0.96, Math.max(0.12, elapsedMs / EXTRACTION_DELAY_MS));
+  const progressPercent = Math.round(ratio * 100);
+  const previewUrl = record.sourceDocument.previewUrls[0] ?? null;
+  const previewLabel = record.sourceDocument.sourceFiles[0] ?? record.sourceDocument.fileName;
+  const lineItemCount = record.lineItems.length;
+  const totalLabel = record.header.grandTotal ? `$${record.header.grandTotal.toFixed(2)}` : 'Detecting total';
+  const stageSteps = ratio < 0.34
+    ? 'Storing the original image and splitting the upload if needed.'
+    : ratio < 0.67
+      ? 'Detecting vendor, total, and likely line items from the raw receipt.'
+      : 'Packaging parsed details so review can open with useful purchase facts.';
+
+  return {
+    progressPercent,
+    previewUrl,
+    previewLabel,
+    statusLabel: stageSteps,
+    detailLines: [
+      `Vendor detected: ${record.header.merchantName || 'Detecting merchant'}`,
+      `Items detected: ${lineItemCount}`,
+      `Total detected: ${totalLabel}`,
+    ],
+  };
 }
 
 function appendReviewDecision(existing: ReviewDecisionRecord[], nextDecision: ReviewDecisionRecord) {

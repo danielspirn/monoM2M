@@ -56,6 +56,9 @@ describe('Milestone 1 shell', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Process receipt capture' }));
 
     expect(screen.getByText('Extraction running')).toBeTruthy();
+    expect(screen.getByText(/Vendor detected:/)).toBeTruthy();
+    expect(screen.getByText(/Items detected:/)).toBeTruthy();
+    expect(screen.getByText(/Total detected:/)).toBeTruthy();
 
     act(() => {
       vi.advanceTimersByTime(2200);
@@ -239,8 +242,12 @@ describe('Milestone 1 shell', () => {
     fireEvent.change(fileInput, { target: { files: [file] } });
 
     expect((screen.getByLabelText('Merchant') as HTMLInputElement).value).toBe('Safeway');
+    expect(screen.getByAltText('Receipt preview')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Process receipt capture' }));
+
+    expect(screen.getByAltText('Uploaded receipt preview')).toBeTruthy();
+    expect(screen.getByText('Vendor detected: Safeway')).toBeTruthy();
 
     act(() => {
       vi.advanceTimersByTime(2200);
